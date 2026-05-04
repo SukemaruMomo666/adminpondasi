@@ -288,6 +288,7 @@
     let currentMessageCount = -1;
     let pendingMedia = null;
     let globalPollingInterval = null;
+    let typingTimeout = null; // Timeout untuk menyembunyikan efek ngetik
 
     document.addEventListener('DOMContentLoaded', () => {
         const isOpen = sessionStorage.getItem('pota_chat_open') === 'true';
@@ -326,16 +327,25 @@
         startGlobalPolling();
     });
 
-    // --- FUNGSI GLOBAL POLLING ---
+    // --- FUNGSI GLOBAL POLLING (HANYA UNTUK UPDATE LEFT SIDEBAR UNREAD) ---
     function startGlobalPolling() {
         if(globalPollingInterval) clearInterval(globalPollingInterval);
         globalPollingInterval = setInterval(() => {
             fetchSellerContacts(false);
-            if (currentStoreId && !chatWindow.classList.contains('hidden') && sessionStorage.getItem('pota_chat_tab') === 'seller') {
-                loadMessages(currentStoreId, false);
-            }
-        }, 4000);
+        }, 5000); // Polling dibikin 5 detik biar lebih hemat resource server
     }
+
+    /* === MENGIRIM SINYAL WHISPER "SEDANG MENGETIK" KE SELLER === */
+    document.getElementById('seller-chat-input').addEventListener('input', function() {
+        if(currentStoreId && window.Echo) {
+            // Berbisik (whisper) ke jaringan Reverb kalau customer lagi ngetik
+            window.Echo.private(`chat.toko.${currentStoreId}`)
+                .whisper('typing', {
+                    is_typing: true,
+                    sender: 'customer'
+                });
+        }
+    });
 
     /* === LIGHTBOX LOGIC === */
     window.openLightbox = function(src) {
@@ -564,7 +574,53 @@
             msgContainer.innerHTML = `<div class="text-center text-xs font-bold text-zinc-400 my-4 flex items-center justify-center gap-2"><i class="fas fa-circle-notch fa-spin"></i> Memuat histori...</div>`;
         }
 
+        // Load pesan lama dari database
         loadMessages(storeId, true);
+
+        // ========================================================
+        // [KODE BARU: JARING PENANGKAP REVERB WEBSOCKETS]
+        // ========================================================
+        if (window.Echo) {
+            window.Echo.leaveAll(); // Tinggalkan obrolan toko lain (biar gak bentrok)
+
+            window.Echo.private(`chat.toko.${storeId}`)
+                // Menangkap bisikan "Sedang mengetik..." dari Seller
+                .listenForWhisper('typing', (e) => {
+                    const typingInd = document.getElementById('typing-indicator');
+                    typingInd.classList.remove('hidden');
+                    scrollToBottom();
+
+                    // Sembunyikan efek titik tiga kalau Seller berhenti ngetik selama 2 detik
+                    clearTimeout(typingTimeout);
+                    typingTimeout = setTimeout(() => {
+                        typingInd.classList.add('hidden');
+                    }, 2000);
+                })
+                // Menangkap pesan masuk beneran dari Seller
+                .listen('PesanBaruTerkirim', (e) => {
+                    // Cek kalau pesan beneran dari seller
+                    if(e.message && e.message.sender === 'seller') {
+                        // Sembunyikan animasi ngetik karena pesan udah dikirim
+                        document.getElementById('typing-indicator').classList.add('hidden');
+
+                        appendSellerMessage(
+                            e.message.content,
+                            'seller', // <--- Penting: Settingan agar balon di kiri
+                            e.message.time,
+                            e.message.type,
+                            e.message.fileName,
+                            0,
+                            true
+                        );
+
+                        currentMessageCount++;
+                        scrollToBottom();
+
+                        // Perbarui contact list biar dot merah notif nambah
+                        fetchSellerContacts(false);
+                    }
+                });
+        }
     }
 
     async function loadMessages(storeId, isInitialLoad = false) {
@@ -574,8 +630,8 @@
             const data = await res.json();
             const msgContainer = document.getElementById('seller-chat-messages');
 
-            if(data.is_typing) document.getElementById('typing-indicator').classList.remove('hidden');
-            else document.getElementById('typing-indicator').classList.add('hidden');
+            // Kita biarkan Echo/Reverb yang mengatur UI ngetiknya sekarang
+            // document.getElementById('typing-indicator').classList.add('hidden');
 
             if (isInitialLoad || data.length > currentMessageCount || data.length < currentMessageCount) {
                 msgContainer.innerHTML = '';
@@ -590,6 +646,7 @@
                     scrollToBottom();
                 }
             } else if (data.length === currentMessageCount) {
+                // Update Centang Jika Jumlah Pesan Tetap Sama (Read Receipt Update)
                 updateReadTicks(data);
             }
             fetchSellerContacts(false);
@@ -709,6 +766,7 @@
         container.classList.add('hidden'); container.classList.remove('flex');
     }
 
+    // LOGIKA PENGIRIMAN FINAL KE BACKEND
     function sendMediaMessage(content, type = 'text', fileName = '', caption = '') {
         if(!content || !currentStoreId) return;
 

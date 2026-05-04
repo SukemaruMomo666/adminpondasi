@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Events\PesanBaruTerkirim; // <-- PENTING: Memanggil Event Reverb
 
 class ChatController extends Controller
 {
@@ -182,6 +183,23 @@ class ChatController extends Controller
             ]);
 
             DB::commit();
+
+            // === [KODE BARU: MESIN LEMPAR REVERB WEBSOCKETS] ===
+            $pesanSocket = [
+                'content'  => $msgType === 'text' ? $messageText : $fileUrl,
+                'sender'   => 'user', // Pengirimnya adalah customer
+                'type'     => $msgType,
+                'fileName' => $msgType === 'file' ? ($request->input('file_name') ?? 'Dokumen') : '',
+                'time'     => date('H:i')
+            ];
+
+            try {
+                // Lempar ke channel Reverb! Abaikan pengirim (toOthers) agar tidak mantul di layarnya sendiri
+                broadcast(new PesanBaruTerkirim($pesanSocket, $storeId))->toOthers();
+            } catch (\Exception $e) {
+                // Sengaja dibiarkan kosong agar aplikasi tidak error jika server Reverb mati
+            }
+            // ==================================================
 
             return response()->json([
                 'status' => 'success',
