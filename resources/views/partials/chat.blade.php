@@ -703,18 +703,17 @@
 
         const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
         appendSellerMessage(content, 'user', timeNow, type, fileName, 0, true);
-
-        currentMessageCount++;
-
         if (caption && type !== 'text') {
             setTimeout(() => appendSellerMessage(caption, 'user', timeNow, 'text', '', 0, true), 100);
-            currentMessageCount++;
         }
 
         const msgContainer = document.getElementById('seller-chat-messages');
         msgContainer.scrollTop = msgContainer.scrollHeight;
+        currentMessageCount++;
 
-        // BUG FIX UTAMA: Kunci (Key) yang benar dikirim adalah 'store_id'
+        // BUG FIX: KOSONGKAN KOTAK INPUT SEKARANG!
+        document.getElementById('seller-chat-input').value = '';
+
         let payload = { store_id: currentStoreId, message: content, type: type, file_name: fileName };
 
         fetch('/api/chat/send', {
@@ -728,7 +727,6 @@
                 fetch('/api/chat/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    // BUG FIX: Kunci 'store_id'
                     body: JSON.stringify({ store_id: currentStoreId, message: caption, type: 'text' })
                 });
             }
