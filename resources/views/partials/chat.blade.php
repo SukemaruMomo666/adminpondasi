@@ -559,7 +559,8 @@
             if(data.is_typing) document.getElementById('typing-indicator').classList.remove('hidden');
             else document.getElementById('typing-indicator').classList.add('hidden');
 
-            if (isInitialLoad || data.length !== currentMessageCount) {
+            // BUG FIX DEWA: Tangani penambahan array dinamis tanpa flicker total jika memungkinkan
+            if (isInitialLoad || data.length > currentMessageCount || data.length < currentMessageCount) {
                 msgContainer.innerHTML = '';
                 currentMessageCount = data.length;
 
@@ -571,7 +572,8 @@
                 if(isInitialLoad || msgContainer.scrollHeight - msgContainer.scrollTop < 500) {
                     msgContainer.scrollTop = msgContainer.scrollHeight;
                 }
-            } else {
+            } else if (data.length === currentMessageCount) {
+                // Update Centang Jika Jumlah Pesan Tetap Sama (Read Receipt Update)
                 updateReadTicks(data);
             }
             fetchSellerContacts(false);
@@ -701,15 +703,19 @@
 
         const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
         appendSellerMessage(content, 'user', timeNow, type, fileName, 0, true);
+
+        currentMessageCount++;
+
         if (caption && type !== 'text') {
             setTimeout(() => appendSellerMessage(caption, 'user', timeNow, 'text', '', 0, true), 100);
+            currentMessageCount++;
         }
 
         const msgContainer = document.getElementById('seller-chat-messages');
         msgContainer.scrollTop = msgContainer.scrollHeight;
-        currentMessageCount++;
 
-        let payload = { chat_id: currentStoreId, message: content, type: type, file_name: fileName };
+        // BUG FIX UTAMA: Kunci (Key) yang benar dikirim adalah 'store_id'
+        let payload = { store_id: currentStoreId, message: content, type: type, file_name: fileName };
 
         fetch('/api/chat/send', {
             method: 'POST',
@@ -722,7 +728,8 @@
                 fetch('/api/chat/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: JSON.stringify({ chat_id: currentStoreId, message: caption, type: 'text' })
+                    // BUG FIX: Kunci 'store_id'
+                    body: JSON.stringify({ store_id: currentStoreId, message: caption, type: 'text' })
                 });
             }
             fetchSellerContacts(false);
