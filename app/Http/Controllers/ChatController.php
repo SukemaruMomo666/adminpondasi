@@ -16,21 +16,21 @@ class ChatController extends Controller
      */
     public function getContacts()
     {
-        // Mengambil ID user yang sedang login dari tabel tb_user[cite: 1]
         $userId = Auth::id();
 
-        // Subquery untuk mencari ID pesan terakhir di setiap chat room[cite: 1]
+        // Subquery untuk mencari ID pesan terakhir di setiap chat room
         $latestMessages = DB::table('messages')
             ->select('chat_id', DB::raw('MAX(id) as last_msg_id'))
             ->groupBy('chat_id');
 
-        // Main Query: Gabungkan tabel chats, tb_toko, dan messages[cite: 1]
+        // Main Query: Gabungkan tabel chats, tb_toko, dan messages
         $contactsQuery = DB::table('chats')
             ->join('tb_toko', 'chats.toko_id', '=', 'tb_toko.id')
-            ->joinSub($latestMessages, 'latest_msg', function ($join) {
+            // PERBAIKAN: Gunakan leftJoin agar chat room yang baru dibuat (belum ada pesannya) tetap muncul
+            ->leftJoinSub($latestMessages, 'latest_msg', function ($join) {
                 $join->on('chats.id', '=', 'latest_msg.chat_id');
             })
-            ->join('messages', 'messages.id', '=', 'latest_msg.last_msg_id')
+            ->leftJoin('messages', 'messages.id', '=', 'latest_msg.last_msg_id')
             ->where('chats.customer_id', $userId)
             ->select(
                 'tb_toko.id as store_id',
@@ -39,10 +39,11 @@ class ChatController extends Controller
                 'messages.message_text',
                 'messages.message_type',
                 'messages.timestamp as last_time',
-                // Hitung pesan yang belum dibaca (is_read = 0) dan dikirim oleh orang lain[cite: 1]
+                // Hitung pesan yang belum dibaca dari seller
                 DB::raw("(SELECT COUNT(*) FROM messages m2 WHERE m2.chat_id = chats.id AND m2.is_read = 0 AND m2.sender_id != {$userId}) as unread_count")
             )
-            ->orderByDesc('messages.timestamp')
+            // PERBAIKAN SQL: Anti-error untuk MariaDB/MySQL jika timestamp kosong
+            ->orderByRaw('CASE WHEN messages.timestamp IS NULL THEN 1 ELSE 0 END, messages.timestamp DESC')
             ->get();
 
         // Format data untuk dikirim ke UI Vue/Blade
@@ -53,12 +54,14 @@ class ChatController extends Controller
             if ($chat->message_type === 'audio') $previewText = '🎤 Voice Note';
             if ($chat->message_type === 'file')  $previewText = '📄 Mengirim Dokumen';
 
+            if (!$previewText) $previewText = 'Belum ada pesan.';
+
             return [
                 'store_id' => $chat->store_id,
                 'nama_toko' => $chat->nama_toko,
                 'logo_toko' => $chat->logo_toko,
                 'last_message' => $previewText,
-                'last_time' => $this->formatChatTime($chat->last_time),
+                'last_time' => $chat->last_time ? $this->formatChatTime($chat->last_time) : '',
                 'unread_count' => $chat->unread_count
             ];
         });
@@ -71,9 +74,8 @@ class ChatController extends Controller
      */
     public function getMessages($storeId)
     {
-        $userId = Auth::id(); // Referensi tabel tb_user[cite: 1]
+        $userId = Auth::id();
 
-        // Cek apakah room chat sudah ada di tabel chats[cite: 1]
         $chatRoom = DB::table('chats')
             ->where('customer_id', $userId)
             ->where('toko_id', $storeId)
@@ -83,7 +85,7 @@ class ChatController extends Controller
             return response()->json([]); // Belum ada histori chat
         }
 
-        // Tandai pesan dari lawan bicara sebagai sudah dibaca (is_read = 1)[cite: 1]
+        // Tandai pesan dari lawan bicara sebagai sudah dibaca (is_read = 1)
         DB::table('messages')
             ->where('chat_id', $chatRoom->id)
             ->where('sender_id', '!=', $userId)
@@ -93,14 +95,13 @@ class ChatController extends Controller
                 'read_at' => Carbon::now()
             ]);
 
-        // Ambil histori pesan dari tabel messages[cite: 1]
+        // Ambil histori pesan
         $messagesQuery = DB::table('messages')
             ->where('chat_id', $chatRoom->id)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $messages = $messagesQuery->map(function ($msg) use ($userId) {
-            // Tentukan isi konten (Teks biasa atau URL gambar/file/voice note)[cite: 1]
             $content = $msg->message_type === 'text' ? $msg->message_text : $msg->file_url;
 
             return [
@@ -108,6 +109,7 @@ class ChatController extends Controller
                 'content' => $content,
                 'type' => $msg->message_type,
                 'fileName' => $msg->message_type === 'file' ? $msg->message_text : '',
+                'is_read' => $msg->is_read, // <--- PERBAIKAN WAJIB: Agar tag "SEEN ✓✓" bisa berfungsi di Frontend!
                 'time' => Carbon::parse($msg->timestamp)->format('H:i')
             ];
         });
@@ -120,18 +122,16 @@ class ChatController extends Controller
      */
     public function sendMessage(Request $request)
     {
-        $userId = Auth::id(); // Berelasi dengan customer_id[cite: 1]
-        $storeId = $request->input('store_id'); // Berelasi dengan toko_id[cite: 1]
+        $userId = Auth::id();
+        $storeId = $request->input('store_id');
         $rawMessage = $request->input('message');
         $msgType = $request->input('type', 'text');
 
         $messageText = $rawMessage;
         $fileUrl = null;
 
-        // DB Transaction untuk menjamin data tersimpan sempurna[cite: 1]
         DB::beginTransaction();
         try {
-            // 1. Dapatkan atau Buat Room Chat (Tabel chats)[cite: 1]
             $chatRoom = DB::table('chats')
                 ->where('customer_id', $userId)
                 ->where('toko_id', $storeId)
@@ -148,7 +148,6 @@ class ChatController extends Controller
                 $chatId = $chatRoom->id;
             }
 
-            // 2. Logika Pemrosesan Media (Base64 ke File Fisik)
             if (in_array($msgType, ['image', 'audio', 'file']) && preg_match('/^data:(\w+\/[\w+-.]+);base64,/', $rawMessage, $matches)) {
                 $mimeType = $matches[1];
                 $extensions = [
@@ -158,22 +157,20 @@ class ChatController extends Controller
                 ];
 
                 $extension = $extensions[$mimeType] ?? 'bin';
-                // Potong string 'data:image/...;base64,' untuk mendapatkan data murni
                 $fileData = base64_decode(substr($rawMessage, strpos($rawMessage, ',') + 1));
 
                 $fileName = 'chat_' . time() . '_' . uniqid() . '.' . $extension;
                 $storagePath = 'chat_media/' . $fileName;
 
-                // Simpan ke storage Laravel (storage/app/public/chat_media)
                 Storage::disk('public')->put($storagePath, $fileData);
 
-                $fileUrl = '/storage/' . $storagePath; // Path URL untuk diakses UI
+                $fileUrl = '/storage/' . $storagePath;
 
-                // Jika itu file dokumen, simpan nama aslinya di message_text
                 $messageText = $msgType === 'file' ? ($request->input('file_name') ?? 'Dokumen') : '';
+            } elseif ($msgType === 'text') {
+                $fileUrl = null;
             }
 
-            // 3. Insert ke Tabel Messages (Sesuai upgrade kolom terbaru)[cite: 1]
             DB::table('messages')->insert([
                 'chat_id' => $chatId,
                 'sender_id' => $userId,
@@ -198,18 +195,17 @@ class ChatController extends Controller
         }
     }
 
-    /**
-     * FUNGSI HELPER: Format Waktu Ala WhatsApp/Shopee
-     */
     private function formatChatTime($timestamp)
     {
+        if (!$timestamp) return '';
+
         $date = Carbon::parse($timestamp);
         if ($date->isToday()) {
-            return $date->format('H:i'); // Tampilkan 10:45
+            return $date->format('H:i');
         } elseif ($date->isYesterday()) {
             return 'Kemarin';
         } else {
-            return $date->format('d/m/y'); // Tampilkan 12/05/26
+            return $date->format('d/m/y');
         }
     }
 }

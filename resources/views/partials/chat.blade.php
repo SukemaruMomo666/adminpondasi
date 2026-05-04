@@ -307,11 +307,11 @@
     function startGlobalPolling() {
         if(globalPollingInterval) clearInterval(globalPollingInterval);
         globalPollingInterval = setInterval(() => {
-            fetchSellerContacts(false); 
+            fetchSellerContacts(false);
             if (currentStoreId && !chatWindow.classList.contains('hidden') && sessionStorage.getItem('pota_chat_tab') === 'seller') {
-                loadMessages(currentStoreId, false); 
+                loadMessages(currentStoreId, false);
             }
-        }, 4000); 
+        }, 4000);
     }
 
     /* === LIGHTBOX LOGIC === */
@@ -448,7 +448,7 @@
         document.getElementById('seller-empty-state').classList.remove('opacity-0');
         currentStoreId = null;
         sessionStorage.removeItem('pota_active_store');
-        fetchSellerContacts(); 
+        fetchSellerContacts();
     }
 
 
@@ -574,7 +574,7 @@
             } else {
                 updateReadTicks(data);
             }
-            fetchSellerContacts(false); 
+            fetchSellerContacts(false);
         } catch(e) {
             if(isInitialLoad) {
                 document.getElementById('seller-chat-messages').innerHTML = `<div class="text-center text-xs font-bold text-red-500 my-4 bg-red-50 p-2 rounded-xl border border-red-200 mx-auto max-w-[250px]">Gagal memuat histori chat. Pastikan server terhubung.</div>`;
@@ -708,7 +708,7 @@
         const msgContainer = document.getElementById('seller-chat-messages');
         msgContainer.scrollTop = msgContainer.scrollHeight;
         currentMessageCount++;
-        
+
         let payload = { chat_id: currentStoreId, message: content, type: type, file_name: fileName };
 
         fetch('/api/chat/send', {
