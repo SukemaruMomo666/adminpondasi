@@ -103,18 +103,18 @@
                     </div>
 
                     {{-- Area Histori Chat --}}
-                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative">
+                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative scroll-smooth">
                         {{-- Isi Chat di-render JS --}}
                     </div>
 
                     {{-- Animasi Typing Indicator --}}
                     <div id="typing-indicator" class="hidden px-6 py-2 pb-4 border-t border-transparent bg-zinc-50">
-                        <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-[scale-in_0.2s_ease-out]">
+                        <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-slide-left">
                             <div class="w-8 h-8 rounded-full bg-zinc-200 shrink-0 flex items-center justify-center text-zinc-500 text-xs mt-auto shadow-sm"><i class="fas fa-store"></i></div>
                             <div class="bg-white border border-zinc-200 p-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.2s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.4s"></span>
                             </div>
                         </div>
                     </div>
@@ -122,8 +122,8 @@
                     {{-- Alat Kirim (Teks, Gambar, File, Voice Note) --}}
                     <div class="p-3 md:p-4 bg-white border-t border-zinc-200 shrink-0 relative z-20">
 
-                        {{-- MEDIA PREVIEW CONTAINER (Tampung sebelum kirim) --}}
-                        <div id="media-preview-container" class="hidden items-center justify-between p-3 mx-1 mb-3 bg-zinc-50 border border-zinc-200 rounded-xl shadow-inner">
+                        {{-- MEDIA PREVIEW CONTAINER --}}
+                        <div id="media-preview-container" class="hidden items-center justify-between p-3 mx-1 mb-3 bg-zinc-50 border border-zinc-200 rounded-xl shadow-inner animate-slide-up">
                             <div id="media-preview-content" class="flex items-center gap-3 w-full overflow-hidden">
                                 <!-- Preview Injected Here -->
                             </div>
@@ -185,11 +185,11 @@
             </div>
 
             {{-- Area Pesan AI --}}
-            <div class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-slate-50 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]" id="ai-chat-messages">
+            <div class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-slate-50 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] scroll-smooth" id="ai-chat-messages">
                 <div class="text-[10px] text-center text-zinc-400 font-black uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
                     <span class="w-8 h-px bg-zinc-200"></span> Percakapan Cerdas <span class="w-8 h-px bg-zinc-200"></span>
                 </div>
-                <div class="flex gap-3 max-w-[90%] md:max-w-[85%]">
+                <div class="flex gap-3 max-w-[90%] md:max-w-[85%] animate-slide-left">
                     <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs shadow-md mt-auto"><i class="fas fa-robot"></i></div>
                     <div class="bg-blue-50 border border-blue-100 text-zinc-800 p-4 rounded-2xl rounded-bl-sm text-sm shadow-sm relative font-medium leading-relaxed">
                         Halo <strong>{{ auth()->user()?->nama ?? 'Juragan' }}</strong>! Saya POTA. Ingin mencari rekomendasi material terbaik, membandingkan harga pasar, atau butuh bantuan hitung RAB proyek hari ini?
@@ -249,6 +249,29 @@
     #image-lightbox { transition: opacity 0.3s ease; }
     #image-lightbox.hidden { display: none; opacity: 0; pointer-events: none; }
     #image-lightbox.flex { display: flex; opacity: 1; pointer-events: auto; }
+
+    /* Animasi Cantik Kelas Dewa */
+    .animate-slide-right { animation: slideRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+    .animate-slide-left { animation: slideLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+    .animate-typing { animation: typingBounce 1.4s infinite ease-in-out both; }
+    .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+    @keyframes slideRight {
+        0% { opacity: 0; transform: translateY(15px) translateX(15px) scale(0.95); }
+        100% { opacity: 1; transform: translateY(0) translateX(0) scale(1); }
+    }
+    @keyframes slideLeft {
+        0% { opacity: 0; transform: translateY(15px) translateX(-15px) scale(0.95); }
+        100% { opacity: 1; transform: translateY(0) translateX(0) scale(1); }
+    }
+    @keyframes typingBounce {
+        0%, 80%, 100% { transform: scale(0.8) translateY(0); opacity: 0.5; }
+        40% { transform: scale(1.2) translateY(-4px); opacity: 1; background-color: #3b82f6; }
+    }
+    @keyframes slideUp {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <script>
@@ -300,7 +323,7 @@
         }
 
         fetchSellerContacts();
-        startGlobalPolling(); // MULAI POLLING ANTI FLICKER DEWA
+        startGlobalPolling();
     });
 
     // --- FUNGSI GLOBAL POLLING ---
@@ -330,7 +353,6 @@
         lightbox.classList.replace('flex', 'hidden');
     }
 
-    // Mencegah enter mengirim form langsung, shift+enter untuk baris baru
     document.getElementById('seller-chat-input').addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -351,7 +373,6 @@
         }
     });
 
-    // FUNGSI TRIGGER CHAT DARI HALAMAN PRODUK
     window.openChatWithStore = function(storeId, storeName, initials) {
         if(chatWindow.classList.contains('hidden')) {
             chatWindow.classList.remove('hidden');
@@ -451,7 +472,6 @@
         fetchSellerContacts();
     }
 
-
     /* ========================================================
        2. SELLER CHAT LOGIC (100% REAL API)
        ======================================================== */
@@ -464,7 +484,6 @@
             const data = await res.json();
             renderContacts(data, contactList);
 
-            // LOGIKA DOT MERAH GLOBAL
             const hasUnread = data.some(c => c.unread_count > 0);
             const dot = document.getElementById('unread-global-dot');
             if(hasUnread) dot.classList.remove('hidden');
@@ -548,7 +567,6 @@
         loadMessages(storeId, true);
     }
 
-    // FUNGSI POLLING CERDAS ANTI FLICKER (Hanya render jika ada pesan baru)
     async function loadMessages(storeId, isInitialLoad = false) {
         try {
             const res = await fetch(`/api/chat/messages/${storeId}`);
@@ -559,7 +577,6 @@
             if(data.is_typing) document.getElementById('typing-indicator').classList.remove('hidden');
             else document.getElementById('typing-indicator').classList.add('hidden');
 
-            // BUG FIX DEWA: Tangani penambahan array dinamis tanpa flicker total jika memungkinkan
             if (isInitialLoad || data.length > currentMessageCount || data.length < currentMessageCount) {
                 msgContainer.innerHTML = '';
                 currentMessageCount = data.length;
@@ -570,10 +587,9 @@
                      data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad));
                 }
                 if(isInitialLoad || msgContainer.scrollHeight - msgContainer.scrollTop < 500) {
-                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                    scrollToBottom();
                 }
             } else if (data.length === currentMessageCount) {
-                // Update Centang Jika Jumlah Pesan Tetap Sama (Read Receipt Update)
                 updateReadTicks(data);
             }
             fetchSellerContacts(false);
@@ -601,15 +617,13 @@
 
     function appendSellerMessage(content, sender, time, type = 'text', fileName = '', isRead = 0, animate = true) {
         const container = document.getElementById('seller-chat-messages');
-        const isOut = sender === 'user'; // Di sisi customer, 'user' adalah diri sendiri
+        const isOut = sender === 'user';
 
         let wrapAlign = isOut ? 'self-end items-end' : 'self-start items-start';
         let bubbleColor = isOut ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm shadow-md' : 'bg-white border border-zinc-200 text-zinc-800 rounded-r-2xl rounded-tl-2xl rounded-bl-sm shadow-sm';
         let timeColor = isOut ? 'text-blue-100' : 'text-zinc-400';
-        let animClass = animate ? 'animate-[scale-in_0.2s_ease-out]' : '';
-        let transformOrigin = isOut ? 'origin-bottom-right' : 'origin-bottom-left';
+        let animClass = animate ? (isOut ? 'animate-slide-right' : 'animate-slide-left') : '';
 
-        // Logika Centang Customer (Pakai FontAwesome FAS)
         let tickHtml = '';
         if(isOut) {
             if(isRead == 1) {
@@ -641,7 +655,7 @@
         }
 
         let html = `
-            <div class="message-bubble flex flex-col max-w-[85%] md:max-w-[75%] ${wrapAlign} ${transformOrigin} ${animClass}">
+            <div class="message-bubble flex flex-col max-w-[85%] md:max-w-[75%] ${wrapAlign} ${animClass}">
                 <div class="${bubbleColor}">
                     ${innerHTML}
                     <div class="text-[9px] font-bold mt-1 px-3 pb-2 text-right ${timeColor} flex items-center justify-end gap-1">
@@ -654,9 +668,11 @@
         sessionStorage.setItem('pota_seller_dom', container.innerHTML);
     }
 
-    // ========================================================
-    // LOGIKA PREVIEW MEDIA & UPLOAD
-    // ========================================================
+    function scrollToBottom() {
+        const msgContainer = document.getElementById('seller-chat-messages');
+        msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' });
+    }
+
     window.handleFileUpload = function(inputElement, type) {
         const file = inputElement.files[0];
         if(!file || !currentStoreId) return;
@@ -693,7 +709,6 @@
         container.classList.add('hidden'); container.classList.remove('flex');
     }
 
-    // LOGIKA PENGIRIMAN FINAL KE BACKEND
     function sendMediaMessage(content, type = 'text', fileName = '', caption = '') {
         if(!content || !currentStoreId) return;
 
@@ -703,15 +718,16 @@
 
         const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
         appendSellerMessage(content, 'user', timeNow, type, fileName, 0, true);
-        if (caption && type !== 'text') {
-            setTimeout(() => appendSellerMessage(caption, 'user', timeNow, 'text', '', 0, true), 100);
-        }
 
-        const msgContainer = document.getElementById('seller-chat-messages');
-        msgContainer.scrollTop = msgContainer.scrollHeight;
         currentMessageCount++;
 
-        // BUG FIX: KOSONGKAN KOTAK INPUT SEKARANG!
+        if (caption && type !== 'text') {
+            setTimeout(() => appendSellerMessage(caption, 'user', timeNow, 'text', '', 0, true), 100);
+            currentMessageCount++;
+        }
+
+        scrollToBottom();
+
         document.getElementById('seller-chat-input').value = '';
 
         let payload = { store_id: currentStoreId, message: content, type: type, file_name: fileName };
@@ -787,10 +803,7 @@
         }
     }
 
-
-    /* ========================================================
-       3. POTA AI CHAT LOGIC (Real API)
-       ======================================================== */
+    /* === 3. POTA AI CHAT LOGIC === */
     const aiMessagesContainer = document.getElementById('ai-chat-messages');
     const aiInput = document.getElementById('ai-chat-input');
     const aiCallOverlay = document.getElementById('ai-voice-overlay');
@@ -876,11 +889,12 @@
     function appendAIMessage(text, sender) {
         if(!aiMessagesContainer) return;
         const clean = text.replace(/"/g, "'").replace(/\n/g, " ").replace(/<[^>]*>?/gm, '');
+        let animClass = sender === 'bot' ? 'animate-slide-left' : 'animate-slide-right';
 
         let html = '';
         if(sender === 'bot') {
             html = `
-            <div class="flex gap-3 max-w-[90%] md:max-w-[85%] origin-bottom-left transition-all animate-[scale-in_0.2s_ease-out]">
+            <div class="flex gap-3 max-w-[90%] md:max-w-[85%] origin-bottom-left ${animClass}">
                 <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs shadow-md mt-auto"><i class="fas fa-robot"></i></div>
                 <div class="bg-blue-50 border border-blue-100 text-zinc-800 p-4 rounded-2xl rounded-bl-sm text-sm shadow-sm relative group font-medium leading-relaxed">
                     ${text}
@@ -889,13 +903,13 @@
             </div>`;
         } else {
             html = `
-            <div class="flex justify-end max-w-[90%] md:max-w-[85%] self-end origin-bottom-right animate-[scale-in_0.2s_ease-out]">
+            <div class="flex justify-end max-w-[90%] md:max-w-[85%] self-end origin-bottom-right ${animClass}">
                 <div class="bg-zinc-900 text-white p-4 rounded-2xl rounded-br-sm text-sm font-medium shadow-md leading-relaxed break-words">${text}</div>
             </div>`;
         }
 
         aiMessagesContainer.insertAdjacentHTML('beforeend', html);
-        aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+        aiMessagesContainer.scrollTo({ top: aiMessagesContainer.scrollHeight, behavior: 'smooth' });
         saveAIState();
     }
 
@@ -915,7 +929,7 @@
                 <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
             </div>`;
             aiMessagesContainer.insertAdjacentHTML('beforeend', loadHtml);
-            aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+            aiMessagesContainer.scrollTo({ top: aiMessagesContainer.scrollHeight, behavior: 'smooth' });
         }
 
         try {
