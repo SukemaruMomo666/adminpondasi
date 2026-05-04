@@ -114,7 +114,7 @@
                                 <i class="fas fa-user-edit"></i> Edit Profil
                             </a>
                             @auth
-                            <form action="{{ route('logout') }}" method="POST" class="m-0"> 
+                            <form action="{{ route('logout') }}" method="POST" class="m-0">
                                 @csrf
                                 <button type="submit" class="w-full flex items-center justify-center gap-2 bg-white border-2 border-zinc-100 text-zinc-400 hover:text-red-600 hover:border-red-100 hover:bg-red-50 font-bold py-3 rounded-xl transition-all text-sm group">
                                     <i class="fas fa-power-off group-hover:rotate-12 transition-transform"></i> Logout
@@ -208,7 +208,7 @@
                         <h3 class="text-lg font-black text-black flex items-center gap-2">
                             <i class="fas fa-map-marked-alt text-blue-600"></i> Alamat Pengiriman
                         </h3>
-                        <a href="{{ route('profil.edit') }}#titik-lokasi" 
+                        <a href="{{ route('profil.edit') }}#titik-lokasi"
                         class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
                         Ubah Alamat
                         </a>
@@ -238,6 +238,8 @@
             </div>
         </div>
     </main>
+        {{-- Tambahkan baris ini --}}
+    @include('partials.chat')
 
     @include('partials.footer')
     <script src="{{ asset('assets/js/navbar.js') }}"></script>

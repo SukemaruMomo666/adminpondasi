@@ -1,12 +1,11 @@
 {{-- ===================== CHAT HUB PREMIUM (POTA AI & SELLER) ===================== --}}
 {{-- Tombol Toggle Floating --}}
 <button id="live-chat-toggle" class="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-zinc-950 text-white p-1.5 pr-5 md:pr-6 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] hover:shadow-[0_15px_50px_rgba(37,99,235,0.4)] transition-all duration-300 z-[9998] flex items-center gap-2.5 md:gap-3 group outline-none hover:-translate-y-1 border border-zinc-800" onclick="toggleChatWindow()">
-    {{-- PERBAIKAN: overflow-hidden dihapus agar dot merah tidak terpotong --}}
     <div class="bg-blue-600 w-11 h-11 md:w-12 md:h-12 rounded-full relative flex items-center justify-center shadow-inner">
         <div class="absolute inset-0 bg-blue-500 animate-pulse opacity-50 rounded-full"></div>
         <i class="fas fa-comments text-lg md:text-xl relative z-10 text-white group-hover:scale-110 transition-transform duration-300"></i>
-        {{-- Dot Merah --}}
-        <div class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-zinc-950 animate-bounce shadow-sm z-20"></div>
+        {{-- Dot Merah Dinamis: Muncul hanya jika ada unread_count --}}
+        <div id="unread-global-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-zinc-950 animate-bounce shadow-sm z-20 hidden"></div>
     </div>
     <div class="flex flex-col text-left hidden sm:flex">
         <span class="font-black text-sm md:text-base tracking-wide text-white leading-tight">Pusat Obrolan</span>
@@ -15,7 +14,7 @@
 </button>
 
 {{-- Main Chat Window --}}
-<div id="live-chat-window" class="fixed bottom-0 right-0 md:bottom-28 md:right-8 w-full h-[100dvh] md:w-[800px] md:h-[600px] bg-white md:rounded-2xl shadow-[0_20px_70px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden z-[9999] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] opacity-0 translate-y-10 scale-95 pointer-events-none md:border md:border-zinc-200 origin-bottom-right">
+<div id="live-chat-window" class="fixed bottom-0 right-0 md:bottom-28 md:right-8 w-full h-[100dvh] md:w-[800px] md:h-[600px] bg-white md:rounded-2xl shadow-[0_20px_70px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden z-[9999] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] opacity-0 translate-y-10 scale-95 pointer-events-none md:border md:border-zinc-200 origin-bottom-right hidden">
 
     {{-- Header Universal --}}
     <div class="bg-white border-b border-zinc-200 p-3 md:p-4 flex justify-between items-center shrink-0 z-30 shadow-sm relative">
@@ -24,7 +23,7 @@
                 <i class="fas fa-comments text-lg"></i>
             </div>
 
-            {{-- TAB SWITCHER ELEGAN (IOS STYLE) --}}
+            {{-- TAB SWITCHER --}}
             <div class="flex bg-zinc-100 rounded-xl p-1 relative z-20 w-[190px] md:w-[240px] shadow-inner">
                 <div id="tab-slider" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-transform duration-300 ease-out z-0"></div>
 
@@ -50,9 +49,7 @@
     {{-- KONTEN AREA (TAB CONTAINER) --}}
     <div class="relative flex-1 overflow-hidden bg-zinc-50">
 
-        {{-- ==========================================
-             TAB 1: SELLER VIEW (SPLIT PANE)
-             ========================================== --}}
+        {{-- TAB 1: SELLER VIEW --}}
         <div id="view-seller" class="absolute inset-0 flex flex-row transition-all duration-500 ease-out opacity-100 translate-x-0 z-20">
 
             {{-- Kiri: Contact List --}}
@@ -106,12 +103,34 @@
                     </div>
 
                     {{-- Area Histori Chat --}}
-                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50">
+                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative">
                         {{-- Isi Chat di-render JS --}}
                     </div>
 
+                    {{-- Animasi Typing Indicator --}}
+                    <div id="typing-indicator" class="hidden px-6 py-2 pb-4 border-t border-transparent bg-zinc-50">
+                        <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-[scale-in_0.2s_ease-out]">
+                            <div class="w-8 h-8 rounded-full bg-zinc-200 shrink-0 flex items-center justify-center text-zinc-500 text-xs mt-auto shadow-sm"><i class="fas fa-store"></i></div>
+                            <div class="bg-white border border-zinc-200 p-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Alat Kirim (Teks, Gambar, File, Voice Note) --}}
-                    <div class="p-3 md:p-4 bg-white border-t border-zinc-200 shrink-0 relative">
+                    <div class="p-3 md:p-4 bg-white border-t border-zinc-200 shrink-0 relative z-20">
+
+                        {{-- MEDIA PREVIEW CONTAINER (Tampung sebelum kirim) --}}
+                        <div id="media-preview-container" class="hidden items-center justify-between p-3 mx-1 mb-3 bg-zinc-50 border border-zinc-200 rounded-xl shadow-inner">
+                            <div id="media-preview-content" class="flex items-center gap-3 w-full overflow-hidden">
+                                <!-- Preview Injected Here -->
+                            </div>
+                            <button type="button" onclick="cancelMediaPreview()" class="w-8 h-8 rounded-full bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center transition-colors flex-shrink-0 ml-2 shadow-sm outline-none">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
 
                         {{-- Hidden File Inputs --}}
                         <input type="file" id="upload-image" accept="image/*" class="hidden" onchange="handleFileUpload(this, 'image')">
@@ -127,32 +146,28 @@
                             </button>
 
                             {{-- Indikator Rekaman --}}
-                            <div id="recording-indicator" class="hidden items-center gap-1.5 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md animate-pulse">
+                            <div id="recording-indicator" class="hidden items-center gap-1.5 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md animate-pulse border border-red-100">
                                 <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Merekam VN...
                             </div>
                         </div>
 
                         {{-- Teks Input --}}
-                        <div class="flex items-end gap-2 bg-zinc-50 border border-zinc-200 rounded-xl p-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                        <form id="formSendMessage" class="flex items-end gap-2 bg-zinc-50 border border-zinc-200 rounded-xl p-1.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                             <textarea id="seller-chat-input" rows="1" placeholder="Ketik pesan..." class="w-full text-sm text-zinc-700 font-medium bg-transparent px-2 py-2 outline-none resize-none max-h-[100px] min-h-[40px] custom-scrollbar"></textarea>
-                            <button onclick="sendSellerMessage()" id="btn-send-seller" class="w-10 h-10 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 hover:bg-blue-600 hover:shadow-lg hover:-translate-y-0.5 transition-all outline-none">
+                            <button type="submit" id="btn-send-seller" class="w-10 h-10 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 hover:bg-blue-600 hover:shadow-lg hover:-translate-y-0.5 transition-all outline-none">
                                 <i class="fas fa-paper-plane text-xs"></i>
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- ==========================================
-             TAB 2: AI VIEW (POTA AI)
-             ========================================== --}}
+        {{-- TAB 2: AI VIEW (POTA AI) --}}
         <div id="view-ai" class="absolute inset-0 flex flex-col transition-all duration-500 ease-out opacity-0 translate-x-10 z-10 pointer-events-none bg-white">
-
             {{-- Header Khusus AI --}}
             <div class="bg-gradient-to-r from-zinc-950 to-zinc-900 p-4 flex justify-between items-center shrink-0 shadow-md relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-[30px]"></div>
-
                 <div class="flex items-center gap-3 md:gap-4 relative z-10">
                     <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center border border-white/10 shadow-[0_0_20px_rgba(37,99,235,0.4)]">
                         <i class="fas fa-robot text-white text-xl"></i>
@@ -174,7 +189,6 @@
                 <div class="text-[10px] text-center text-zinc-400 font-black uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
                     <span class="w-8 h-px bg-zinc-200"></span> Percakapan Cerdas <span class="w-8 h-px bg-zinc-200"></span>
                 </div>
-
                 <div class="flex gap-3 max-w-[90%] md:max-w-[85%]">
                     <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs shadow-md mt-auto"><i class="fas fa-robot"></i></div>
                     <div class="bg-blue-50 border border-blue-100 text-zinc-800 p-4 rounded-2xl rounded-bl-sm text-sm shadow-sm relative font-medium leading-relaxed">
@@ -199,7 +213,6 @@
             {{-- Voice Call Overlay Eksklusif AI --}}
             <div id="ai-voice-overlay" class="absolute inset-0 bg-zinc-950/95 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center text-white">
                 <div class="text-[11px] md:text-xs font-black tracking-[0.3em] text-blue-400 uppercase mb-16 animate-pulse" id="ai-voice-status">Mendengarkan...</div>
-
                 <div class="relative w-32 h-32 flex items-center justify-center mb-16">
                     <div class="absolute inset-0 bg-blue-600/30 rounded-full animate-ping duration-1000"></div>
                     <div class="absolute inset-[-20px] bg-blue-500/10 rounded-full animate-ping duration-1000" style="animation-delay: 0.3s"></div>
@@ -207,7 +220,6 @@
                         <i class="fas fa-microphone"></i>
                     </div>
                 </div>
-
                 <button onclick="endVoiceCallMode()" class="bg-red-500 text-white hover:bg-red-600 px-8 py-3.5 rounded-full font-black flex items-center gap-3 transition-all group text-xs md:text-sm outline-none shadow-[0_10px_20px_rgba(239,68,68,0.3)] hover:-translate-y-1">
                     <i class="fas fa-phone-slash"></i> Tutup Panggilan
                 </button>
@@ -217,9 +229,14 @@
     </div>
 </div>
 
-{{-- ========================================================
-     SCRIPT LOGIKA CHAT HUB PREMIUM (REAL API)
-     ======================================================== --}}
+{{-- MODAL LIGHTBOX IMAGE --}}
+<div id="image-lightbox" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-zinc-950/95 backdrop-blur-sm p-4" onclick="closeLightbox()">
+    <button class="absolute top-6 right-6 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white text-xl hover:bg-red-500 transition-colors outline-none"><i class="fas fa-times"></i></button>
+    <div class="relative max-w-full max-h-full flex items-center justify-center p-2" onclick="event.stopPropagation()">
+        <img id="lightbox-img" src="" class="max-w-full max-h-[90dvh] object-contain rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] scale-90 transition-transform duration-300">
+    </div>
+</div>
+
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -227,6 +244,11 @@
     .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
     .custom-audio { height: 35px; border-radius: 20px; outline: none; }
     .custom-audio::-webkit-media-controls-panel { background-color: #f1f5f9; }
+
+    /* Lightbox Animasi */
+    #image-lightbox { transition: opacity 0.3s ease; }
+    #image-lightbox.hidden { display: none; opacity: 0; pointer-events: none; }
+    #image-lightbox.flex { display: flex; opacity: 1; pointer-events: auto; }
 </style>
 
 <script>
@@ -240,6 +262,9 @@
     const tabSlider = document.getElementById('tab-slider');
 
     let currentStoreId = null;
+    let currentMessageCount = -1;
+    let pendingMedia = null;
+    let globalPollingInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const isOpen = sessionStorage.getItem('pota_chat_open') === 'true';
@@ -262,13 +287,11 @@
             document.getElementById('active-store-avatar').innerText = sessionStorage.getItem('pota_active_avatar');
             document.getElementById('seller-chat-messages').innerHTML = savedSellerDom;
             document.getElementById('seller-chat-messages').scrollTop = document.getElementById('seller-chat-messages').scrollHeight;
-
             openStoreChat(savedStoreId, sessionStorage.getItem('pota_active_name'), sessionStorage.getItem('pota_active_avatar'), false);
         }
 
         if(isOpen && chatWindow) {
             chatWindow.classList.remove('hidden');
-            // Timeout hack for initial load animation
             setTimeout(() => {
                 chatWindow.classList.remove('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
                 chatWindow.classList.add('flex', 'opacity-100', 'translate-y-0', 'scale-100');
@@ -277,22 +300,82 @@
         }
 
         fetchSellerContacts();
+        startGlobalPolling(); // MULAI POLLING ANTI FLICKER DEWA
     });
 
-    // PERBAIKAN: Animasi mulus saat klik tombol "Pusat Obrolan"
-    function toggleChatWindow() {
-        if(chatWindow.classList.contains('hidden')) {
-            const lastTab = sessionStorage.getItem('pota_chat_tab') || 'seller';
+    // --- FUNGSI GLOBAL POLLING ---
+    function startGlobalPolling() {
+        if(globalPollingInterval) clearInterval(globalPollingInterval);
+        globalPollingInterval = setInterval(() => {
+            fetchSellerContacts(false); 
+            if (currentStoreId && !chatWindow.classList.contains('hidden') && sessionStorage.getItem('pota_chat_tab') === 'seller') {
+                loadMessages(currentStoreId, false); 
+            }
+        }, 4000); 
+    }
 
+    /* === LIGHTBOX LOGIC === */
+    window.openLightbox = function(src) {
+        const lightbox = document.getElementById('image-lightbox');
+        const img = document.getElementById('lightbox-img');
+        img.src = src;
+        lightbox.classList.remove('hidden');
+        lightbox.classList.add('flex');
+        setTimeout(() => img.classList.replace('scale-90', 'scale-100'), 10);
+    }
+    window.closeLightbox = function() {
+        const lightbox = document.getElementById('image-lightbox');
+        const img = document.getElementById('lightbox-img');
+        img.classList.replace('scale-100', 'scale-90');
+        lightbox.classList.replace('flex', 'hidden');
+    }
+
+    // Mencegah enter mengirim form langsung, shift+enter untuk baris baru
+    document.getElementById('seller-chat-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('formSendMessage').dispatchEvent(new Event('submit'));
+        }
+    });
+
+    document.getElementById('formSendMessage').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const input = document.getElementById('seller-chat-input');
+        const text = input.value.trim();
+
+        if (pendingMedia) {
+            sendMediaMessage(pendingMedia.content, pendingMedia.type, pendingMedia.fileName, text);
+            cancelMediaPreview();
+        } else if (text !== '') {
+            sendMediaMessage(text, 'text');
+        }
+    });
+
+    // FUNGSI TRIGGER CHAT DARI HALAMAN PRODUK
+    window.openChatWithStore = function(storeId, storeName, initials) {
+        if(chatWindow.classList.contains('hidden')) {
             chatWindow.classList.remove('hidden');
-            // Timeout hack agar Tailwind punya waktu me-render 'display: block/flex' sebelum transisi
             setTimeout(() => {
                 chatWindow.classList.remove('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
                 chatWindow.classList.add('flex', 'opacity-100', 'translate-y-0', 'scale-100');
             }, 10);
+            sessionStorage.setItem('pota_chat_open', 'true');
+        }
+        switchChatTab('seller', false);
+        setTimeout(() => { openStoreChat(storeId, storeName, initials); }, 300);
+    }
 
+    function toggleChatWindow() {
+        if(chatWindow.classList.contains('hidden')) {
+            const lastTab = sessionStorage.getItem('pota_chat_tab') || 'seller';
+            chatWindow.classList.remove('hidden');
+            setTimeout(() => {
+                chatWindow.classList.remove('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
+                chatWindow.classList.add('flex', 'opacity-100', 'translate-y-0', 'scale-100');
+            }, 10);
             switchChatTab(lastTab, true);
             sessionStorage.setItem('pota_chat_open', 'true');
+            fetchSellerContacts(false);
         } else {
             chatWindow.classList.add('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
             chatWindow.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
@@ -308,54 +391,44 @@
 
     function switchChatTab(tabName, instant = false) {
         sessionStorage.setItem('pota_chat_tab', tabName);
-
         if(tabName === 'ai') {
             tabSlider.style.transform = 'translateX(100%)';
             tabAIBtn.classList.replace('text-zinc-400', 'text-zinc-900');
             tabSellerBtn.classList.replace('text-zinc-900', 'text-zinc-400');
-
             viewAI.style.display = 'flex';
             if(!instant) {
                 viewSeller.classList.replace('translate-x-0', '-translate-x-10');
                 viewSeller.classList.replace('opacity-100', 'opacity-0');
                 viewSeller.classList.replace('pointer-events-auto', 'pointer-events-none');
-                viewSeller.classList.replace('z-20', 'z-10');
             } else {
-                viewSeller.classList.add('opacity-0', 'pointer-events-none', '-translate-x-10', 'z-10');
-                viewSeller.classList.remove('opacity-100', 'pointer-events-auto', 'translate-x-0', 'z-20');
+                viewSeller.classList.add('opacity-0', 'pointer-events-none', '-translate-x-10');
+                viewSeller.classList.remove('opacity-100', 'pointer-events-auto', 'translate-x-0');
             }
-
             setTimeout(() => {
                 if(!instant) viewSeller.style.display = 'none';
                 viewAI.classList.replace('opacity-0', 'opacity-100');
                 viewAI.classList.replace('translate-x-10', 'translate-x-0');
                 viewAI.classList.replace('pointer-events-none', 'pointer-events-auto');
-                viewAI.classList.replace('z-10', 'z-20');
                 document.getElementById('ai-chat-input').focus();
             }, instant ? 10 : 300);
-
         } else {
             tabSlider.style.transform = 'translateX(0)';
             tabSellerBtn.classList.replace('text-zinc-400', 'text-zinc-900');
             tabAIBtn.classList.replace('text-zinc-900', 'text-zinc-400');
-
             viewSeller.style.display = 'flex';
             if(!instant) {
                 viewAI.classList.replace('translate-x-0', 'translate-x-10');
                 viewAI.classList.replace('opacity-100', 'opacity-0');
                 viewAI.classList.replace('pointer-events-auto', 'pointer-events-none');
-                viewAI.classList.replace('z-20', 'z-10');
             } else {
-                viewAI.classList.add('opacity-0', 'pointer-events-none', 'translate-x-10', 'z-10');
-                viewAI.classList.remove('opacity-100', 'pointer-events-auto', 'translate-x-0', 'z-20');
+                viewAI.classList.add('opacity-0', 'pointer-events-none', 'translate-x-10');
+                viewAI.classList.remove('opacity-100', 'pointer-events-auto', 'translate-x-0');
             }
-
             setTimeout(() => {
                 if(!instant) viewAI.style.display = 'none';
                 viewSeller.classList.replace('opacity-0', 'opacity-100');
                 viewSeller.classList.replace('-translate-x-10', 'translate-x-0');
                 viewSeller.classList.replace('pointer-events-none', 'pointer-events-auto');
-                viewSeller.classList.replace('z-10', 'z-20');
             }, instant ? 10 : 300);
         }
     }
@@ -375,27 +448,35 @@
         document.getElementById('seller-empty-state').classList.remove('opacity-0');
         currentStoreId = null;
         sessionStorage.removeItem('pota_active_store');
-        fetchSellerContacts();
+        fetchSellerContacts(); 
     }
 
 
     /* ========================================================
        2. SELLER CHAT LOGIC (100% REAL API)
        ======================================================== */
-    async function fetchSellerContacts() {
+    async function fetchSellerContacts(showLoading = true) {
         const contactList = document.getElementById('seller-contact-list');
+        if(showLoading && contactList.innerHTML === "") contactList.innerHTML = `<div class="p-6 text-center text-zinc-400 flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i><span class="text-[10px] font-bold uppercase">Memuat...</span></div>`;
         try {
             const res = await fetch('/api/chat/contacts');
             if(!res.ok) throw new Error();
             const data = await res.json();
             renderContacts(data, contactList);
+
+            // LOGIKA DOT MERAH GLOBAL
+            const hasUnread = data.some(c => c.unread_count > 0);
+            const dot = document.getElementById('unread-global-dot');
+            if(hasUnread) dot.classList.remove('hidden');
+            else dot.classList.add('hidden');
+
         } catch(e) {
-            contactList.innerHTML = `<div class="p-6 text-center text-zinc-500 text-xs font-medium">Gagal memuat kontak. Pastikan Anda sudah login.</div>`;
+            if(showLoading) contactList.innerHTML = `<div class="p-6 text-center text-zinc-500 text-xs font-medium">Gagal memuat kontak. Pastikan Anda sudah login.</div>`;
         }
     }
 
     function renderContacts(data, container) {
-        container.innerHTML = '';
+        let html = '';
         if(data.length === 0) {
             container.innerHTML = `<div class="p-6 text-center text-zinc-400 text-xs font-medium">Belum ada obrolan. Cari produk dan klik chat!</div>`;
             return;
@@ -403,10 +484,10 @@
 
         data.forEach(toko => {
             const initial = toko.nama_toko.substring(0, 2).toUpperCase();
-            const unreadBadge = toko.unread_count > 0 ? `<div class="bg-red-500 text-white text-[9px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center shadow-sm absolute -top-1 -right-1 z-10">${toko.unread_count}</div>` : '';
+            const unreadBadge = toko.unread_count > 0 ? `<div class="bg-red-500 text-white text-[9px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center shadow-sm absolute -top-1 -right-1 z-10 animate-bounce">${toko.unread_count}</div>` : '';
             const isActive = currentStoreId == toko.store_id ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'hover:bg-zinc-50 border-l-4 border-l-transparent';
 
-            let html = `
+            html += `
             <div onclick="openStoreChat(${toko.store_id}, '${toko.nama_toko}', '${initial}')" class="flex items-center gap-3 p-3 border-b border-zinc-100 cursor-pointer transition-all group ${isActive}">
                 <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-inner group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors relative">
                     ${initial}
@@ -423,8 +504,8 @@
                 </div>
                 <div class="md:hidden absolute top-1 right-1">${unreadBadge}</div>
             </div>`;
-            container.insertAdjacentHTML('beforeend', html);
         });
+        container.innerHTML = html;
     }
 
     document.getElementById('sellerSearchInput').addEventListener('keyup', function() {
@@ -439,7 +520,6 @@
 
     async function openStoreChat(storeId, storeName, initials, triggerAnimation = true) {
         currentStoreId = storeId;
-
         sessionStorage.setItem('pota_active_store', storeId);
         sessionStorage.setItem('pota_active_name', storeName);
         sessionStorage.setItem('pota_active_avatar', initials);
@@ -450,7 +530,6 @@
         if(triggerAnimation) {
             emptyState.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => { emptyState.classList.add('hidden'); }, 300);
-
             activeChat.classList.remove('hidden');
             setTimeout(() => { activeChat.classList.remove('opacity-0'); }, 50);
         } else {
@@ -462,103 +541,198 @@
         document.getElementById('active-store-avatar').innerText = initials;
 
         const msgContainer = document.getElementById('seller-chat-messages');
-        msgContainer.innerHTML = `<div class="text-center text-xs font-bold text-zinc-400 my-4 flex items-center justify-center gap-2"><i class="fas fa-circle-notch fa-spin"></i> Memuat histori...</div>`;
+        if(triggerAnimation) {
+            msgContainer.innerHTML = `<div class="text-center text-xs font-bold text-zinc-400 my-4 flex items-center justify-center gap-2"><i class="fas fa-circle-notch fa-spin"></i> Memuat histori...</div>`;
+        }
 
+        loadMessages(storeId, true);
+    }
+
+    // FUNGSI POLLING CERDAS ANTI FLICKER (Hanya render jika ada pesan baru)
+    async function loadMessages(storeId, isInitialLoad = false) {
         try {
             const res = await fetch(`/api/chat/messages/${storeId}`);
             if(!res.ok) throw new Error();
             const data = await res.json();
+            const msgContainer = document.getElementById('seller-chat-messages');
 
-            msgContainer.innerHTML = '';
-            if(data.length === 0) {
-                 msgContainer.innerHTML = `<div class="text-center text-[10px] font-bold text-zinc-400 my-4 bg-white p-2 mx-auto rounded-full border border-zinc-200 max-w-[200px] shadow-sm">Belum ada obrolan. Mulai sapa penjual!</div>`;
+            if(data.is_typing) document.getElementById('typing-indicator').classList.remove('hidden');
+            else document.getElementById('typing-indicator').classList.add('hidden');
+
+            if (isInitialLoad || data.length !== currentMessageCount) {
+                msgContainer.innerHTML = '';
+                currentMessageCount = data.length;
+
+                if(data.length === 0) {
+                     msgContainer.innerHTML = `<div class="text-center text-[10px] font-bold text-zinc-400 my-4 bg-white p-2 mx-auto rounded-full border border-zinc-200 max-w-[200px] shadow-sm">Belum ada obrolan. Mulai sapa penjual!</div>`;
+                } else {
+                     data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad));
+                }
+                if(isInitialLoad || msgContainer.scrollHeight - msgContainer.scrollTop < 500) {
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                }
             } else {
-                 data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName));
+                updateReadTicks(data);
             }
-            fetchSellerContacts();
+            fetchSellerContacts(false); 
         } catch(e) {
-            msgContainer.innerHTML = `<div class="text-center text-xs font-bold text-red-500 my-4 bg-red-50 p-2 rounded-xl border border-red-200 mx-auto max-w-[250px]">Gagal memuat histori chat. Pastikan server terhubung.</div>`;
+            if(isInitialLoad) {
+                document.getElementById('seller-chat-messages').innerHTML = `<div class="text-center text-xs font-bold text-red-500 my-4 bg-red-50 p-2 rounded-xl border border-red-200 mx-auto max-w-[250px]">Gagal memuat histori chat. Pastikan server terhubung.</div>`;
+            }
         }
     }
 
-    function appendSellerMessage(content, sender, time, type = 'text', fileName = '') {
+    function updateReadTicks(items) {
+        const msgContainer = document.getElementById('seller-chat-messages');
+        const messageElements = msgContainer.querySelectorAll('.message-bubble');
+        items.forEach((msg, index) => {
+            let isOut = msg.sender === 'user';
+            if (isOut && msg.is_read == 1 && messageElements[index]) {
+                const statusContainer = messageElements[index].querySelector('.chat-status');
+                if (statusContainer && statusContainer.innerHTML.includes('fa-check') && !statusContainer.innerHTML.includes('fa-check-double')) {
+                    statusContainer.className = 'chat-status flex items-center gap-1 bg-white/25 text-white px-1.5 py-[2px] rounded uppercase ml-1 transition-all duration-300';
+                    statusContainer.innerHTML = `<span class="text-[8px] tracking-wider font-black">SEEN</span><i class="chat-tick fas fa-check-double text-[11px] leading-none"></i>`;
+                }
+            }
+        });
+    }
+
+    function appendSellerMessage(content, sender, time, type = 'text', fileName = '', isRead = 0, animate = true) {
         const container = document.getElementById('seller-chat-messages');
+        const isOut = sender === 'user'; // Di sisi customer, 'user' adalah diri sendiri
+
+        let wrapAlign = isOut ? 'self-end items-end' : 'self-start items-start';
+        let bubbleColor = isOut ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm shadow-md' : 'bg-white border border-zinc-200 text-zinc-800 rounded-r-2xl rounded-tl-2xl rounded-bl-sm shadow-sm';
+        let timeColor = isOut ? 'text-blue-100' : 'text-zinc-400';
+        let animClass = animate ? 'animate-[scale-in_0.2s_ease-out]' : '';
+        let transformOrigin = isOut ? 'origin-bottom-right' : 'origin-bottom-left';
+
+        // Logika Centang Customer (Pakai FontAwesome FAS)
+        let tickHtml = '';
+        if(isOut) {
+            if(isRead == 1) {
+                tickHtml = `<div class="chat-status flex items-center gap-1 bg-white/25 text-white px-1.5 py-[2px] rounded uppercase ml-1"><span class="text-[8px] tracking-wider font-black">SEEN</span><i class="chat-tick fas fa-check-double text-[11px] leading-none"></i></div>`;
+            } else {
+                tickHtml = `<div class="chat-status flex items-center gap-1 text-blue-200 px-1.5 py-0.5 ml-1"><i class="chat-tick fas fa-check text-[11px] leading-none"></i></div>`;
+            }
+        }
 
         let innerHTML = '';
-        if(type === 'text') {
-            innerHTML = `<div class="p-3 md:p-3.5 text-xs md:text-sm font-medium leading-relaxed break-words">${content}</div>`;
-        }
-        else if (type === 'image') {
-            innerHTML = `<div class="p-1"><img src="${content}" class="max-w-[200px] md:max-w-[250px] rounded-xl object-cover cursor-pointer hover:opacity-90 border border-black/5" alt="Uploaded Image"></div>`;
+        if(type === 'image') {
+            innerHTML = `<div class="p-1"><img src="${content}" onclick="openLightbox('${content}')" class="max-w-[200px] md:max-w-[250px] rounded-xl object-cover cursor-pointer hover:opacity-90 border border-black/5 transition-all" alt="Uploaded Image"></div>`;
         }
         else if (type === 'file') {
             innerHTML = `
-            <a href="${content}" download="${fileName}" class="p-3 flex items-center gap-3 hover:bg-black/5 transition-colors rounded-xl no-underline">
+            <a href="${content}" download="${fileName}" class="p-2 flex items-center gap-3 hover:bg-black/5 transition-colors rounded-xl no-underline">
                 <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600 shrink-0"><i class="fas fa-file-pdf text-xl"></i></div>
                 <div class="flex flex-col min-w-0 pr-2">
-                    <span class="text-xs font-bold truncate max-w-[150px] md:max-w-[200px] text-zinc-800">${fileName}</span>
-                    <span class="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5"><i class="fas fa-download"></i> Unduh File</span>
+                    <span class="text-xs font-bold truncate max-w-[150px] md:max-w-[200px] ${isOut ? 'text-white' : 'text-zinc-800'}">${fileName}</span>
+                    <span class="text-[9px] ${isOut ? 'text-blue-200' : 'text-zinc-500'} uppercase tracking-widest mt-0.5"><i class="fas fa-download"></i> Unduh File</span>
                 </div>
             </a>`;
         }
         else if (type === 'audio') {
             innerHTML = `<div class="p-2 w-[220px] md:w-[260px]"><audio controls src="${content}" class="w-full custom-audio"></audio></div>`;
         }
-
-        let html = '';
-        if(sender === 'user') {
-            html = `
-            <div class="flex justify-end max-w-[85%] self-end group origin-bottom-right animate-[scale-in_0.2s_ease-out]">
-                <div class="flex flex-col items-end">
-                    <div class="bg-blue-600 text-white rounded-2xl rounded-tr-sm shadow-md overflow-hidden">${innerHTML}</div>
-                    <span class="text-[9px] font-bold text-zinc-400 mt-1.5">${time}</span>
-                </div>
-            </div>`;
-        } else {
-            html = `
-            <div class="flex gap-2.5 max-w-[85%] group origin-bottom-left animate-[scale-in_0.2s_ease-out]">
-                <div class="w-6 h-6 rounded-full bg-emerald-500 shrink-0 flex items-center justify-center text-white text-[8px] mt-auto shadow-sm"><i class="fas fa-store"></i></div>
-                <div class="flex flex-col items-start">
-                    <div class="bg-white border border-zinc-200 text-zinc-800 rounded-2xl rounded-tl-sm shadow-sm overflow-hidden">${innerHTML}</div>
-                    <span class="text-[9px] font-bold text-zinc-400 mt-1.5">${time}</span>
-                </div>
-            </div>`;
+        else {
+            innerHTML = `<div class="px-4 py-2.5 text-[13px] md:text-sm font-medium leading-relaxed break-words">${content}</div>`;
         }
 
+        let html = `
+            <div class="message-bubble flex flex-col max-w-[85%] md:max-w-[75%] ${wrapAlign} ${transformOrigin} ${animClass}">
+                <div class="${bubbleColor}">
+                    ${innerHTML}
+                    <div class="text-[9px] font-bold mt-1 px-3 pb-2 text-right ${timeColor} flex items-center justify-end gap-1">
+                        ${time} ${tickHtml}
+                    </div>
+                </div>
+            </div>`;
+
         container.insertAdjacentHTML('beforeend', html);
-        container.scrollTop = container.scrollHeight;
         sessionStorage.setItem('pota_seller_dom', container.innerHTML);
     }
 
-    async function handleFileUpload(inputElement, type) {
+    // ========================================================
+    // LOGIKA PREVIEW MEDIA & UPLOAD
+    // ========================================================
+    window.handleFileUpload = function(inputElement, type) {
         const file = inputElement.files[0];
         if(!file || !currentStoreId) return;
 
-        if(file.size > 2000000) {
-            alert('Maksimal ukuran file adalah 2MB.');
-            return;
-        }
+        if(file.size > 2000000) { alert('Maksimal ukuran file adalah 2MB.'); return; }
 
         const reader = new FileReader();
         reader.onload = async function(e) {
-            const base64data = e.target.result;
-            const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-
-            appendSellerMessage(base64data, 'user', timeNow, type, file.name);
-
-            try {
-                await fetch('/api/chat/send', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-                    body: JSON.stringify({ message: base64data, store_id: currentStoreId, type: type, file_name: file.name })
-                });
-                fetchSellerContacts();
-            } catch(error) {
-                console.error("Gagal mengirim file ke server", error);
-            }
+            showMediaPreview(type, e.target.result, file.name);
         };
         reader.readAsDataURL(file);
         inputElement.value = '';
+    }
+
+    function showMediaPreview(type, content, fileName) {
+        pendingMedia = { type, content, fileName };
+        const container = document.getElementById('media-preview-container');
+        const contentDiv = document.getElementById('media-preview-content');
+
+        if(type === 'image') {
+            contentDiv.innerHTML = `<img src="${content}" class="h-12 w-12 object-cover rounded-lg border border-zinc-200 shadow-sm"> <div class="flex flex-col"><span class="text-xs font-black text-zinc-800 truncate">Gambar Siap Kirim</span><span class="text-[10px] text-zinc-400">Tambahkan pesan teks di bawah jika perlu...</span></div>`;
+        } else if (type === 'file') {
+            contentDiv.innerHTML = `<div class="h-12 w-12 bg-red-100 text-red-500 rounded-lg flex items-center justify-center text-xl shadow-sm"><i class="fas fa-file-pdf"></i></div> <div class="flex flex-col"><span class="text-xs font-black text-zinc-800 truncate max-w-[200px]">${fileName}</span><span class="text-[10px] text-zinc-400">Dokumen siap kirim</span></div>`;
+        } else if (type === 'audio') {
+            contentDiv.innerHTML = `<div class="h-12 w-12 bg-blue-100 text-blue-500 rounded-lg flex items-center justify-center text-xl shadow-sm"><i class="fas fa-microphone"></i></div> <div class="flex flex-col"><span class="text-xs font-black text-zinc-800">Voice Note</span><span class="text-[10px] text-zinc-400">Siap dikirim</span></div>`;
+        }
+
+        container.classList.remove('hidden'); container.classList.add('flex');
+    }
+
+    window.cancelMediaPreview = function() {
+        pendingMedia = null;
+        const container = document.getElementById('media-preview-container');
+        container.classList.add('hidden'); container.classList.remove('flex');
+    }
+
+    // LOGIKA PENGIRIMAN FINAL KE BACKEND
+    function sendMediaMessage(content, type = 'text', fileName = '', caption = '') {
+        if(!content || !currentStoreId) return;
+
+        let btn = document.getElementById('btn-send-seller');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>';
+
+        const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+        appendSellerMessage(content, 'user', timeNow, type, fileName, 0, true);
+        if (caption && type !== 'text') {
+            setTimeout(() => appendSellerMessage(caption, 'user', timeNow, 'text', '', 0, true), 100);
+        }
+
+        const msgContainer = document.getElementById('seller-chat-messages');
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+        currentMessageCount++;
+        
+        let payload = { chat_id: currentStoreId, message: content, type: type, file_name: fileName };
+
+        fetch('/api/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify(payload)
+        })
+        .then(async res => {
+            if(!res.ok) throw new Error();
+            if (caption && type !== 'text') {
+                fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: JSON.stringify({ chat_id: currentStoreId, message: caption, type: 'text' })
+                });
+            }
+            fetchSellerContacts(false);
+        })
+        .catch(err => { console.error(err); })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane text-xs"></i>';
+            document.getElementById('seller-chat-input').focus();
+        });
     }
 
     let vnRecorder;
@@ -566,10 +740,7 @@
     let isRecordingVN = false;
 
     async function toggleSellerVoiceNote() {
-        if(!currentStoreId) {
-            alert('Pilih toko terlebih dahulu di sebelah kiri!');
-            return;
-        }
+        if(!currentStoreId) return alert('Pilih toko terlebih dahulu di sebelah kiri!');
 
         const btn = document.getElementById('record-vn-btn');
         const ping = document.getElementById('vn-ping');
@@ -578,11 +749,9 @@
         if(isRecordingVN) {
             vnRecorder.stop();
             isRecordingVN = false;
-
             btn.classList.remove('text-red-500'); btn.classList.add('text-zinc-400');
             ping.classList.add('hidden');
             indicator.classList.add('hidden'); indicator.classList.remove('flex');
-
         } else {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -595,19 +764,7 @@
                     const reader = new FileReader();
 
                     reader.onload = async function(e) {
-                        const base64audio = e.target.result;
-                        const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-
-                        appendSellerMessage(base64audio, 'user', timeNow, 'audio');
-
-                        try {
-                            await fetch('/api/chat/send', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-                                body: JSON.stringify({ message: base64audio, store_id: currentStoreId, type: 'audio' })
-                            });
-                            fetchSellerContacts();
-                        } catch(err) { console.error("Gagal kirim VN"); }
+                        showMediaPreview('audio', e.target.result, 'Voice Note');
                     };
                     reader.readAsDataURL(audioBlob);
                     stream.getTracks().forEach(track => track.stop());
@@ -624,68 +781,6 @@
             }
         }
     }
-
-    async function sendSellerMessage() {
-        const input = document.getElementById('seller-chat-input');
-        const text = input.value.trim();
-        if(!text || !currentStoreId) return;
-
-        const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-        const msgContainer = document.getElementById('seller-chat-messages');
-        const tempId = `msg-temp-${Date.now()}`;
-
-        const html = `
-        <div class="flex justify-end max-w-[85%] self-end group opacity-70 origin-bottom-right animate-[scale-in_0.2s_ease-out]" id="${tempId}">
-            <div class="flex flex-col items-end">
-                <div class="bg-blue-600 text-white p-3 md:p-3.5 rounded-2xl rounded-tr-sm text-xs md:text-sm shadow-md font-medium leading-relaxed break-words">${text}</div>
-                <span class="text-[9px] font-bold text-zinc-400 mt-1.5 flex items-center gap-1"><i class="far fa-clock"></i> Mengirim...</span>
-            </div>
-        </div>`;
-        msgContainer.insertAdjacentHTML('beforeend', html);
-        msgContainer.scrollTop = msgContainer.scrollHeight;
-        input.value = '';
-
-        try {
-            const res = await fetch('/api/chat/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                body: JSON.stringify({ message: text, store_id: currentStoreId, type: 'text' })
-            });
-            if(!res.ok) throw new Error();
-
-            const tempMsg = document.getElementById(tempId);
-            if(tempMsg) {
-                tempMsg.classList.remove('opacity-70');
-                const clockIcon = tempMsg.querySelector('.fa-clock');
-                if(clockIcon) {
-                    clockIcon.classList.replace('far', 'fas');
-                    clockIcon.classList.replace('fa-clock', 'fa-check-double');
-                    clockIcon.parentElement.innerHTML = `<i class="fas fa-check-double text-blue-500"></i> ${timeNow}`;
-                }
-                sessionStorage.setItem('pota_seller_dom', msgContainer.innerHTML);
-                fetchSellerContacts();
-            }
-        } catch(e) {
-            const tempMsg = document.getElementById(tempId);
-            if(tempMsg) {
-                tempMsg.classList.remove('opacity-70');
-                const clockIcon = tempMsg.querySelector('.fa-clock');
-                if(clockIcon) {
-                    clockIcon.classList.replace('far', 'fas');
-                    clockIcon.classList.replace('fa-clock', 'fa-exclamation-circle');
-                    clockIcon.parentElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500"></i> Gagal dikirim`;
-                    clockIcon.parentElement.classList.replace('text-zinc-400', 'text-red-500');
-                }
-            }
-        }
-    }
-
-    document.getElementById('seller-chat-input').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendSellerMessage();
-        }
-    });
 
 
     /* ========================================================
