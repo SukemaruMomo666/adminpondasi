@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentMessageCount = -1;
     let pendingMedia = null;
 
-    // Variabel Pengganti Polling
     let echoChannel = null;
     let typingTimeout = null;
 
@@ -241,7 +240,8 @@ document.addEventListener('DOMContentLoaded', function() {
     msgInput.addEventListener('input', function() {
         if(activeChatId && echoChannel) {
             window.Echo.private(echoChannel).whisper('typing', {
-                is_typing: true
+                is_typing: true,
+                sender: 'seller'
             });
         }
     });
@@ -337,20 +337,22 @@ document.addEventListener('DOMContentLoaded', function() {
             window.Echo.leave(echoChannel);
         }
 
+        // PASTIKAN NAMA CHANNEL INI SAMA DENGAN YG DITEMBAK BACKEND!
         echoChannel = `chat.${activeChatId}`;
 
         // FUNGSI HANDLE PESAN BARU (SUPER AMAN)
         const handleNewMessage = (e) => {
-            console.log("Menerima Pesan dari Pusher: ", e); // Buat jaga-jaga kalau bos mau cek Inspect Element
+            console.log("Seller menerima Pesan dari Pusher: ", e);
 
-            // Fallback object: Kadang Laravel meletakkan data di luar 'message'
             let msgData = e.message || e;
 
-            // Cek apakah pesan berasal dari diri sendiri (Seller)
+            // Pastikan ini BUKAN pesan dari Seller sendiri
             let isSeller = msgData.sender === 'seller' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
 
-            // Jika BUKAN seller (berarti dari pelanggan), baru tampilkan di layar
+            // Tampilkan jika dikirim oleh customer
             if (!isSeller) {
+                document.getElementById('typing-indicator').classList.add('hidden');
+
                 let text = msgData.content || msgData.text || msgData.message_text || '';
                 let type = msgData.type || msgData.message_type || 'text';
                 let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
@@ -359,10 +361,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 appendMessageUI(text, false, time, type, file, 0, true);
                 scrollToBottom();
             }
-            loadChatList(); // Refresh sidebar otomatis
+            loadChatList();
         };
 
-        // KITA LISTEN 2 VERSI EVENT (DENGAN TITIK DAN TANPA TITIK)
         window.Echo.private(echoChannel)
             .listen('PesanBaruTerkirim', handleNewMessage)
             .listen('.PesanBaruTerkirim', handleNewMessage)
@@ -373,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     clearTimeout(typingTimeout);
                     typingTimeout = setTimeout(() => {
                         typingIndicator.classList.add('hidden');
-                    }, 1500);
+                    }, 2000);
                 }
             });
     });
@@ -387,12 +388,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 let items = data.data || data;
                 if(!Array.isArray(items)) items = [];
-
-                if(data.is_typing) {
-                    typingIndicator.classList.remove('hidden');
-                } else {
-                    typingIndicator.classList.add('hidden');
-                }
 
                 if (isInitialLoad || items.length !== currentMessageCount) {
                     msgArea.innerHTML = '';
