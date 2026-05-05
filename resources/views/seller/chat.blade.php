@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentMessageCount = -1;
     let pendingMedia = null;
 
-    // Variabel Baru Pengganti Polling
+    // Variabel Pengganti Polling
     let echoChannel = null;
     let typingTimeout = null;
 
@@ -339,15 +339,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
         echoChannel = `chat.${activeChatId}`;
 
+        // FUNGSI HANDLE PESAN BARU (SUPER AMAN)
+        const handleNewMessage = (e) => {
+            console.log("Menerima Pesan dari Pusher: ", e); // Buat jaga-jaga kalau bos mau cek Inspect Element
+
+            // Fallback object: Kadang Laravel meletakkan data di luar 'message'
+            let msgData = e.message || e;
+
+            // Cek apakah pesan berasal dari diri sendiri (Seller)
+            let isSeller = msgData.sender === 'seller' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
+
+            // Jika BUKAN seller (berarti dari pelanggan), baru tampilkan di layar
+            if (!isSeller) {
+                let text = msgData.content || msgData.text || msgData.message_text || '';
+                let type = msgData.type || msgData.message_type || 'text';
+                let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                let file = msgData.file_name || msgData.fileName || '';
+
+                appendMessageUI(text, false, time, type, file, 0, true);
+                scrollToBottom();
+            }
+            loadChatList(); // Refresh sidebar otomatis
+        };
+
+        // KITA LISTEN 2 VERSI EVENT (DENGAN TITIK DAN TANPA TITIK)
         window.Echo.private(echoChannel)
-            .listen('PesanBaruTerkirim', (e) => {
-                // Pastikan yang dimasukkan ke obrolan hanya pesan dari lawan bicara
-                if (e.message.sender !== 'seller' && e.message.is_mine !== true) {
-                    appendMessageUI(e.message.content || e.message.text, false, e.message.time, e.message.type, e.message.file_name || e.message.fileName, 0, true);
-                    scrollToBottom();
-                }
-                loadChatList(); // Refresh sidebar otomatis
-            })
+            .listen('PesanBaruTerkirim', handleNewMessage)
+            .listen('.PesanBaruTerkirim', handleNewMessage)
             .listenForWhisper('typing', (e) => {
                 if(e.is_typing) {
                     typingIndicator.classList.remove('hidden');
@@ -621,14 +639,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========================================================
     // GLOBAL LISTENER UNTUK UPDATE SIDEBAR SECARA REALTIME
-    // (Akan otomatis menyala jika ada pesan masuk baru dari siapapun)
     // ========================================================
     const sellerId = "{{ auth()->id() ?? 0 }}";
     if (sellerId != 0) {
+        const handleGlobalUpdate = () => { loadChatList(); };
         window.Echo.private(`seller.${sellerId}`)
-            .listen('PesanBaruTerkirim', (e) => {
-                loadChatList();
-            });
+            .listen('PesanBaruTerkirim', handleGlobalUpdate)
+            .listen('.PesanBaruTerkirim', handleGlobalUpdate);
     }
 });
 </script>
