@@ -259,7 +259,7 @@
     @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0.8) translateY(0); opacity: 0.5; } 40% { transform: scale(1.2) translateY(-4px); opacity: 1; background-color: #3b82f6; } }
     @keyframes slideUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
 </style>
-
+@push('scripts')
 <script>
     /* === 1. GLOBAL UI & TRIGGER LOGIC === */
     const chatWindow = document.getElementById('live-chat-window');
