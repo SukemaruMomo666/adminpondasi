@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Seller; // <- Pastikan Namespace nya Seller
+namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Events\PesanBaruTerkirim; // <-- WAJIB IMPORT EVENT PUSHER
 
 class ChatController extends Controller
 {
@@ -24,19 +25,17 @@ class ChatController extends Controller
      */
     public function getChatList()
     {
-        $userId = Auth::id(); // Ambil ID Seller yang sedang login
+        $userId = Auth::id();
 
         $toko = DB::table('tb_toko')->where('user_id', $userId)->first();
         if (!$toko) {
             return response()->json(['status' => 'error', 'message' => 'Toko tidak ditemukan.']);
         }
 
-        // Subquery: Ambil ID pesan terakhir dari setiap percakapan
         $latestMessages = DB::table('messages')
             ->select('chat_id', DB::raw('MAX(id) as last_msg_id'))
             ->groupBy('chat_id');
 
-        // Query Utama: Gabungkan Chat, Pelanggan, dan Pesan Terakhir
         $chatsQuery = DB::table('chats')
             ->join('tb_user', 'chats.customer_id', '=', 'tb_user.id')
             ->leftJoinSub($latestMessages, 'latest_msg', function ($join) {
@@ -50,15 +49,11 @@ class ChatController extends Controller
                 'messages.message_text',
                 'messages.message_type',
                 'messages.timestamp as last_time',
-                // Hitung pesan yang belum dibaca dari pelanggan
                 DB::raw("(SELECT COUNT(*) FROM messages m2 WHERE m2.chat_id = chats.id AND m2.is_read = 0 AND m2.sender_id != {$userId}) as unread_count")
             )
-            // BUG FIX DEWA: Menggunakan CASE WHEN agar aman di SEMUA versi MySQL/MariaDB
-            // Pesan kosong ditaruh di bawah, pesan terbaru di atas.
             ->orderByRaw('CASE WHEN messages.timestamp IS NULL THEN 1 ELSE 0 END, messages.timestamp DESC')
             ->get();
 
-        // Format data untuk Frontend
         $formattedChats = $chatsQuery->map(function ($chat) {
             $preview = $chat->message_text;
             if ($chat->message_type === 'image') $preview = '📷 Mengirim Gambar';
@@ -100,7 +95,6 @@ class ChatController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Akses ditolak.'], 403);
         }
 
-        // Tandai pesan dari pelanggan sebagai "Telah Dibaca"
         DB::table('messages')
             ->where('chat_id', $chatId)
             ->where('sender_id', '!=', $userId)
@@ -110,7 +104,6 @@ class ChatController extends Controller
                 'read_at' => Carbon::now()
             ]);
 
-        // Ambil histori pesan
         $messages = DB::table('messages')
             ->where('chat_id', $chatId)
             ->orderBy('timestamp', 'asc')
@@ -124,7 +117,7 @@ class ChatController extends Controller
                     'content' => $content,
                     'type' => $msg->message_type,
                     'fileName' => $msg->message_type === 'file' ? $msg->message_text : '',
-                    'is_read' => $msg->is_read, // <--- PENYELARASAN: Wajib dikirim agar centang biru berfungsi!
+                    'is_read' => $msg->is_read,
                     'time' => Carbon::parse($msg->timestamp)->format('H:i')
                 ];
             });
@@ -133,7 +126,7 @@ class ChatController extends Controller
     }
 
     /**
-     * 4. API: Mengirim Pesan (Teks, Gambar, File, Voice Note)
+     * 4. API: Mengirim Pesan & TRIGGER PUSHER
      */
     public function sendMessage(Request $request)
     {
@@ -164,7 +157,6 @@ class ChatController extends Controller
         try {
             if (in_array($msgType, ['image', 'audio', 'file']) && preg_match('/^data:(\w+\/[\w+-.]+);base64,/', $rawMessage, $matches)) {
                 $mimeType = $matches[1];
-
                 $extensions = [
                     'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
                     'audio/webm' => 'webm', 'audio/mp3' => 'mp3', 'audio/ogg' => 'ogg',
@@ -172,13 +164,10 @@ class ChatController extends Controller
                     'application/msword' => 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
                     'application/vnd.ms-excel' => 'xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx'
                 ];
-
                 $extension = $extensions[$mimeType] ?? 'bin';
                 $fileData = base64_decode(substr($rawMessage, strpos($rawMessage, ',') + 1));
-
                 $generateName = 'seller_' . time() . '_' . uniqid() . '.' . $extension;
                 $storagePath = 'chat_media/' . $generateName;
-
                 Storage::disk('public')->put($storagePath, $fileData);
 
                 $fileUrl = '/storage/' . $storagePath;
@@ -187,7 +176,7 @@ class ChatController extends Controller
                 $fileUrl = null;
             }
 
-            DB::table('messages')->insert([
+            $messageId = DB::table('messages')->insertGetId([
                 'chat_id' => $chatId,
                 'sender_id' => $userId,
                 'message_text' => $messageText,
@@ -198,6 +187,24 @@ class ChatController extends Controller
             ]);
 
             DB::commit();
+
+            // ========================================================
+            // PENYEMPURNAAN: TRIGGER PUSHER EVENT KE JARINGAN REALTIME
+            // ========================================================
+            $payloadPusher = [
+                'id' => $messageId,
+                'chat_id' => $chatId,
+                'sender' => 'seller',
+                'sender_id' => $userId,
+                'content' => $msgType === 'text' ? $messageText : $fileUrl,
+                'type' => $msgType,
+                'file_name' => $fileNameParam,
+                'time' => Carbon::now()->format('H:i')
+            ];
+
+            // Panggil event agar diteruskan ke Pusher
+            event(new PesanBaruTerkirim($payloadPusher));
+
             return response()->json(['status' => 'success', 'message' => 'Pesan terkirim']);
 
         } catch (\Exception $e) {
