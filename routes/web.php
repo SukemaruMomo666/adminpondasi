@@ -112,7 +112,7 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Product Management (SUDAH DITAMBAHKAN ROUTE EXCEL)
+    // Product Management
     Route::get('/products/template', [SellerProductController::class, 'downloadTemplate'])->name('products.template');
     Route::post('/products/import', [SellerProductController::class, 'importExcel'])->name('products.import');
     Route::resource('products', SellerProductController::class)->except(['show']);
@@ -125,7 +125,6 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::post('/mass-update', [SellerController::class, 'massUpdateOrderStatus'])->name('massUpdate');
         Route::get('/return', [SellerController::class, 'pengembalian'])->name('return');
         Route::post('/return/process', [SellerController::class, 'processPengembalian'])->name('return.process');
-        // Ubah rutenya menjadi seperti ini:
         Route::get('/{invoice}/detail', [SellerController::class, 'detailPesanan'])->name('show');
     });
 
@@ -147,7 +146,7 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::delete('/vouchers/{id}', [SellerController::class, 'destroyVoucher'])->name('vouchers.destroy');
     });
 
-    // Customer Service (Chat & Reviews) - MENGGUNAKAN SELLER CHAT CONTROLLER DEWA
+    // Customer Service (Chat & Reviews)
     Route::prefix('service')->name('service.')->group(function() {
         Route::get('/chat', [SellerChatController::class, 'chat'])->name('chat');
         Route::get('/chat/list', [SellerChatController::class, 'getChatList'])->name('chat.list');
@@ -173,23 +172,16 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::get('/health', [SellerController::class, 'health'])->name('health');
     });
 
-    // Shop Management (DEWA LOGIC CONNECTED)
+    // Shop Management
     Route::prefix('shop')->name('shop.')->group(function() {
         Route::get('/profile', [ShopController::class, 'profile'])->name('profile');
         Route::put('/profile/update', [ShopController::class, 'updateProfile'])->name('profile.update');
 
-        // --- DEKORASI TOKO ---
         Route::get('/decoration', [ShopController::class, 'decoration'])->name('decoration');
-
-        // --- RUTE EDITOR MOBILE ---
         Route::get('/decoration/editor', [ShopController::class, 'editor'])->name('decoration.editor');
-
-        // --- RUTE EDITOR DESKTOP ---
         Route::get('/decoration/editor-desktop', [ShopController::class, 'editorDesktop'])->name('decoration.editor.desktop');
         Route::get('/decoration/template', [ShopController::class, 'templateSelection'])->name('decoration.template');
         Route::post('/decoration/update', [ShopController::class, 'updateDecoration'])->name('decoration.update');
-
-        // ✅ INI RUTE SAKTI YANG BARU SAJA DITAMBAHKAN
         Route::post('/decoration/save', [ShopController::class, 'saveDecoration'])->name('decoration.save');
 
         Route::get('/settings', [ShopController::class, 'settings'])->name('settings');
@@ -205,6 +197,7 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::get('/print/{invoice}', [SellerController::class, 'printStruk'])->name('print');
     });
 });
+
 // 5. ADMIN PANEL (ENTRANCE)
 Route::get('/kunci-brankas-pks', [AdminAuthController::class, 'showLoginForm'])->name('admin.login');
 Route::post('/kunci-brankas-pks', [AdminAuthController::class, 'login'])->name('admin.login.submit');
@@ -276,3 +269,14 @@ Route::post('/webhook/midtrans', [WebhookController::class, 'midtransHandler'])-
 // 7. EXTERNAL & UTILS
 Route::get('/auth/google', [\App\Http\Controllers\AuthController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [\App\Http\Controllers\AuthController::class, 'handleGoogleCallback']);
+
+// ========================================================
+// RUTE SAPU JAGAT (PEMBERSIH MEMORI SERVER HOSTINGER)
+// ========================================================
+Route::get('/bersih', function() {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    return "<h1>Sapu Jagat Berhasil!</h1><p>Semua memori lama sudah dihapus. Silakan cek API sekarang.</p>";
+});
