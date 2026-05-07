@@ -262,6 +262,8 @@
 
 <script>
     /* === 1. GLOBAL UI & TRIGGER LOGIC === */
+    const authUserId = "{{ auth()->id() ?? 0 }}"; // Variabel ID user diletakkan di global scope
+
     const chatWindow = document.getElementById('live-chat-window');
     const viewSeller = document.getElementById('view-seller');
     const viewAI = document.getElementById('view-ai');
@@ -275,6 +277,7 @@
     let pendingMedia = null;
     let globalPollingInterval = null;
     let typingTimeout = null;
+    let currentEchoChannelName = null; // Menambahkan variabel channel untuk tracking PUSHER
 
     document.addEventListener('DOMContentLoaded', () => {
         const isOpen = sessionStorage.getItem('pota_chat_open') === 'true';
@@ -314,10 +317,10 @@
 
     /* === MENGIRIM SINYAL WHISPER "SEDANG MENGETIK" KE SELLER === */
     document.getElementById('seller-chat-input').addEventListener('input', function() {
-        if(currentStoreId && window.Echo) {
-            window.Echo.private(`chat.toko.${currentStoreId}`).whisper('typing', {
+        if(currentStoreId && window.Echo && currentEchoChannelName) {
+            window.Echo.private(currentEchoChannelName).whisper('typing', {
                 is_typing: true,
-                sender: 'customer'
+                sender: 'customer' // Penanda identitas
             });
         }
     });
@@ -522,8 +525,6 @@
         });
     });
 
-    let currentEchoChannelName = null;
-
     async function openStoreChat(storeId, storeName, initials, triggerAnimation = true) {
         currentStoreId = storeId;
         sessionStorage.setItem('pota_active_store', storeId);
@@ -554,25 +555,27 @@
         loadMessages(storeId, true);
 
         // ========================================================
-        // PENYEMPURNAAN PUSHER (KEBAL ERROR PAYLOAD & EVENT)
+        // PENYEMPURNAAN PUSHER (CHANNEL UNIK & EVENT HANDLING)
         // ========================================================
-        if (window.Echo) {
+        if (window.Echo && authUserId != 0) {
+            // Hapus koneksi channel lama jika user pindah obrolan
             if(currentEchoChannelName) {
                 window.Echo.leave(currentEchoChannelName);
             }
 
-            // Pastikan ini sama dengan di route channels.php (chat.toko.{id} atau chat.{id})
-            currentEchoChannelName = `chat.toko.${storeId}`;
+            // PERBAIKAN 1: Channel unik per user & toko
+            currentEchoChannelName = `chat.room.${authUserId}.${storeId}`;
 
-            // FUNGSI HANDLE PESAN BARU YANG SUPER AMAN
             const handleNewMessage = (e) => {
-                // Kadang data dibungkus dalam e.message, kadang langsung di 'e'
                 let msgData = e.message || e;
 
-                // Cek apakah pengirim ini adalah customer (diri kita sendiri)
-                let isCustomer = msgData.sender === 'user' || msgData.sender === 'customer' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
+                // Pastikan pesan untuk room ini
+                if (msgData.store_id && msgData.store_id != currentStoreId) return;
 
-                // Kalau bukan dari customer (berarti dari SELLER), tampilkan di kiri!
+                // Cek apakah pesan dikirim oleh Customer (diri kita sendiri)
+                let isCustomer = msgData.sender === 'user' || msgData.sender === 'customer' || msgData.is_mine === true || msgData.sender_id == authUserId;
+
+                // Jika pesan dari Toko (Seller), tampilkan di sebelah Kiri
                 if (!isCustomer) {
                     document.getElementById('typing-indicator').classList.add('hidden');
 
@@ -586,23 +589,24 @@
                     scrollToBottom();
                 }
 
-                // Refresh list kontak biar badge notifnya update
                 fetchSellerContacts(false);
             };
 
             window.Echo.private(currentEchoChannelName)
-                // Tangkap event pakai titik maupun tanpa titik (Biar Aman!)
-                .listen('PesanBaruTerkirim', handleNewMessage)
+                // PERBAIKAN 2: Pastikan nama event mendengarkan dengan prefix dot
                 .listen('.PesanBaruTerkirim', handleNewMessage)
                 .listenForWhisper('typing', (e) => {
-                    const typingInd = document.getElementById('typing-indicator');
-                    typingInd.classList.remove('hidden');
-                    scrollToBottom();
+                    // PERBAIKAN 3: Jangan munculkan typing indikator jika yang ngetik kita sendiri
+                    if (e.sender !== 'customer') {
+                        const typingInd = document.getElementById('typing-indicator');
+                        typingInd.classList.remove('hidden');
+                        scrollToBottom();
 
-                    clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(() => {
-                        typingInd.classList.add('hidden');
-                    }, 2000);
+                        clearTimeout(typingTimeout);
+                        typingTimeout = setTimeout(() => {
+                            typingInd.classList.add('hidden');
+                        }, 2000);
+                    }
                 });
         }
     }
@@ -984,7 +988,7 @@
 
             if(isAiCallMode) speakText(data.reply, true);
 
-        } catch(e) {
+            } catch(e) {
             if(document.getElementById('ai-loading')) document.getElementById('ai-loading').remove();
             appendAIMessage("Mohon maaf, server AI POTA sedang sibuk.", 'bot');
         }
@@ -1021,15 +1025,11 @@
     // GLOBAL LISTENER UNTUK CUSTOMER
     // (Menerima Notif/Pesan Tanpa Harus Buka Chat Room)
     // ========================================================
-    const authUserId = "{{ auth()->id() ?? 0 }}";
-    if (authUserId != 0) {
+    if (authUserId != 0 && window.Echo) {
         const handleGlobalUpdate = () => { fetchSellerContacts(false); };
 
-        // Asumsi Customer listen ke channel milik dia sendiri (bukan seller)
         window.Echo.private(`user.${authUserId}`)
-            .listen('PesanBaruTerkirim', handleGlobalUpdate)
             .listen('.PesanBaruTerkirim', handleGlobalUpdate);
     }
 
 </script>
-

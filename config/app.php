@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'PondasiKita'), // Disesuaikan dengan nama project Anda
 
     /*
     |--------------------------------------------------------------------------
@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // PERBAIKAN: Diubah ke waktu Indonesia Barat (WIB) agar timestamp chat akurat
+    'timezone' => 'Asia/Jakarta',
 
     /*
     |--------------------------------------------------------------------------
@@ -78,11 +79,12 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // PERBAIKAN: Diubah ke bahasa Indonesia
+    'locale' => env('APP_LOCALE', 'id'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'id_ID'),
 
     /*
     |--------------------------------------------------------------------------

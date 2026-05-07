@@ -180,12 +180,15 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let activeChatId = null;
+    let activeChatId = null; // Menyimpan ID Customer
     let currentMessageCount = -1;
     let pendingMedia = null;
 
     let echoChannel = null;
     let typingTimeout = null;
+
+    // Asumsi ID Toko diambil dari auth user, sesuaikan jika relasi database Anda berbeda
+    const currentStoreId = "{{ auth()->user()->store_id ?? auth()->user()->toko->id ?? auth()->id() }}"; 
 
     const contactListDiv = document.getElementById('contactList');
     const msgArea = document.getElementById('messageArea');
@@ -228,6 +231,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     }
 
+    // ==========================================
+    // LOGIKA SEARCH / CARI PELANGGAN
+    // ==========================================
+    searchInput.addEventListener('keyup', function() {
+        let keyword = this.value.toLowerCase();
+        let items = contactListDiv.querySelectorAll('.contact-item');
+        
+        items.forEach(item => {
+            let name = item.querySelector('h6').textContent.toLowerCase();
+            if (name.includes(keyword)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
     // Trigger kirim saat tekan ENTER
     msgInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -238,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // MENGIRIM STATUS TYPING KE PUSHER SAAT SELLER MENGETIK
     msgInput.addEventListener('input', function() {
-        if(activeChatId && echoChannel) {
+        if(activeChatId && echoChannel && window.Echo) {
             window.Echo.private(echoChannel).whisper('typing', {
                 is_typing: true,
                 sender: 'seller'
@@ -280,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         chats.forEach(chat => {
             let nama = chat.nama_pelanggan || chat.nama_toko || 'Customer';
-            let id = chat.id || chat.store_id;
+            let id = chat.id || chat.customer_id || chat.user_id; // Pastikan ID ini adalah user_id dari customer
             let initial = nama.charAt(0).toUpperCase();
 
             let badgeUnread = chat.unread_count > 0 ? `<div class="bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center absolute -top-1 -right-1 shadow-sm">${chat.unread_count}</div>` : '';
@@ -315,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         item.classList.add('bg-blue-50/50', 'border-l-blue-600', 'pl-3', 'pr-4');
 
-        activeChatId = item.dataset.id;
+        activeChatId = item.dataset.id; // Ini adalah Customer ID
         let cName = item.dataset.name;
 
         placeholder.classList.add('hidden'); placeholder.classList.remove('flex');
@@ -333,50 +353,49 @@ document.addEventListener('DOMContentLoaded', function() {
         // ========================================================
         // AKTIFKAN KONEKSI PUSHER UNTUK RUANG CHAT INI
         // ========================================================
-        if(echoChannel) {
-            window.Echo.leave(echoChannel);
-        }
-
-        // PASTIKAN NAMA CHANNEL INI SAMA DENGAN YG DITEMBAK BACKEND!
-        echoChannel = `chat.${activeChatId}`;
-
-        // FUNGSI HANDLE PESAN BARU (SUPER AMAN)
-        const handleNewMessage = (e) => {
-            console.log("Seller menerima Pesan dari Pusher: ", e);
-
-            let msgData = e.message || e;
-
-            // Pastikan ini BUKAN pesan dari Seller sendiri
-            let isSeller = msgData.sender === 'seller' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
-
-            // Tampilkan jika dikirim oleh customer
-            if (!isSeller) {
-                document.getElementById('typing-indicator').classList.add('hidden');
-
-                let text = msgData.content || msgData.text || msgData.message_text || '';
-                let type = msgData.type || msgData.message_type || 'text';
-                let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                let file = msgData.file_name || msgData.fileName || '';
-
-                appendMessageUI(text, false, time, type, file, 0, true);
-                scrollToBottom();
+        if (window.Echo) {
+            if(echoChannel) {
+                window.Echo.leave(echoChannel);
             }
-            loadChatList();
-        };
 
-        window.Echo.private(echoChannel)
-            .listen('PesanBaruTerkirim', handleNewMessage)
-            .listen('.PesanBaruTerkirim', handleNewMessage)
-            .listenForWhisper('typing', (e) => {
-                if(e.is_typing) {
-                    typingIndicator.classList.remove('hidden');
+            // PENTING 1: Sinkronisasi Arsitektur Channel (Menggunakan ID Pelanggan & ID Toko)
+            echoChannel = `chat.room.${activeChatId}.${currentStoreId}`;
+
+            // FUNGSI HANDLE PESAN BARU (SUPER AMAN)
+            const handleNewMessage = (e) => {
+                let msgData = e.message || e;
+
+                // Pastikan pesan hanya dirender jika berasal dari customer
+                let isSeller = msgData.sender === 'seller' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
+
+                if (!isSeller) {
+                    document.getElementById('typing-indicator').classList.add('hidden');
+
+                    let text = msgData.content || msgData.text || msgData.message_text || '';
+                    let type = msgData.type || msgData.message_type || 'text';
+                    let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                    let file = msgData.file_name || msgData.fileName || '';
+
+                    appendMessageUI(text, false, time, type, file, 0, true);
                     scrollToBottom();
-                    clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(() => {
-                        typingIndicator.classList.add('hidden');
-                    }, 2000);
                 }
-            });
+                loadChatList();
+            };
+
+            window.Echo.private(echoChannel)
+                .listen('.PesanBaruTerkirim', handleNewMessage) // PENTING 2: Menggunakan dot listener
+                .listenForWhisper('typing', (e) => {
+                    // PENTING 3: Validasi hanya menampilkan efek mengetik jika dikirim oleh customer
+                    if(e.is_typing && e.sender === 'customer') {
+                        typingIndicator.classList.remove('hidden');
+                        scrollToBottom();
+                        clearTimeout(typingTimeout);
+                        typingTimeout = setTimeout(() => {
+                            typingIndicator.classList.add('hidden');
+                        }, 2000);
+                    }
+                });
+        }
     });
 
     function loadMessages(chatId, isInitialLoad = false) {
@@ -615,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pnlChat.classList.add('hidden', 'translate-x-full');
         pnlChat.classList.remove('flex', 'translate-x-0');
 
-        if(echoChannel) {
+        if(echoChannel && window.Echo) {
             window.Echo.leave(echoChannel);
             echoChannel = null;
         }
@@ -636,10 +655,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // GLOBAL LISTENER UNTUK UPDATE SIDEBAR SECARA REALTIME
     // ========================================================
     const sellerId = "{{ auth()->id() ?? 0 }}";
-    if (sellerId != 0) {
+    if (sellerId != 0 && window.Echo) {
         const handleGlobalUpdate = () => { loadChatList(); };
         window.Echo.private(`seller.${sellerId}`)
-            .listen('PesanBaruTerkirim', handleGlobalUpdate)
             .listen('.PesanBaruTerkirim', handleGlobalUpdate);
     }
 });
