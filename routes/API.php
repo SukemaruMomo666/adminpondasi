@@ -2,8 +2,13 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+// Import semua Controller yang digunakan di API
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\LandingController; // Pastikan Controller ini ada
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ProjectController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,10 +17,10 @@ use App\Http\Controllers\LandingController; // Pastikan Controller ini ada
 */
 
 // ========================================================
-// 1. DATA PUBLIK (Untuk Landing Page & Katalog)
+// 1. DATA PUBLIK (Bisa diakses tanpa login)
 // ========================================================
 
-// Route utama untuk menarik semua data Landing Page (Banner, Flash Sale, Kategori, Toko) dalam 1 Request
+// Landing Page Data (Digunakan di React Native Home Screen)
 Route::get('/landing-data', [LandingController::class, 'getApiData']);
 
 // Katalog Produk & Pencarian
@@ -27,26 +32,29 @@ Route::get('/stores', [LandingController::class, 'getStores']);
 
 
 // ========================================================
-// 2. AUTENTIKASI (Login & Register)
+// 2. AUTENTIKASI
 // ========================================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 
 // ========================================================
-// 3. PRIVATE ROUTES (Membutuhkan Bearer Token / Sanctum)
+// 3. PRIVATE ROUTES (Wajib Login & Menggunakan Sanctum Token)
 // ========================================================
 Route::middleware('auth:sanctum')->group(function () {
 
-    // User Profile
+    // User Profile & Logout
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Keranjang & Transaksi
+    // Keranjang Belanja
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/add', [CartController::class, 'store']);
+
+    // Transaksi / Checkout
     Route::post('/checkout', [TransactionController::class, 'checkout']);
 
-    // Manajemen Proyek / RAB (Jika ada fitur Mandor AI / POTA)
+    // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
+
 });
