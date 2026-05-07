@@ -88,7 +88,7 @@
                         <h5 id="activeName" class="text-sm font-black text-slate-900 truncate mb-0.5">Nama Pelanggan</h5>
                         <div class="flex items-center gap-1.5" id="user-status-indicator">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]"></span>
-                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Online</span>
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
                         </div>
                     </div>
                 </div>
@@ -96,18 +96,6 @@
                 {{-- Area Pesan (Balon Chat) --}}
                 <div id="messageArea" class="flex-1 p-4 sm:p-6 overflow-y-auto chat-scrollbar flex flex-col gap-4 relative">
                     {{-- Balon pesan akan di-inject JS ke sini --}}
-                </div>
-
-                {{-- Animasi Typing Indicator --}}
-                <div id="typing-indicator" class="hidden px-6 py-2 pb-4 border-t border-transparent">
-                    <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-[scale-in_0.2s_ease-out]">
-                        <div class="w-8 h-8 rounded-full bg-slate-200 shrink-0 flex items-center justify-center text-slate-500 text-xs mt-auto shadow-sm"><i class="mdi mdi-account"></i></div>
-                        <div class="bg-white border border-slate-200 p-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
-                            <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                            <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
-                            <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
-                        </div>
-                    </div>
                 </div>
 
                 {{-- Alat Input Tersembunyi (Hidden) --}}
@@ -180,25 +168,37 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
     let activeChatId = null; // Menyimpan ID Customer
     let currentMessageCount = -1;
     let pendingMedia = null;
+    let isUserScrolling = false;
 
-    let echoChannel = null;
-    let typingTimeout = null;
-
-    // Asumsi ID Toko diambil dari auth user, sesuaikan jika relasi database Anda berbeda
-    const currentStoreId = "{{ auth()->user()->store_id ?? auth()->user()->toko->id ?? auth()->id() }}"; 
+    // VARIABEL POLLING (AUTO-RELOAD)
+    let globalPollingInterval = null;
+    let activeChatPollingInterval = null;
 
     const contactListDiv = document.getElementById('contactList');
     const msgArea = document.getElementById('messageArea');
     const searchInput = document.getElementById('searchContact');
     const msgInput = document.getElementById('inputMessage');
-    const typingIndicator = document.getElementById('typing-indicator');
 
     const pnlChat = document.getElementById('chatPanel');
     const placeholder = document.getElementById('chatPlaceholder');
     const activeWindow = document.getElementById('chatActiveWindow');
+
+    // ==========================================
+    // LOGIKA SCROLL CHAT AREA
+    // ==========================================
+    // Deteksi jika user sedang scroll ke atas (melihat chat lama), jangan paksa scroll ke bawah saat auto-reload
+    msgArea.addEventListener('scroll', function() {
+        const isAtBottom = msgArea.scrollHeight - msgArea.scrollTop <= msgArea.clientHeight + 50;
+        isUserScrolling = !isAtBottom;
+    });
+
+    function scrollToBottom() {
+        msgArea.scrollTop = msgArea.scrollHeight;
+    }
 
     // ==========================================
     // LOGIKA LIGHTBOX GAMBAR
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
     searchInput.addEventListener('keyup', function() {
         let keyword = this.value.toLowerCase();
         let items = contactListDiv.querySelectorAll('.contact-item');
-        
+
         items.forEach(item => {
             let name = item.querySelector('h6').textContent.toLowerCase();
             if (name.includes(keyword)) {
@@ -248,21 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Trigger kirim saat tekan ENTER
+    // ==========================================
+    // MENGIRIM PESAN
+    // ==========================================
     msgInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             document.getElementById('btnSendMsg').click();
-        }
-    });
-
-    // MENGIRIM STATUS TYPING KE PUSHER SAAT SELLER MENGETIK
-    msgInput.addEventListener('input', function() {
-        if(activeChatId && echoChannel && window.Echo) {
-            window.Echo.private(echoChannel).whisper('typing', {
-                is_typing: true,
-                sender: 'seller'
-            });
         }
     });
 
@@ -278,12 +270,70 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function loadChatList() {
+    function sendMediaMessage(content, type = 'text', fileName = '', caption = '') {
+        if(!content || !activeChatId) return;
+
+        let btn = document.getElementById('btnSendMsg');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="mdi mdi-loading mdi-spin text-xl leading-none"></i>';
+
+        const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+
+        // Tampilkan Langsung (Optimistic UI)
+        appendMessageUI(content, true, timeNow, type, fileName, 0, true);
+
+        if (caption && type !== 'text') {
+            setTimeout(() => appendMessageUI(caption, true, timeNow, 'text', '', 0, true), 100);
+        }
+
+        scrollToBottom();
+        currentMessageCount++;
+        msgInput.value = '';
+
+        let payload = { chat_id: activeChatId, message: content, type: type, file_name: fileName };
+
+        // Kirim ke Backend
+        fetch("{{ route('seller.service.chat.send') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(async res => {
+            if(!res.ok) throw new Error("Gagal mengirim ke server.");
+            return res.json();
+        })
+        .then(data => {
+            if (caption && type !== 'text') {
+                fetch("{{ route('seller.service.chat.send') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value },
+                    body: JSON.stringify({ chat_id: activeChatId, message: caption, type: 'text' })
+                });
+            }
+            loadChatListSilently(); // Update list kontak setelah mengirim
+        })
+        .catch(err => { console.error(err); })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="mdi mdi-send text-lg leading-none"></i>';
+            msgInput.focus();
+        });
+    }
+
+    // ==========================================
+    // LOGIKA DAFTAR KONTAK (SIDEBAR)
+    // ==========================================
+    function loadChatList(showLoading = true) {
+        if(showLoading && contactListDiv.innerHTML.trim() === '') {
+            contactListDiv.innerHTML = '<div class="text-center py-10 opacity-50"><i class="mdi mdi-loading mdi-spin text-4xl text-slate-400 mb-3 block"></i></div>';
+        }
+
         fetch("{{ route('seller.service.chat.list') }}")
-            .then(async res => {
-                if(!res.ok) throw new Error("Gagal menyinkronkan kontak.");
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 let items = data.data || data;
                 if(Array.isArray(items)) renderContactList(items);
@@ -291,22 +341,27 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => console.error(err));
     }
 
+    // Fungsi fetch tanpa mengubah UI jika tidak perlu (untuk polling)
+    function loadChatListSilently() {
+        loadChatList(false);
+    }
+
     function renderContactList(chats) {
-        contactListDiv.innerHTML = '';
         if(chats.length === 0) {
             contactListDiv.innerHTML = '<div class="text-center py-10 opacity-50"><i class="mdi mdi-message-off-outline text-4xl text-slate-400 block mb-2"></i><p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Belum ada pesan.</p></div>';
             return;
         }
 
+        let html = '';
         chats.forEach(chat => {
             let nama = chat.nama_pelanggan || chat.nama_toko || 'Customer';
-            let id = chat.id || chat.customer_id || chat.user_id; // Pastikan ID ini adalah user_id dari customer
+            let id = chat.id || chat.customer_id || chat.user_id;
             let initial = nama.charAt(0).toUpperCase();
 
             let badgeUnread = chat.unread_count > 0 ? `<div class="bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center absolute -top-1 -right-1 shadow-sm">${chat.unread_count}</div>` : '';
             let isActiveClass = (id == activeChatId) ? 'bg-blue-50/50 border-l-4 border-l-blue-600 pl-3 pr-4' : 'bg-transparent border-l-4 border-l-transparent hover:bg-slate-100/50 px-4';
 
-            let html = `
+            html += `
                 <div class="contact-item flex items-center gap-3 py-4 border-b border-slate-100 cursor-pointer transition-colors ${isActiveClass}" data-id="${id}" data-name="${nama}">
                     <div class="w-12 h-12 rounded-full bg-slate-200 text-slate-600 border border-slate-300 flex items-center justify-center font-black text-lg flex-shrink-0 uppercase relative">
                         ${initial}
@@ -321,8 +376,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            contactListDiv.insertAdjacentHTML('beforeend', html);
         });
+
+        // Hanya replace HTML jika ada perubahan (menghindari kedip saat user ngetik di search)
+        const currentSearch = searchInput.value.toLowerCase();
+        contactListDiv.innerHTML = html;
+
+        // Terapkan ulang filter search jika sedang mencari
+        if(currentSearch !== '') {
+            const ev = new Event('keyup');
+            searchInput.dispatchEvent(ev);
+        }
     }
 
     contactListDiv.addEventListener('click', function(e) {
@@ -335,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         item.classList.add('bg-blue-50/50', 'border-l-blue-600', 'pl-3', 'pr-4');
 
-        activeChatId = item.dataset.id; // Ini adalah Customer ID
+        activeChatId = item.dataset.id;
         let cName = item.dataset.name;
 
         placeholder.classList.add('hidden'); placeholder.classList.remove('flex');
@@ -348,59 +412,30 @@ document.addEventListener('DOMContentLoaded', function() {
             pnlChat.classList.add('flex', 'translate-x-0');
         }
 
+        // Mulai ambil pesan
         loadMessages(activeChatId, true);
 
-        // ========================================================
-        // AKTIFKAN KONEKSI PUSHER UNTUK RUANG CHAT INI
-        // ========================================================
-        if (window.Echo) {
-            if(echoChannel) {
-                window.Echo.leave(echoChannel);
+        // Hentikan interval chat lama jika ada
+        if (activeChatPollingInterval) clearInterval(activeChatPollingInterval);
+
+        // BUAT INTERVAL POLLING BARU UNTUK CHAT ROOM INI (Setiap 3 Detik)
+        activeChatPollingInterval = setInterval(() => {
+            if(activeChatId) {
+                loadMessagesSilently(activeChatId);
             }
-
-            // PENTING 1: Sinkronisasi Arsitektur Channel (Menggunakan ID Pelanggan & ID Toko)
-            echoChannel = `chat.room.${activeChatId}.${currentStoreId}`;
-
-            // FUNGSI HANDLE PESAN BARU (SUPER AMAN)
-            const handleNewMessage = (e) => {
-                let msgData = e.message || e;
-
-                // Pastikan pesan hanya dirender jika berasal dari customer
-                let isSeller = msgData.sender === 'seller' || msgData.is_mine === true || msgData.sender_id == "{{ auth()->id() ?? 0 }}";
-
-                if (!isSeller) {
-                    document.getElementById('typing-indicator').classList.add('hidden');
-
-                    let text = msgData.content || msgData.text || msgData.message_text || '';
-                    let type = msgData.type || msgData.message_type || 'text';
-                    let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                    let file = msgData.file_name || msgData.fileName || '';
-
-                    appendMessageUI(text, false, time, type, file, 0, true);
-                    scrollToBottom();
-                }
-                loadChatList();
-            };
-
-            window.Echo.private(echoChannel)
-                .listen('.PesanBaruTerkirim', handleNewMessage) // PENTING 2: Menggunakan dot listener
-                .listenForWhisper('typing', (e) => {
-                    // PENTING 3: Validasi hanya menampilkan efek mengetik jika dikirim oleh customer
-                    if(e.is_typing && e.sender === 'customer') {
-                        typingIndicator.classList.remove('hidden');
-                        scrollToBottom();
-                        clearTimeout(typingTimeout);
-                        typingTimeout = setTimeout(() => {
-                            typingIndicator.classList.add('hidden');
-                        }, 2000);
-                    }
-                });
-        }
+        }, 3000);
     });
 
+    // ==========================================
+    // LOGIKA RUANG OBROLAN (PESAN)
+    // ==========================================
     function loadMessages(chatId, isInitialLoad = false) {
         if(!chatId) return;
         let url = "{{ route('seller.service.chat.messages', ':id') }}".replace(':id', chatId);
+
+        if(isInitialLoad) {
+            msgArea.innerHTML = `<div class="text-center py-10 opacity-50"><i class="mdi mdi-loading mdi-spin text-4xl text-slate-400 block mb-2"></i></div>`;
+        }
 
         fetch(url)
             .then(res => res.json())
@@ -421,16 +456,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         appendMessageUI(msg.content || msg.text, isOut, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad);
                     });
 
-                    setTimeout(() => { scrollToBottom(); }, 50);
+                    // Hanya scroll ke bawah jika ini loading awal, ATAU jika user tidak sedang scroll ke atas
+                    if(isInitialLoad || !isUserScrolling) {
+                        setTimeout(() => { scrollToBottom(); }, 50);
+                    }
                 } else {
+                    // Update tanda centang biru (read receipts)
                     updateReadTicks(items);
                 }
             })
-            .catch(err => console.error(err));
+            .catch(err => {
+                if(isInitialLoad) {
+                    msgArea.innerHTML = `<div class="text-center text-xs font-bold text-red-500 my-4 bg-red-50 p-2 rounded-xl border border-red-200 mx-auto max-w-[250px]">Gagal memuat histori chat.</div>`;
+                }
+            });
     }
 
-    function scrollToBottom() {
-        msgArea.scrollTop = msgArea.scrollHeight;
+    function loadMessagesSilently(chatId) {
+        loadMessages(chatId, false);
     }
 
     function updateReadTicks(items) {
@@ -447,7 +490,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // FUNGSI RENDER BALON PESAN (UI MAKER) DENGAN LIGHTBOX
     function appendMessageUI(content, isOut, time, type = 'text', fileName = '', isRead = 0, animate = true) {
         let wrapAlign = isOut ? 'self-end items-end' : 'self-start items-start';
         let bubbleColor = isOut ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl rounded-br-sm shadow-md' : 'bg-white border border-slate-200 text-slate-800 rounded-r-2xl rounded-tl-2xl rounded-bl-sm shadow-sm';
@@ -495,6 +537,9 @@ document.addEventListener('DOMContentLoaded', function() {
         msgArea.insertAdjacentHTML('beforeend', html);
     }
 
+    // ==========================================
+    // LOGIKA INPUT FILE, MEDIA, VOICE NOTE
+    // ==========================================
     window.handleFileUpload = function(inputElement, type) {
         const file = inputElement.files[0];
         if(!file || !activeChatId) return;
@@ -578,70 +623,20 @@ document.addEventListener('DOMContentLoaded', function() {
         container.classList.add('hidden'); container.classList.remove('flex');
     }
 
-    function sendMediaMessage(content, type = 'text', fileName = '', caption = '') {
-        if(!content || !activeChatId) return;
-
-        let btn = document.getElementById('btnSendMsg');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="mdi mdi-loading mdi-spin text-xl leading-none"></i>';
-
-        const timeNow = new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-
-        appendMessageUI(content, true, timeNow, type, fileName, 0, true);
-
-        if (caption && type !== 'text') {
-            setTimeout(() => appendMessageUI(caption, true, timeNow, 'text', '', 0, true), 100);
-        }
-
-        scrollToBottom();
-        currentMessageCount++;
-        msgInput.value = '';
-
-        let payload = { chat_id: activeChatId, message: content, type: type, file_name: fileName };
-
-        fetch("{{ route('seller.service.chat.send') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(async res => {
-            if(!res.ok) throw new Error("Gagal mengirim ke server.");
-            return res.json();
-        })
-        .then(data => {
-            if (caption && type !== 'text') {
-                fetch("{{ route('seller.service.chat.send') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value },
-                    body: JSON.stringify({ chat_id: activeChatId, message: caption, type: 'text' })
-                });
-            }
-            loadChatList();
-        })
-        .catch(err => { console.error(err); })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="mdi mdi-send text-lg leading-none"></i>';
-            msgInput.focus();
-        });
-    }
-
+    // ==========================================
+    // LOGIKA TOMBOL BACK (KHUSUS MOBILE)
+    // ==========================================
     document.getElementById('btnBackMobile').addEventListener('click', function() {
         pnlChat.classList.add('hidden', 'translate-x-full');
         pnlChat.classList.remove('flex', 'translate-x-0');
 
-        if(echoChannel && window.Echo) {
-            window.Echo.leave(echoChannel);
-            echoChannel = null;
-        }
+        // Hentikan interval saat keluar dari ruang chat
+        if (activeChatPollingInterval) clearInterval(activeChatPollingInterval);
 
         activeChatId = null;
         placeholder.classList.remove('hidden'); placeholder.classList.add('flex');
         activeWindow.classList.add('hidden'); activeWindow.classList.remove('flex');
+
         loadChatList();
     });
 
@@ -649,17 +644,16 @@ document.addEventListener('DOMContentLoaded', function() {
     style.innerHTML = `@keyframes scale-in { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }`;
     document.head.appendChild(style);
 
+    // ==========================================
+    // INITIALISASI DAN POLLING GLOBAL
+    // ==========================================
     loadChatList();
 
-    // ========================================================
-    // GLOBAL LISTENER UNTUK UPDATE SIDEBAR SECARA REALTIME
-    // ========================================================
-    const sellerId = "{{ auth()->id() ?? 0 }}";
-    if (sellerId != 0 && window.Echo) {
-        const handleGlobalUpdate = () => { loadChatList(); };
-        window.Echo.private(`seller.${sellerId}`)
-            .listen('.PesanBaruTerkirim', handleGlobalUpdate);
-    }
+    // Polling Global: Refresh daftar kontak setiap 5 detik (untuk menangkap pesan baru dari pelanggan lain)
+    globalPollingInterval = setInterval(() => {
+        loadChatListSilently();
+    }, 5000);
+
 });
 </script>
 @endpush

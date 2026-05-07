@@ -107,26 +107,13 @@
                         {{-- Isi Chat di-render JS --}}
                     </div>
 
-                    {{-- Animasi Typing Indicator --}}
-                    <div id="typing-indicator" class="hidden px-6 py-2 pb-4 border-t border-transparent bg-zinc-50">
-                        <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-slide-left">
-                            <div class="w-8 h-8 rounded-full bg-zinc-200 shrink-0 flex items-center justify-center text-zinc-500 text-xs mt-auto shadow-sm"><i class="fas fa-store"></i></div>
-                            <div class="bg-white border border-zinc-200 p-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0s"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.2s"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.4s"></span>
-                            </div>
-                        </div>
-                    </div>
-
                     {{-- Alat Kirim (Teks, Gambar, File, Voice Note) --}}
                     <div class="p-3 md:p-4 bg-white border-t border-zinc-200 shrink-0 relative z-20">
 
                         {{-- MEDIA PREVIEW CONTAINER --}}
                         <div id="media-preview-container" class="hidden items-center justify-between p-3 mx-1 mb-3 bg-zinc-50 border border-zinc-200 rounded-xl shadow-inner animate-slide-up">
                             <div id="media-preview-content" class="flex items-center gap-3 w-full overflow-hidden">
-                                <!-- Preview Injected Here -->
-                            </div>
+                                </div>
                             <button type="button" onclick="cancelMediaPreview()" class="w-8 h-8 rounded-full bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center transition-colors flex-shrink-0 ml-2 shadow-sm outline-none">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -251,18 +238,16 @@
 
     .animate-slide-right { animation: slideRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
     .animate-slide-left { animation: slideLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-    .animate-typing { animation: typingBounce 1.4s infinite ease-in-out both; }
     .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
 
     @keyframes slideRight { 0% { opacity: 0; transform: translateY(15px) translateX(15px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) translateX(0) scale(1); } }
     @keyframes slideLeft { 0% { opacity: 0; transform: translateY(15px) translateX(-15px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) translateX(0) scale(1); } }
-    @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0.8) translateY(0); opacity: 0.5; } 40% { transform: scale(1.2) translateY(-4px); opacity: 1; background-color: #3b82f6; } }
     @keyframes slideUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
 </style>
 
 <script>
     /* === 1. GLOBAL UI & TRIGGER LOGIC === */
-    const authUserId = "{{ auth()->id() ?? 0 }}"; // Variabel ID user diletakkan di global scope
+    const authUserId = "{{ auth()->id() ?? 0 }}";
 
     const chatWindow = document.getElementById('live-chat-window');
     const viewSeller = document.getElementById('view-seller');
@@ -275,9 +260,7 @@
     let currentStoreId = null;
     let currentMessageCount = -1;
     let pendingMedia = null;
-    let globalPollingInterval = null;
-    let typingTimeout = null;
-    let currentEchoChannelName = null; // Menambahkan variabel channel untuk tracking PUSHER
+    let smartPollingInterval = null; // Ganti Pusher dengan Polling Pintar
 
     document.addEventListener('DOMContentLoaded', () => {
         const isOpen = sessionStorage.getItem('pota_chat_open') === 'true';
@@ -289,18 +272,17 @@
             document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
         }
 
-        const savedSellerDom = sessionStorage.getItem('pota_seller_dom');
         const savedStoreId = sessionStorage.getItem('pota_active_store');
-        if(savedSellerDom && savedStoreId) {
+        if(savedStoreId) {
             currentStoreId = savedStoreId;
             document.getElementById('seller-empty-state').classList.add('hidden');
             document.getElementById('seller-active-chat').classList.remove('hidden', 'opacity-0');
             document.getElementById('seller-active-chat').classList.add('flex');
             document.getElementById('active-store-name').innerText = sessionStorage.getItem('pota_active_name');
             document.getElementById('active-store-avatar').innerText = sessionStorage.getItem('pota_active_avatar');
-            document.getElementById('seller-chat-messages').innerHTML = savedSellerDom;
-            document.getElementById('seller-chat-messages').scrollTop = document.getElementById('seller-chat-messages').scrollHeight;
-            openStoreChat(savedStoreId, sessionStorage.getItem('pota_active_name'), sessionStorage.getItem('pota_active_avatar'), false);
+
+            // JANGAN pakai innerHTML lama. Langsung fetch baru biar selalu update!
+            loadMessages(savedStoreId, true);
         }
 
         if(isOpen && chatWindow) {
@@ -313,16 +295,7 @@
         }
 
         fetchSellerContacts();
-    });
-
-    /* === MENGIRIM SINYAL WHISPER "SEDANG MENGETIK" KE SELLER === */
-    document.getElementById('seller-chat-input').addEventListener('input', function() {
-        if(currentStoreId && window.Echo && currentEchoChannelName) {
-            window.Echo.private(currentEchoChannelName).whisper('typing', {
-                is_typing: true,
-                sender: 'customer' // Penanda identitas
-            });
-        }
+        startSmartPolling(); // Mulai Auto Reload!
     });
 
     /* === LIGHTBOX LOGIC === */
@@ -385,6 +358,7 @@
             switchChatTab(lastTab, true);
             sessionStorage.setItem('pota_chat_open', 'true');
             fetchSellerContacts(false);
+            startSmartPolling(); // Pastikan polling jalan saat chat dibuka
         } else {
             chatWindow.classList.add('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
             chatWindow.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
@@ -395,6 +369,9 @@
             }, 500);
             sessionStorage.setItem('pota_chat_open', 'false');
             endVoiceCallMode();
+
+            // Matikan polling saat chat ditutup biar web gak berat
+            clearInterval(smartPollingInterval);
         }
     }
 
@@ -461,8 +438,23 @@
     }
 
     /* ========================================================
-       2. SELLER CHAT LOGIC (100% REAL API)
+       2. SMART POLLING LOGIC (PENGGANTI PUSHER)
        ======================================================== */
+    function startSmartPolling() {
+        if(smartPollingInterval) clearInterval(smartPollingInterval);
+
+        // Tarik data baru tiap 3 detik
+        smartPollingInterval = setInterval(() => {
+            // Update daftar kontak kiri
+            fetchSellerContacts(false);
+
+            // Kalau lagi buka chat, update pesannya juga
+            if (currentStoreId) {
+                loadMessages(currentStoreId, false);
+            }
+        }, 3000);
+    }
+
     async function fetchSellerContacts(showLoading = true) {
         const contactList = document.getElementById('seller-contact-list');
         if(showLoading && contactList.innerHTML === "") contactList.innerHTML = `<div class="p-6 text-center text-zinc-400 flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i><span class="text-[10px] font-bold uppercase">Memuat...</span></div>`;
@@ -553,62 +545,6 @@
         }
 
         loadMessages(storeId, true);
-
-        // ========================================================
-        // PENYEMPURNAAN PUSHER (CHANNEL UNIK & EVENT HANDLING)
-        // ========================================================
-        if (window.Echo && authUserId != 0) {
-            // Hapus koneksi channel lama jika user pindah obrolan
-            if(currentEchoChannelName) {
-                window.Echo.leave(currentEchoChannelName);
-            }
-
-            // PERBAIKAN 1: Channel unik per user & toko
-            currentEchoChannelName = `chat.room.${authUserId}.${storeId}`;
-
-            const handleNewMessage = (e) => {
-                let msgData = e.message || e;
-
-                // Pastikan pesan untuk room ini
-                if (msgData.store_id && msgData.store_id != currentStoreId) return;
-
-                // Cek apakah pesan dikirim oleh Customer (diri kita sendiri)
-                let isCustomer = msgData.sender === 'user' || msgData.sender === 'customer' || msgData.is_mine === true || msgData.sender_id == authUserId;
-
-                // Jika pesan dari Toko (Seller), tampilkan di sebelah Kiri
-                if (!isCustomer) {
-                    document.getElementById('typing-indicator').classList.add('hidden');
-
-                    let text = msgData.content || msgData.text || msgData.message_text || '';
-                    let type = msgData.type || msgData.message_type || 'text';
-                    let time = msgData.time || msgData.timestamp || new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                    let file = msgData.file_name || msgData.fileName || '';
-
-                    appendSellerMessage(text, 'seller', time, type, file, 0, true);
-                    currentMessageCount++;
-                    scrollToBottom();
-                }
-
-                fetchSellerContacts(false);
-            };
-
-            window.Echo.private(currentEchoChannelName)
-                // PERBAIKAN 2: Pastikan nama event mendengarkan dengan prefix dot
-                .listen('.PesanBaruTerkirim', handleNewMessage)
-                .listenForWhisper('typing', (e) => {
-                    // PERBAIKAN 3: Jangan munculkan typing indikator jika yang ngetik kita sendiri
-                    if (e.sender !== 'customer') {
-                        const typingInd = document.getElementById('typing-indicator');
-                        typingInd.classList.remove('hidden');
-                        scrollToBottom();
-
-                        clearTimeout(typingTimeout);
-                        typingTimeout = setTimeout(() => {
-                            typingInd.classList.add('hidden');
-                        }, 2000);
-                    }
-                });
-        }
     }
 
     async function loadMessages(storeId, isInitialLoad = false) {
@@ -618,6 +554,7 @@
             const data = await res.json();
             const msgContainer = document.getElementById('seller-chat-messages');
 
+            // Logika Auto Reload Tanpa Kedip
             if (isInitialLoad || data.length > currentMessageCount || data.length < currentMessageCount) {
                 msgContainer.innerHTML = '';
                 currentMessageCount = data.length;
@@ -627,13 +564,14 @@
                 } else {
                      data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad));
                 }
-                if(isInitialLoad || msgContainer.scrollHeight - msgContainer.scrollTop < 500) {
+
+                // Cek apakah scroll sedang di bawah. Kalau iya, scroll otomatis ke pesan baru.
+                if(isInitialLoad || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 150)) {
                     scrollToBottom();
                 }
             } else if (data.length === currentMessageCount) {
                 updateReadTicks(data);
             }
-            fetchSellerContacts(false);
         } catch(e) {
             if(isInitialLoad) {
                 document.getElementById('seller-chat-messages').innerHTML = `<div class="text-center text-xs font-bold text-red-500 my-4 bg-red-50 p-2 rounded-xl border border-red-200 mx-auto max-w-[250px]">Gagal memuat histori chat. Pastikan server terhubung.</div>`;
@@ -788,6 +726,9 @@
                 });
             }
             fetchSellerContacts(false);
+
+            // Paksa tarik pesan terbaru langsung biar animasi lancar
+            loadMessages(currentStoreId, false);
         })
         .catch(err => { console.error(err); })
         .finally(() => {
@@ -988,7 +929,7 @@
 
             if(isAiCallMode) speakText(data.reply, true);
 
-            } catch(e) {
+        } catch(e) {
             if(document.getElementById('ai-loading')) document.getElementById('ai-loading').remove();
             appendAIMessage("Mohon maaf, server AI POTA sedang sibuk.", 'bot');
         }
@@ -1020,16 +961,4 @@
         };
         window.speechSynthesis.speak(u);
     }
-
-    // ========================================================
-    // GLOBAL LISTENER UNTUK CUSTOMER
-    // (Menerima Notif/Pesan Tanpa Harus Buka Chat Room)
-    // ========================================================
-    if (authUserId != 0 && window.Echo) {
-        const handleGlobalUpdate = () => { fetchSellerContacts(false); };
-
-        window.Echo.private(`user.${authUserId}`)
-            .listen('.PesanBaruTerkirim', handleGlobalUpdate);
-    }
-
 </script>
