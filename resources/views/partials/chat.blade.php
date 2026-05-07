@@ -103,7 +103,7 @@
                     </div>
 
                     {{-- Area Histori Chat --}}
-                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative scroll-smooth">
+                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative">
                         {{-- Isi Chat di-render JS --}}
                     </div>
 
@@ -567,11 +567,12 @@ if(data.length === 0) {
 }
 
 // Masukkan trigger scroll ke dalam setTimeout agar DOM selesai digambar dulu
+// Masukkan trigger scroll ke dalam setTimeout agar DOM selesai digambar dulu
 setTimeout(() => {
     if(isInitialLoad || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 150)) {
-        scrollToBottom(isInitialLoad); // Parameter isInitialLoad = true akan memicu scroll instan
+        scrollToBottom(isInitialLoad); // Parameter isInitialLoad = true memicu scroll instan
     }
-}, 10);
+}, 50); // <-- Beri jeda 50ms agar DOM & gambar selesai dihitung ukurannya
             } else if (data.length === currentMessageCount) {
                 updateReadTicks(data);
             }
