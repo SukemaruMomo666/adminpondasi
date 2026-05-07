@@ -564,11 +564,9 @@
                 } else {
                      data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad));
                 }
-
-                // Cek apakah scroll sedang di bawah. Kalau iya, scroll otomatis ke pesan baru.
-                if(isInitialLoad || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 150)) {
-                    scrollToBottom();
-                }
+if(isInitialLoad || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 150)) {
+    scrollToBottom(isInitialLoad); // 'auto' saat baru masuk, 'smooth' saat ada pesan baru
+}
             } else if (data.length === currentMessageCount) {
                 updateReadTicks(data);
             }
@@ -647,10 +645,10 @@
         sessionStorage.setItem('pota_seller_dom', container.innerHTML);
     }
 
-    function scrollToBottom() {
-        const msgContainer = document.getElementById('seller-chat-messages');
-        msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' });
-    }
+function scrollToBottom(isInstant = false) {
+    const msgContainer = document.getElementById('seller-chat-messages');
+    msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: isInstant ? 'auto' : 'smooth' });
+}
 
     window.handleFileUpload = function(inputElement, type) {
         const file = inputElement.files[0];
