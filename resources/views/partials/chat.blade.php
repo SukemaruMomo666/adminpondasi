@@ -455,11 +455,19 @@
         }, 3000); 
     }
 
-    async function fetchSellerContacts(showLoading = true) {
+async function fetchSellerContacts(showLoading = true) {
         const contactList = document.getElementById('seller-contact-list');
         if(showLoading && contactList.innerHTML === "") contactList.innerHTML = `<div class="p-6 text-center text-zinc-400 flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i><span class="text-[10px] font-bold uppercase">Memuat...</span></div>`;
         try {
-            const res = await fetch('/api/chat/contacts');
+            // === INI YANG DIGANTI YA BOS ===
+            const res = await fetch('/api/chat/contacts', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            // ===============================
+            
             if(!res.ok) throw new Error();
             const data = await res.json();
             renderContacts(data, contactList);
