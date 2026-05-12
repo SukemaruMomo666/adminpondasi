@@ -261,6 +261,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/chat/contacts', [ChatController::class, 'getContacts']);
     Route::get('/api/chat/messages/{storeId}', [ChatController::class, 'getMessages']);
     Route::post('/api/chat/send', [ChatController::class, 'sendMessage']);
+    
+    // === TAMBAHKAN INI: ROUTE PENJAGA PINTU MEDIA PRIVATE ===
+    Route::get('/chat/media/{filename}', function ($filename) {
+        $path = 'private_chats/' . $filename;
+
+        // Cek apakah filenya benar-benar ada di storage lokal?
+        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($path)) { 
+            abort(404, 'File media tidak ditemukan.'); 
+        }
+
+        // Tampilkan file secara aman melalui backend
+        return response()->file(storage_path('app/' . $path));
+    })->name('chat.file');
+    // ========================================================
 });
 
 // Webhook Midtrans (Payment Gateway)

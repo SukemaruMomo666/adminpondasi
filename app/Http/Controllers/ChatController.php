@@ -18,6 +18,9 @@ class ChatController extends Controller
     public function getContacts()
     {
         $userId = Auth::id();
+        
+        // PENGAMAN: Mencegah layar putih JSON jika sesi habis
+        if (!$userId) return response()->json(['error' => 'Unauthenticated'], 401);
 
         // Subquery untuk mencari ID pesan terakhir di setiap chat room
         $latestMessages = DB::table('messages')
@@ -27,7 +30,6 @@ class ChatController extends Controller
         // Main Query: Gabungkan tabel chats, tb_toko, dan messages
         $contactsQuery = DB::table('chats')
             ->join('tb_toko', 'chats.toko_id', '=', 'tb_toko.id')
-            // PERBAIKAN: Gunakan leftJoin agar chat room yang baru dibuat (belum ada pesannya) tetap muncul
             ->leftJoinSub($latestMessages, 'latest_msg', function ($join) {
                 $join->on('chats.id', '=', 'latest_msg.chat_id');
             })
@@ -76,6 +78,9 @@ class ChatController extends Controller
     public function getMessages($storeId)
     {
         $userId = Auth::id();
+        
+        // PENGAMAN: Mencegah layar putih JSON jika sesi habis
+        if (!$userId) return response()->json([], 401);
 
         $chatRoom = DB::table('chats')
             ->where('customer_id', $userId)
@@ -124,6 +129,10 @@ class ChatController extends Controller
     public function sendMessage(Request $request)
     {
         $userId = Auth::id();
+        
+        // PENGAMAN: Mencegah layar putih JSON jika sesi habis
+        if (!$userId) return response()->json(['status' => 'error', 'message' => 'Unauthenticated'], 401);
+
         $storeId = $request->input('store_id');
         $rawMessage = $request->input('message');
         $msgType = $request->input('type', 'text');
@@ -149,6 +158,7 @@ class ChatController extends Controller
                 $chatId = $chatRoom->id;
             }
 
+            // === PENYEMPURNAAN PRIVATE STORAGE DEWA ===
             if (in_array($msgType, ['image', 'audio', 'file']) && preg_match('/^data:(\w+\/[\w+-.]+);base64,/', $rawMessage, $matches)) {
                 $mimeType = $matches[1];
                 $extensions = [
@@ -161,16 +171,18 @@ class ChatController extends Controller
                 $fileData = base64_decode(substr($rawMessage, strpos($rawMessage, ',') + 1));
 
                 $fileName = 'chat_' . time() . '_' . uniqid() . '.' . $extension;
-                $storagePath = 'chat_media/' . $fileName;
+                
+                // Simpan ke folder storage/app/private_chats (Privat, tidak bisa ditembus dari URL langsung)
+                Storage::disk('local')->put('private_chats/' . $fileName, $fileData);
 
-                Storage::disk('public')->put($storagePath, $fileData);
-
-                $fileUrl = '/storage/' . $storagePath;
+                // URL-nya diarahkan ke Route "Penjaga Pintu"
+                $fileUrl = route('chat.file', ['filename' => $fileName]);
 
                 $messageText = $msgType === 'file' ? ($request->input('file_name') ?? 'Dokumen') : '';
             } elseif ($msgType === 'text') {
                 $fileUrl = null;
             }
+            // ==========================================
 
             DB::table('messages')->insert([
                 'chat_id' => $chatId,
@@ -184,7 +196,9 @@ class ChatController extends Controller
 
             DB::commit();
 
-            // === [KODE BARU: MESIN LEMPAR REVERB WEBSOCKETS] ===
+            // === [MESIN LEMPAR PUSHER/REVERB] ===
+            // Jika Bos pakai Auto-reload murni, kode ini bisa dihapus/di-comment.
+            // Tapi kalau pakai hybrid, dibiarkan saja tidak apa-apa.
             $pesanSocket = [
                 'content'  => $msgType === 'text' ? $messageText : $fileUrl,
                 'sender'   => 'user', // Pengirimnya adalah customer
@@ -194,12 +208,11 @@ class ChatController extends Controller
             ];
 
             try {
-                // Lempar ke channel Reverb! Abaikan pengirim (toOthers) agar tidak mantul di layarnya sendiri
                 broadcast(new PesanBaruTerkirim($pesanSocket, $storeId))->toOthers();
             } catch (\Exception $e) {
-                // Sengaja dibiarkan kosong agar aplikasi tidak error jika server Reverb mati
+                // Sengaja dibiarkan kosong
             }
-            // ==================================================
+            // ====================================
 
             return response()->json([
                 'status' => 'success',
