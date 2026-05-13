@@ -717,4 +717,52 @@ $query = DB::table('tb_toko as t')
 
         return response()->json($districts);
     }
+
+    // =================================================================
+    // 15. API: BIKIN KECAMATAN OTOMATIS JIKA TIDAK ADA DI DATABASE
+    // =================================================================
+    public function getOrCreateDistrict(Request $request)
+    {
+        $request->validate([
+            'city_id' => 'required',
+            'name' => 'required|string'
+        ]);
+
+        $cityId = $request->city_id;
+        // Rapikan teks (contoh: "cibogo" jadi "Cibogo")
+        $distName = ucwords(strtolower(trim($request->name)));
+
+        // Cek apakah kecamatan sudah ada di tabel districts
+        $existing = DB::table('districts')
+            ->where('city_id', $cityId)
+            ->whereRaw('LOWER(name) = ?', [strtolower($distName)])
+            ->first();
+
+        // Kalau ternyata sudah ada, kembalikan datanya
+        if ($existing) {
+            return response()->json([
+                'id' => $existing->id,
+                'name' => $existing->name
+            ]);
+        }
+
+        // KALAU BELUM ADA, BIKIN BARU!
+        try {
+            $newId = DB::table('districts')->insertGetId([
+                'city_id' => $cityId,
+                'name' => $distName
+            ]);
+
+            return response()->json([
+                'id' => $newId,
+                'name' => $distName
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
