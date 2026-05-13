@@ -575,10 +575,34 @@
                                     await loadDistricts(citySelect.value); // Tunggu kecamatan di-load & di-sync ke Komerce
                                     if(distName) {
                                         // Cari kecamatan!
-                                        let distFound = autoSelectDropdown(distSelect, distName);
-                                        if(!distFound) {
-                                            console.warn("Kecamatan tidak cocok persis. Data satelit:", distName);
-                                        }
+let distFound = autoSelectDropdown(distSelect, distName);
+if(!distFound && distName) {
+    // TIPS DEWA: Kalau kecamatan gak ada di dropdown, kita suruh server bikin otomatis!
+    loadingText.innerText = "Menambahkan Kecamatan Baru...";
+    
+    try {
+        const createRes = await fetch('/api/get-or-create-district', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+                city_id: citySelect.value, 
+                name: distName 
+            })
+        });
+        
+        if(createRes.ok) {
+            const newDist = await createRes.json();
+            // Tambahkan ke dropdown dan langsung pilih!
+            distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
+            distSelect.value = newDist.id;
+        }
+    } catch(e) {
+        console.error("Gagal membuat kecamatan otomatis", e);
+    }
+}
                                     }
                                 }
                             }
