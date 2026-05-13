@@ -482,7 +482,7 @@
             document.getElementById('lat-display').innerText = currentLat.toFixed(6);
             document.getElementById('lng-display').innerText = currentLng.toFixed(6);
 
-// --- 4. ENGINE GEOCODING 100% GRATIS (OPENSTREETMAP) ---
+// --- 4. ENGINE GEOCODING 100% GRATIS (OPENSTREETMAP) + AUTO CREATE ---
             const loadingOverlay = document.getElementById('map-loading');
             const loadingText = document.getElementById('loading-text');
 
@@ -511,6 +511,40 @@
                 return false;
             }
 
+            // FUNGSI SAKTI: BIKIN KECAMATAN OTOMATIS JIKA TIDAK ADA DI DROPDOWN
+            async function syncAndCreateDistrict(distName) {
+                if (!distName || !citySelect.value) return;
+                
+                let distFound = autoSelectDropdown(distSelect, distName);
+                
+                // Kalau nggak ketemu di dropdown, paksa server bikinin!
+                if (!distFound) {
+                    loadingText.innerText = `Menambahkan Kec. ${distName}...`;
+                    try {
+                        const createRes = await fetch('/api/get-or-create-district', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ 
+                                city_id: citySelect.value, 
+                                name: distName 
+                            })
+                        });
+                        
+                        if(createRes.ok) {
+                            const newDist = await createRes.json();
+                            // Tambahkan ke dropdown dan langsung auto-select!
+                            distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
+                            distSelect.value = newDist.id;
+                        }
+                    } catch(e) {
+                        console.error("Gagal bikin kecamatan otomatis", e);
+                    }
+                }
+            }
+
             // Eksekusi Pelacakan Satelit Gratis
             async function performGeocoding(lat, lng) {
                 loadingOverlay.style.opacity = '1';
@@ -534,18 +568,21 @@
 
                         loadingText.innerText = "Menyelaraskan Wilayah...";
 
-                        // 2. Ambil data Provinsi & Kota dari satelit
+                        // 2. Ambil data Provinsi, Kota, dan Kecamatan dari satelit
                         let pName = data.address.state || '';
                         let cName = data.address.city || data.address.county || data.address.regency || '';
-                        
-                        // 3. Auto-Select Provinsi & Kota
+                        // Satelit gratis sering naruh nama daerah di sub-parameter ini
+                        let dName = data.address.suburb || data.address.village || data.address.town || data.address.district || data.address.municipality || '';
+
+                        // 3. Auto-Select Provinsi & Kota, lalu Tembak Fungsi Sakti Kecamatan
                         if(autoSelectDropdown(provSelect, pName)) {
-                            await loadCities(provSelect.value);
+                            await loadCities(provSelect.value); // Load daftar kota
                             
                             if(autoSelectDropdown(citySelect, cName)) {
-                                await loadDistricts(citySelect.value);
+                                await loadDistricts(citySelect.value); // Load daftar kecamatan
                                 
-                                // Kecamatan kita biarkan user milih sendiri karena satelit gratis sering kurang presisi
+                                // JALANKAN AUTO-CREATE KECAMATAN DI SINI!
+                                await syncAndCreateDistrict(dName);
                             }
                         }
                         isInitialLoad = false;
