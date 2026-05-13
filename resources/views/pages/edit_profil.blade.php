@@ -482,11 +482,10 @@
             document.getElementById('lat-display').innerText = currentLat.toFixed(6);
             document.getElementById('lng-display').innerText = currentLng.toFixed(6);
 
-// --- 4. ENGINE GEOCODING 100% GRATIS (OPENSTREETMAP) + DETEKTIF ---
+// --- 4. ENGINE GEOCODING 100% GRATIS (OPENSTREETMAP) + AUTO CREATE ---
             const loadingOverlay = document.getElementById('map-loading');
             const loadingText = document.getElementById('loading-text');
 
-            // Fungsi Pencocokan Teks
             function cleanText(text) {
                 if(!text) return '';
                 return text.toLowerCase()
@@ -511,18 +510,12 @@
                 return false;
             }
 
-            // FUNGSI SAKTI: BIKIN KECAMATAN OTOMATIS JIKA TIDAK ADA DI DROPDOWN
+            // FUNGSI SAKTI TANPA ALERT GANGGUAN
             async function syncAndCreateDistrict(distName) {
-                // MODE DETEKTIF 1: Satelit nggak ngirim nama kecamatan
-                if (!distName) {
-                    alert("⚠️ SATELIT GRATISAN BUTA: Titik koordinat ini tidak memiliki data Kecamatan dari satelit. Silakan pilih kecamatan manual dari dropdown.");
-                    return;
-                }
-                if (!citySelect.value) return;
+                if (!distName || !citySelect.value) return; // Kalau satelit buta, diam saja.
                 
                 let distFound = autoSelectDropdown(distSelect, distName);
                 
-                // Kalau nggak ketemu di dropdown, paksa server bikinin!
                 if (!distFound) {
                     loadingText.innerText = `Menambahkan Kec. ${distName}...`;
                     try {
@@ -542,27 +535,18 @@
                             const newDist = await createRes.json();
                             distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
                             distSelect.value = newDist.id;
-                            
-                            // MODE DETEKTIF 2: Berhasil bikin di Database
-                            alert(`✅ BERHASIL: Sistem mendeteksi kecamatan "${distName}" dan sukses menambahkannya ke Database Anda!`);
-                        } else {
-                            // MODE DETEKTIF 3: Controller Laravel Error
-                            const errData = await createRes.json();
-                            alert(`❌ ERROR DATABASE: Gagal memasukkan data. Pesan Server: ${errData.message}`);
                         }
                     } catch(e) {
-                        alert("❌ ERROR KONEKSI: Gagal memanggil fungsi /api/get-or-create-district.");
+                        console.error("Gagal bikin kecamatan otomatis", e);
                     }
                 }
             }
 
-            // Eksekusi Pelacakan Satelit Gratis
             async function performGeocoding(lat, lng) {
                 loadingOverlay.style.opacity = '1';
                 loadingText.innerText = "Satelit Melacak Lokasi...";
 
                 try {
-                    // Tembak langsung ke Nominatim (Gratis & Tanpa API Key)
                     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`);
                     const data = await res.json();
 
@@ -580,31 +564,20 @@
 
                         let pName = data.address.state || '';
                         let cName = data.address.city || data.address.county || data.address.regency || '';
-                        // Satelit gratis sering naruh nama daerah di sub-parameter ini
                         let dName = data.address.suburb || data.address.village || data.address.town || data.address.district || data.address.municipality || '';
 
-                        // Auto-Select Provinsi & Kota
                         if(autoSelectDropdown(provSelect, pName)) {
                             await loadCities(provSelect.value); 
                             
                             if(autoSelectDropdown(citySelect, cName)) {
                                 await loadDistricts(citySelect.value); 
-                                
-                                // Panggil Fungsi Sakti
                                 await syncAndCreateDistrict(dName);
-                            } else {
-                                // MODE DETEKTIF 4: Nama Kota beda
-                                alert(`⚠️ KOTA TIDAK COCOK: Satelit mengirim kota "${cName}", tapi tidak ada di database Anda.`);
                             }
-                        } else {
-                            // MODE DETEKTIF 5: Nama Provinsi beda
-                            alert(`⚠️ PROVINSI TIDAK COCOK: Satelit mengirim provinsi "${pName}", tapi tidak ada di database Anda.`);
                         }
                         isInitialLoad = false;
                     }
                 } catch (error) {
                     console.error("Geocoding Error:", error);
-                    alert("Koneksi ke satelit gagal. Silakan isi alamat secara manual.");
                 } finally {
                     loadingOverlay.style.opacity = '0';
                 }
