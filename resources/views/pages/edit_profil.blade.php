@@ -482,7 +482,7 @@
             document.getElementById('lat-display').innerText = currentLat.toFixed(6);
             document.getElementById('lng-display').innerText = currentLng.toFixed(6);
 
-            // --- 4. ENGINE GEOCODING GOOGLE MAPS ---
+// --- 4. ENGINE GEOCODING GOOGLE MAPS & NOMINATIM ---
             const GOOGLE_API_KEY = "{{ $googleMapsApiKey }}";
             const loadingOverlay = document.getElementById('map-loading');
             const loadingText = document.getElementById('loading-text');
@@ -504,13 +504,46 @@
                     if(!selectObj.options[i].value) continue;
                     let optClean = cleanText(selectObj.options[i].text);
 
-                    // Cocokkan jika string persis sama
                     if(optClean === targetClean) {
                         selectObj.selectedIndex = i;
                         return true;
                     }
                 }
                 return false;
+            }
+
+            // FUNGSI SAKTI: BIKIN KECAMATAN OTOMATIS (Bisa dipakai semua Satelit)
+            async function syncAndCreateDistrict(distName) {
+                if (!distName || !citySelect.value) return;
+                
+                let distFound = autoSelectDropdown(distSelect, distName);
+                
+                // Kalau nggak ketemu di dropdown, paksa server bikinin!
+                if (!distFound) {
+                    loadingText.innerText = `Menambahkan Kec. ${distName}...`;
+                    try {
+                        const createRes = await fetch('/api/get-or-create-district', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ 
+                                city_id: citySelect.value, 
+                                name: distName 
+                            })
+                        });
+                        
+                        if(createRes.ok) {
+                            const newDist = await createRes.json();
+                            // Tambahkan ke dropdown dan langsung pilih!
+                            distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
+                            distSelect.value = newDist.id;
+                        }
+                    } catch(e) {
+                        console.error("Gagal bikin kecamatan otomatis", e);
+                    }
+                }
             }
 
             async function performGeocoding(lat, lng) {
@@ -529,20 +562,15 @@
                             fullAddress = data.results[0].formatted_address;
                             const components = data.results[0].address_components;
 
-                            // Loop komponen mencari nama wilayah
                             components.forEach(c => {
                                 if(c.types.includes('administrative_area_level_1')) provName = c.long_name;
                                 if(c.types.includes('administrative_area_level_2')) cityName = c.long_name;
-                                // Level 3 dan 4 di Google Maps Indonesia biasanya adalah Kecamatan/Kelurahan
                                 if(c.types.includes('administrative_area_level_3') || c.types.includes('administrative_area_level_4') || c.types.includes('locality')) {
-                                    if(!distName) distName = c.long_name; // Ambil yang pertama ketemu
+                                    if(!distName) distName = c.long_name; 
                                 }
                                 if(c.types.includes('postal_code')) zipCode = c.long_name;
                             });
                         } else {
-                            console.error("Google Maps API Gagal/Limit:", data.error_message);
-                            alert("Sistem mendeteksi API Key Google Maps bermasalah. Menggunakan sistem fallback OpenStreetMap.");
-                            // Panggil Nominatim jika Google Error
                             await useNominatim(lat, lng);
                             return;
                         }
@@ -555,7 +583,6 @@
                     document.getElementById('alamat_lengkap').value = fullAddress;
                     if(zipCode) document.getElementById('kode_pos').value = zipCode;
 
-                    // Jika Load Awal dan user sudah punya alamat, Hentikan di sini (Jangan reset dropdown)
                     if (isInitialLoad && distSelect.value !== "") {
                         isInitialLoad = false;
                         loadingOverlay.style.opacity = '0';
@@ -566,44 +593,13 @@
 
                     // EKSEKUSI AUTO-SELECT BERANTAI
                     if(provName) {
-                        let provFound = autoSelectDropdown(provSelect, provName);
-                        if(provFound) {
-                            await loadCities(provSelect.value); // Tunggu kota di-load dari server
+                        if(autoSelectDropdown(provSelect, provName)) {
+                            await loadCities(provSelect.value); 
                             if(cityName) {
-                                let cityFound = autoSelectDropdown(citySelect, cityName);
-                                if(cityFound) {
-                                    await loadDistricts(citySelect.value); // Tunggu kecamatan di-load & di-sync ke Komerce
-                                    if(distName) {
-                                        // Cari kecamatan!
-let distFound = autoSelectDropdown(distSelect, distName);
-if(!distFound && distName) {
-    // TIPS DEWA: Kalau kecamatan gak ada di dropdown, kita suruh server bikin otomatis!
-    loadingText.innerText = "Menambahkan Kecamatan Baru...";
-    
-    try {
-        const createRes = await fetch('/api/get-or-create-district', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ 
-                city_id: citySelect.value, 
-                name: distName 
-            })
-        });
-        
-        if(createRes.ok) {
-            const newDist = await createRes.json();
-            // Tambahkan ke dropdown dan langsung pilih!
-            distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
-            distSelect.value = newDist.id;
-        }
-    } catch(e) {
-        console.error("Gagal membuat kecamatan otomatis", e);
-    }
-}
-                                    }
+                                if(autoSelectDropdown(citySelect, cityName)) {
+                                    await loadDistricts(citySelect.value); 
+                                    // Panggil Fungsi Sakti di sini
+                                    await syncAndCreateDistrict(distName); 
                                 }
                             }
                         }
@@ -633,19 +629,21 @@ if(!distFound && distName) {
 
                     let pName = data.address.state || '';
                     let cName = data.address.city || data.address.county || data.address.regency || '';
-                    let dName = data.address.suburb || data.address.village || data.address.town || data.address.district || '';
+                    
+                    // Diperluas: Satelit gratis kadang naruh kecamatan di "suburb", "district", "town", atau "municipality"
+                    let dName = data.address.suburb || data.address.village || data.address.town || data.address.district || data.address.municipality || '';
 
                     if(autoSelectDropdown(provSelect, pName)) {
                         await loadCities(provSelect.value);
                         if(autoSelectDropdown(citySelect, cName)) {
                             await loadDistricts(citySelect.value);
-                            autoSelectDropdown(distSelect, dName);
+                            // Panggil Fungsi Sakti di SINI JUGA
+                            await syncAndCreateDistrict(dName); 
                         }
                     }
                     isInitialLoad = false;
                 }
             }
-
             // Event Marker Digeser
             marker.on('dragend', function(e) {
                 isInitialLoad = false;
