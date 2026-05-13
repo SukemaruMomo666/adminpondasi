@@ -85,8 +85,8 @@
                     <p class="text-xs md:text-sm text-zinc-500 max-w-xs font-medium leading-relaxed">Pilih kontak mitra di sebelah kiri untuk melihat pesan atau mengirim file material.</p>
                 </div>
 
-                {{-- ACTIVE CHAT --}}
-                <div id="seller-active-chat" class="hidden flex-col h-full opacity-0 transition-opacity duration-300">
+                {{-- ACTIVE CHAT (Penyempurnaan absolute inset-0 & z-30) --}}
+                <div id="seller-active-chat" class="hidden absolute inset-0 flex-col bg-white z-30 opacity-0 transition-opacity duration-300">
 
                     {{-- Header Chat Aktif --}}
                     <div class="bg-white px-4 py-3 border-b border-zinc-200 flex items-center justify-between shadow-sm shrink-0">
@@ -102,9 +102,21 @@
                         </div>
                     </div>
 
-                    {{-- Area Histori Chat --}}
-                    <div id="seller-chat-messages" class="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative scroll-smooth">
+                    {{-- Area Histori Chat (Penyempurnaan min-h-0) --}}
+                    <div id="seller-chat-messages" class="flex-1 min-h-0 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-50 relative scroll-smooth">
                         {{-- Isi Chat di-render JS --}}
+                    </div>
+
+                    {{-- Animasi Typing Indicator --}}
+                    <div id="typing-indicator" class="hidden px-6 py-2 pb-4 border-t border-transparent bg-zinc-50">
+                        <div class="flex gap-2.5 max-w-[85%] self-start items-start origin-bottom-left animate-slide-left">
+                            <div class="w-8 h-8 rounded-full bg-zinc-200 shrink-0 flex items-center justify-center text-zinc-500 text-xs mt-auto shadow-sm"><i class="fas fa-store"></i></div>
+                            <div class="bg-white border border-zinc-200 p-3.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.2s"></span>
+                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-typing" style="animation-delay: 0.4s"></span>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Alat Kirim (Teks, Gambar, File, Voice Note) --}}
@@ -260,7 +272,7 @@
     let currentStoreId = null;
     let currentMessageCount = -1;
     let pendingMedia = null;
-    let smartPollingInterval = null; // Ganti Pusher dengan Polling Pintar
+    let smartPollingInterval = null; 
 
     document.addEventListener('DOMContentLoaded', () => {
         const isOpen = sessionStorage.getItem('pota_chat_open') === 'true';
@@ -275,13 +287,14 @@
         const savedStoreId = sessionStorage.getItem('pota_active_store');
         if(savedStoreId) {
             currentStoreId = savedStoreId;
-            document.getElementById('seller-empty-state').classList.add('hidden');
-            document.getElementById('seller-active-chat').classList.remove('hidden', 'opacity-0');
-            document.getElementById('seller-active-chat').classList.add('flex');
+            document.getElementById('seller-empty-state').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('seller-empty-state').classList.replace('flex', 'hidden');
+            document.getElementById('seller-active-chat').classList.replace('hidden', 'flex');
+            document.getElementById('seller-active-chat').classList.remove('opacity-0');
+            
             document.getElementById('active-store-name').innerText = sessionStorage.getItem('pota_active_name');
             document.getElementById('active-store-avatar').innerText = sessionStorage.getItem('pota_active_avatar');
             
-            // JANGAN pakai innerHTML lama. Langsung fetch baru biar selalu update!
             loadMessages(savedStoreId, true);
         }
 
@@ -295,7 +308,7 @@
         }
 
         fetchSellerContacts();
-        startSmartPolling(); // Mulai Auto Reload!
+        startSmartPolling(); 
     });
 
     /* === LIGHTBOX LOGIC === */
@@ -358,7 +371,7 @@
             switchChatTab(lastTab, true);
             sessionStorage.setItem('pota_chat_open', 'true');
             fetchSellerContacts(false);
-            startSmartPolling(); // Pastikan polling jalan saat chat dibuka
+            startSmartPolling(); 
         } else {
             chatWindow.classList.add('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
             chatWindow.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
@@ -369,8 +382,6 @@
             }, 500);
             sessionStorage.setItem('pota_chat_open', 'false');
             endVoiceCallMode();
-            
-            // Matikan polling saat chat ditutup biar web gak berat
             clearInterval(smartPollingInterval); 
         }
     }
@@ -431,10 +442,10 @@
     function closeActiveChatMobile() {
         document.getElementById('seller-active-chat').classList.replace('flex', 'hidden');
         document.getElementById('seller-empty-state').classList.replace('hidden', 'flex');
-        document.getElementById('seller-empty-state').classList.remove('opacity-0');
+        document.getElementById('seller-empty-state').classList.remove('opacity-0', 'pointer-events-none');
         currentStoreId = null;
         sessionStorage.removeItem('pota_active_store');
-        fetchSellerContacts();
+        fetchSellerContacts(false);
     }
 
     /* ========================================================
@@ -442,32 +453,24 @@
        ======================================================== */
     function startSmartPolling() {
         if(smartPollingInterval) clearInterval(smartPollingInterval);
-        
-        // Tarik data baru tiap 3 detik
         smartPollingInterval = setInterval(() => {
-            // Update daftar kontak kiri
             fetchSellerContacts(false); 
-            
-            // Kalau lagi buka chat, update pesannya juga
             if (currentStoreId) {
                 loadMessages(currentStoreId, false);
             }
         }, 3000); 
     }
 
-async function fetchSellerContacts(showLoading = true) {
+    async function fetchSellerContacts(showLoading = true) {
         const contactList = document.getElementById('seller-contact-list');
         if(showLoading && contactList.innerHTML === "") contactList.innerHTML = `<div class="p-6 text-center text-zinc-400 flex flex-col items-center"><i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i><span class="text-[10px] font-bold uppercase">Memuat...</span></div>`;
         try {
-            // === INI YANG DIGANTI YA BOS ===
             const res = await fetch('/api/chat/contacts', {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-            // ===============================
-            
             if(!res.ok) throw new Error();
             const data = await res.json();
             renderContacts(data, contactList);
@@ -534,14 +537,17 @@ async function fetchSellerContacts(showLoading = true) {
         const emptyState = document.getElementById('seller-empty-state');
         const activeChat = document.getElementById('seller-active-chat');
 
+        // PENYEMPURNAAN CLASS FLEX
         if(triggerAnimation) {
             emptyState.classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => { emptyState.classList.add('hidden'); }, 300);
-            activeChat.classList.remove('hidden');
+            setTimeout(() => { emptyState.classList.replace('flex', 'hidden'); }, 300);
+            activeChat.classList.replace('hidden', 'flex');
             setTimeout(() => { activeChat.classList.remove('opacity-0'); }, 50);
         } else {
-            emptyState.classList.add('hidden');
-            activeChat.classList.remove('hidden', 'opacity-0');
+            emptyState.classList.add('opacity-0', 'pointer-events-none');
+            emptyState.classList.replace('flex', 'hidden');
+            activeChat.classList.replace('hidden', 'flex');
+            activeChat.classList.remove('opacity-0');
         }
 
         document.getElementById('active-store-name').innerText = storeName;
@@ -557,23 +563,27 @@ async function fetchSellerContacts(showLoading = true) {
 
     async function loadMessages(storeId, isInitialLoad = false) {
         try {
-            const res = await fetch(`/api/chat/messages/${storeId}`);
+            const res = await fetch(`/api/chat/messages/${storeId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             if(!res.ok) throw new Error();
             const data = await res.json();
             const msgContainer = document.getElementById('seller-chat-messages');
 
-            // Logika Auto Reload Tanpa Kedip
             if (isInitialLoad || data.length > currentMessageCount || data.length < currentMessageCount) {
                 msgContainer.innerHTML = '';
                 currentMessageCount = data.length;
 
                 if(data.length === 0) {
-                     msgContainer.innerHTML = `<div class="text-center text-[10px] font-bold text-zinc-400 my-4 bg-white p-2 mx-auto rounded-full border border-zinc-200 max-w-[200px] shadow-sm">Belum ada obrolan. Mulai sapa penjual!</div>`;
+                     // PENYEMPURNAAN POSISI "BELUM ADA PESAN"
+                     msgContainer.innerHTML = `<div class="text-center text-[10px] font-bold text-zinc-400 m-auto bg-white p-2 px-4 rounded-full border border-zinc-200 max-w-[200px] shadow-sm">Belum ada obrolan. Mulai sapa penjual!</div>`;
                 } else {
                      data.forEach(msg => appendSellerMessage(msg.content, msg.sender, msg.time, msg.type, msg.fileName, msg.is_read, isInitialLoad));
                 }
                 
-                // Cek apakah scroll sedang di bawah. Kalau iya, scroll otomatis ke pesan baru.
                 if(isInitialLoad || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 150)) {
                     scrollToBottom();
                 }
