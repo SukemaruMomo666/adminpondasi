@@ -482,17 +482,16 @@
             document.getElementById('lat-display').innerText = currentLat.toFixed(6);
             document.getElementById('lng-display').innerText = currentLng.toFixed(6);
 
-// --- 4. ENGINE GEOCODING GOOGLE MAPS & NOMINATIM ---
-            const GOOGLE_API_KEY = "{{ $googleMapsApiKey }}";
+// --- 4. ENGINE GEOCODING 100% GRATIS (OPENSTREETMAP) ---
             const loadingOverlay = document.getElementById('map-loading');
             const loadingText = document.getElementById('loading-text');
 
-            // Fungsi Pencocokan Teks Super Agresif
+            // Fungsi Pencocokan Teks
             function cleanText(text) {
                 if(!text) return '';
                 return text.toLowerCase()
                     .replace(/provinsi|kota|kabupaten|kab\.|kecamatan|kec\.|daerah khusus ibukota|dki/gi, '')
-                    .replace(/[^a-z0-9]/gi, '') // Hapus semua karakter selain huruf dan angka
+                    .replace(/[^a-z0-9]/gi, '') 
                     .trim();
             }
 
@@ -512,136 +511,50 @@
                 return false;
             }
 
-            // FUNGSI SAKTI: BIKIN KECAMATAN OTOMATIS (Bisa dipakai semua Satelit)
-            async function syncAndCreateDistrict(distName) {
-                if (!distName || !citySelect.value) return;
-                
-                let distFound = autoSelectDropdown(distSelect, distName);
-                
-                // Kalau nggak ketemu di dropdown, paksa server bikinin!
-                if (!distFound) {
-                    loadingText.innerText = `Menambahkan Kec. ${distName}...`;
-                    try {
-                        const createRes = await fetch('/api/get-or-create-district', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: JSON.stringify({ 
-                                city_id: citySelect.value, 
-                                name: distName 
-                            })
-                        });
-                        
-                        if(createRes.ok) {
-                            const newDist = await createRes.json();
-                            // Tambahkan ke dropdown dan langsung pilih!
-                            distSelect.innerHTML += `<option value="${newDist.id}">${newDist.name}</option>`;
-                            distSelect.value = newDist.id;
-                        }
-                    } catch(e) {
-                        console.error("Gagal bikin kecamatan otomatis", e);
-                    }
-                }
-            }
-
+            // Eksekusi Pelacakan Satelit Gratis
             async function performGeocoding(lat, lng) {
                 loadingOverlay.style.opacity = '1';
                 loadingText.innerText = "Satelit Melacak Lokasi...";
 
                 try {
-                    let provName = '', cityName = '', distName = '', fullAddress = '', zipCode = '';
+                    // Tembak langsung ke Nominatim (Gratis & Tanpa API Key)
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`);
+                    const data = await res.json();
 
-                    // PAKSA MENGGUNAKAN GOOGLE MAPS JIKA API KEY ADA
-                    if(GOOGLE_API_KEY && GOOGLE_API_KEY.length > 10) {
-                        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}&language=id`);
-                        const data = await res.json();
+                    if(data.display_name) {
+                        // 1. Isi Alamat Lengkap & Kode Pos otomatis
+                        document.getElementById('alamat_lengkap').value = data.display_name;
+                        if(data.address.postcode) document.getElementById('kode_pos').value = data.address.postcode;
 
-                        if(data.status === 'OK' && data.results.length > 0) {
-                            fullAddress = data.results[0].formatted_address;
-                            const components = data.results[0].address_components;
-
-                            components.forEach(c => {
-                                if(c.types.includes('administrative_area_level_1')) provName = c.long_name;
-                                if(c.types.includes('administrative_area_level_2')) cityName = c.long_name;
-                                if(c.types.includes('administrative_area_level_3') || c.types.includes('administrative_area_level_4') || c.types.includes('locality')) {
-                                    if(!distName) distName = c.long_name; 
-                                }
-                                if(c.types.includes('postal_code')) zipCode = c.long_name;
-                            });
-                        } else {
-                            await useNominatim(lat, lng);
+                        if (isInitialLoad && distSelect.value !== "") {
+                            isInitialLoad = false;
+                            loadingOverlay.style.opacity = '0';
                             return;
                         }
-                    } else {
-                         await useNominatim(lat, lng);
-                         return;
-                    }
 
-                    // EKSEKUSI PENGISIAN FORM
-                    document.getElementById('alamat_lengkap').value = fullAddress;
-                    if(zipCode) document.getElementById('kode_pos').value = zipCode;
+                        loadingText.innerText = "Menyelaraskan Wilayah...";
 
-                    if (isInitialLoad && distSelect.value !== "") {
-                        isInitialLoad = false;
-                        loadingOverlay.style.opacity = '0';
-                        return;
-                    }
-
-                    loadingText.innerText = "Menyelaraskan Wilayah...";
-
-                    // EKSEKUSI AUTO-SELECT BERANTAI
-                    if(provName) {
-                        if(autoSelectDropdown(provSelect, provName)) {
-                            await loadCities(provSelect.value); 
-                            if(cityName) {
-                                if(autoSelectDropdown(citySelect, cityName)) {
-                                    await loadDistricts(citySelect.value); 
-                                    // Panggil Fungsi Sakti di sini
-                                    await syncAndCreateDistrict(distName); 
-                                }
+                        // 2. Ambil data Provinsi & Kota dari satelit
+                        let pName = data.address.state || '';
+                        let cName = data.address.city || data.address.county || data.address.regency || '';
+                        
+                        // 3. Auto-Select Provinsi & Kota
+                        if(autoSelectDropdown(provSelect, pName)) {
+                            await loadCities(provSelect.value);
+                            
+                            if(autoSelectDropdown(citySelect, cName)) {
+                                await loadDistricts(citySelect.value);
+                                
+                                // Kecamatan kita biarkan user milih sendiri karena satelit gratis sering kurang presisi
                             }
                         }
+                        isInitialLoad = false;
                     }
-                    isInitialLoad = false;
-
                 } catch (error) {
                     console.error("Geocoding Error:", error);
+                    alert("Koneksi ke satelit gagal. Silakan isi alamat secara manual.");
                 } finally {
                     loadingOverlay.style.opacity = '0';
-                }
-            }
-
-            // FUNGSI CADANGAN JIKA GOOGLE MAPS MATI (NOMINATIM)
-            async function useNominatim(lat, lng) {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`);
-                const data = await res.json();
-
-                if(data.display_name) {
-                    document.getElementById('alamat_lengkap').value = data.display_name;
-                    if(data.address.postcode) document.getElementById('kode_pos').value = data.address.postcode;
-
-                    if (isInitialLoad && distSelect.value !== "") {
-                        isInitialLoad = false;
-                        return;
-                    }
-
-                    let pName = data.address.state || '';
-                    let cName = data.address.city || data.address.county || data.address.regency || '';
-                    
-                    // Diperluas: Satelit gratis kadang naruh kecamatan di "suburb", "district", "town", atau "municipality"
-                    let dName = data.address.suburb || data.address.village || data.address.town || data.address.district || data.address.municipality || '';
-
-                    if(autoSelectDropdown(provSelect, pName)) {
-                        await loadCities(provSelect.value);
-                        if(autoSelectDropdown(citySelect, cName)) {
-                            await loadDistricts(citySelect.value);
-                            // Panggil Fungsi Sakti di SINI JUGA
-                            await syncAndCreateDistrict(dName); 
-                        }
-                    }
-                    isInitialLoad = false;
                 }
             }
             // Event Marker Digeser
