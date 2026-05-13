@@ -80,6 +80,11 @@ Route::controller(PageController::class)->group(function () {
     // Profil User
     Route::get('/profil-saya', 'profil')->name('profil.index');
     Route::get('/profil-saya/edit', 'editProfil')->name('profil.edit');
+    
+    // --- PERBAIKAN: RUTE FALLBACK UNTUK MENCEGAH ERROR METHOD GET SAAT REFRESH ---
+    Route::get('/profil-saya/update', function() { return redirect()->route('profil.edit'); });
+    // -------------------------------------------------------------------------------
+    
     Route::post('/profil-saya/update', 'updateProfil')->name('profil.update');
     Route::get('/profil-saya/ganti-password', 'gantiPassword')->name('profil.password');
     Route::post('/profil-saya/ganti-password', 'updatePassword')->name('profil.password.update');
@@ -249,9 +254,7 @@ Route::prefix('portal-rahasia-pks')->name('admin.')->middleware(['admin'])->grou
 });
 
 // 6. API, AJAX, & WEBHOOKS
-Route::get('/api/cities/{province_id}', [AuthController::class, 'getCities']);
-Route::get('/api/districts/{city_id}', [PageController::class, 'getDistrictsOnDemand']);
-Route::post('/api/get-or-create-district', [PageController::class, 'getOrCreateDistrict'])->name('api.get.create.district');
+Route::get('/api/biteship/search', [PageController::class, 'searchBiteshipAPI']); // <-- UPDATE API BITESHIP
 
 // Chat AI (POTA)
 Route::post('/api/chat', [ChatAiController::class, 'handleChat'])->name('api.chat');

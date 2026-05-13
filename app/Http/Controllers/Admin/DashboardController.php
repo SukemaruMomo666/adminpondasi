@@ -44,8 +44,7 @@ class DashboardController extends Controller
 
         // 4. Ambil Top Performance Toko Bangunan (Limit 5 untuk Dashboard Depan)
         $queryToko = DB::table('tb_toko as t')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-            ->select('t.id', 't.nama_toko', 't.logo_toko', 't.tier_toko', 'c.name as nama_kota');
+            ->select('t.id', 't.nama_toko', 't.logo_toko', 't.tier_toko', 't.area_id as nama_kota'); // <- PERBAIKAN: Hapus JOIN cities, ganti jadi area_id
 
         // Subquery: Hitung GMV (Hanya pesanan yang sudah sampai)
         $queryToko->selectSub(function ($q) {
@@ -85,8 +84,7 @@ class DashboardController extends Controller
         $sort = $request->sort ?? 'gmv'; // Default urutkan berdasarkan penjualan tertinggi
 
         $query = DB::table('tb_toko as t')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-            ->select('t.id', 't.nama_toko', 't.logo_toko', 't.tier_toko', 'c.name as nama_kota');
+            ->select('t.id', 't.nama_toko', 't.logo_toko', 't.tier_toko', 't.area_id as nama_kota'); // <- PERBAIKAN: Hapus JOIN cities, ganti jadi area_id
 
         // Subquery: Hitung GMV
         $query->selectSub(function ($q) {

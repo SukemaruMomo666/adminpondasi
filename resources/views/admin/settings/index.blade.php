@@ -539,18 +539,19 @@
                     </div>
                 </div>
 
-                {{-- KOMERCE API --}}
+                {{-- BITESHIP API --}}
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 lg:p-8 shadow-sm transition-colors duration-300">
                     <div class="border-b border-slate-100 dark:border-slate-800 pb-5 mb-6">
                         <h3 class="text-xl font-black text-slate-800 dark:text-white m-0 flex items-center gap-2">
-                            <i class="mdi mdi-api text-blue-500"></i> Komerce / RajaOngkir API
+                            <i class="mdi mdi-api text-blue-500"></i> Biteship API
                         </h3>
-                        <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 mb-0">Hubungkan logistik untuk perhitungan tarif ongkir akurat ke seluruh Indonesia.</p>
+                        <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 mb-0">Hubungkan logistik dan sistem lokasi untuk perhitungan tarif ongkir otomatis ke seluruh Indonesia.</p>
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">API Key Rahasia</label>
-                        <input type="password" name="rajaongkir_api_key" value="{{ $settings['rajaongkir_api_key'] ?? '' }}" class="form-control-custom p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white shadow-inner dark:shadow-none font-mono text-sm tracking-[0.2em]" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                        <input type="password" name="biteship_api_key" value="{{ $settings['biteship_api_key'] ?? '' }}" class="form-control-custom p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white shadow-inner dark:shadow-none font-mono text-sm tracking-[0.2em]" placeholder="biteship_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                        <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1">Dapatkan API Key di <a href="https://biteship.com/" target="_blank" class="text-blue-500 hover:underline">Dashboard Biteship</a> Anda.</p>
                     </div>
                 </div>
 

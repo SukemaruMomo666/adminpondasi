@@ -113,7 +113,7 @@
     @include('partials.navbar')
 
     {{-- ========================================================
-         2. HERO SECTION : B&W + BLUE PREMIUM EDITION
+         1. HERO SECTION : B&W + BLUE PREMIUM EDITION
          ======================================================== --}}
     <section class="relative bg-zinc-950 pt-20 pb-16 sm:pt-24 sm:pb-20 lg:pt-36 lg:pb-32 overflow-hidden border-b border-zinc-800 w-full">
         {{-- Ambient Glow --}}
@@ -228,62 +228,7 @@
     <main class="container mx-auto px-4 py-8 lg:py-10 space-y-12 lg:space-y-16 relative z-20 overflow-hidden w-full">
 
         {{-- ========================================================
-             3. FLASH SALE SECTION
-             ======================================================== --}}
-        @if(isset($flashSaleProducts) && count($flashSaleProducts) > 0)
-        <section class="relative bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl md:rounded-[2.5rem] p-5 sm:p-6 lg:p-10 shadow-xl overflow-hidden w-full">
-            <div class="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-white/20 rounded-full blur-2xl md:blur-3xl"></div>
-
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 relative z-10">
-                <div class="flex items-center gap-3 md:gap-4">
-                    <div class="w-10 h-10 md:w-12 md:h-12 bg-white text-red-600 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-lg shrink-0">
-                        <i class="fas fa-bolt animate-flash-pulse"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none">FLASH SALE</h2>
-                        <p class="text-red-100 text-xs sm:text-sm font-medium mt-1">Material murah berakhir dalam:</p>
-                    </div>
-                </div>
-                {{-- Countdown Timer --}}
-                <div class="flex gap-1.5 md:gap-2 text-white font-black font-mono text-sm sm:text-lg md:text-xl" x-data="countdown('{{ $flashSaleEndTime ?? '' }}')">
-                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="hours">00</div><span class="py-1.5 md:py-2">:</span>
-                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="minutes">00</div><span class="py-1.5 md:py-2">:</span>
-                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="seconds">00</div>
-                </div>
-            </div>
-
-            {{-- Flash Sale Products Scroll --}}
-            <div class="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-5 px-5 sm:mx-0 sm:px-0">
-                @foreach($flashSaleProducts as $fs)
-                    @php
-                        $harga_coret = $fs->harga;
-                        $harga_diskon = $fs->harga_flash_sale ?? ($fs->harga * 0.8);
-                        $persen = round((($harga_coret - $harga_diskon) / $harga_coret) * 100);
-                        $terjual = $fs->stok_terjual ?? rand(10, 50);
-                        $total_stok = $fs->stok_flash_sale ?? 100;
-                        $persen_terjual = min(100, round(($terjual / $total_stok) * 100));
-                    @endphp
-                    <a href="{{ route('produk.detail', $fs->id) }}" class="snap-start shrink-0 w-[140px] sm:w-44 md:w-56 bg-white rounded-2xl p-2.5 md:p-3 shadow-lg hover:-translate-y-1 md:hover:-translate-y-2 transition-transform duration-300 group">
-                        <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-100 mb-2 md:mb-3">
-                            <img src="{{ asset('assets/uploads/products/'.($fs->gambar_utama ?? 'default.jpg')) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="{{ $fs->nama_barang }}">
-                            <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 bg-red-500 text-white text-[9px] md:text-[10px] font-black px-1.5 md:px-2 py-0.5 md:py-1 rounded-md">-{{ $persen }}%</div>
-                        </div>
-                        <h3 class="text-[11px] md:text-xs font-bold text-zinc-800 line-clamp-2 min-h-[1.75rem] md:min-h-[2rem] leading-snug mb-1">{{ $fs->nama_barang }}</h3>
-                        <div class="font-black text-red-600 text-sm md:text-lg mb-0.5 md:mb-1 truncate">Rp {{ number_format($harga_diskon, 0, ',', '.') }}</div>
-                        <div class="text-[9px] md:text-[10px] text-zinc-400 line-through mb-1.5 md:mb-2 truncate">Rp {{ number_format($harga_coret, 0, ',', '.') }}</div>
-
-                        <div class="w-full bg-red-100 rounded-full h-2.5 md:h-3.5 relative overflow-hidden">
-                            <div class="bg-red-500 h-full progress-bar-striped transition-all duration-1000" style="width: {{ $persen_terjual }}%"></div>
-                            <span class="absolute inset-0 flex items-center justify-center text-[7px] md:text-[8px] font-black text-white drop-shadow-md">TERJUAL {{ $terjual }}</span>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        </section>
-        @endif
-
-        {{-- ========================================================
-             4. KATEGORI UTAMA (ALPINEJS VIEW MORE)
+             2. KATEGORI UTAMA (ALPINEJS VIEW MORE)
              ======================================================== --}}
         <section x-data="{ showAll: false }" class="w-full">
             <div class="text-center max-w-2xl mx-auto mb-8 md:mb-10">
@@ -372,7 +317,7 @@
         </section>
 
         {{-- ========================================================
-             5. FLOATING TECH VALUES (PENGISI GAP)
+             3. FLOATING TECH VALUES (PENGISI GAP) & POTA AI
              ======================================================== --}}
         <section class="relative py-0 overflow-hidden rounded-3xl md:rounded-[3rem] bg-zinc-50/50 border border-zinc-100">
             <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#2563eb 0.5px, transparent 0.5px); background-size: 24px 24px;"></div>
@@ -420,10 +365,7 @@
             }
         </style>
 
-        {{-- ========================================================
-             6. BENTO GRID FEATURE HIGHLIGHT (POTA AI)
-             ======================================================== --}}
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 relative z-20 mt-6 md:mt-10">
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 relative z-20">
             <div class="lg:col-span-2 relative overflow-hidden bg-zinc-950 rounded-3xl md:rounded-[2.5rem] p-6 sm:p-8 md:p-12 flex flex-col justify-center group border border-zinc-800 shadow-2xl">
                 <div class="absolute top-0 right-0 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-blue-600/20 rounded-full mix-blend-screen filter blur-[60px] md:blur-[80px] group-hover:bg-blue-500/30 transition-colors duration-700 pointer-events-none"></div>
                 <div class="absolute bottom-0 left-0 w-[200px] md:w-[300px] h-[200px] md:h-[300px] bg-indigo-600/10 rounded-full mix-blend-screen filter blur-[60px] md:blur-[80px] pointer-events-none"></div>
@@ -474,14 +416,82 @@
         </section>
 
         {{-- ========================================================
-             7. MITRA TOKO TERVERIFIKASI
+             4. FLASH SALE SECTION (KAGET DISKON)
              ======================================================== --}}
-        @if(($settings['show_top_stores'] ?? '1') == '1')
-        <section id="toko" class="relative mt-10 md:mt-12 w-full">
+        @if(isset($flashSaleProducts) && count($flashSaleProducts) > 0)
+        <section class="relative bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl md:rounded-[2.5rem] p-5 sm:p-6 lg:p-10 shadow-xl overflow-hidden w-full">
+            <div class="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-white/20 rounded-full blur-2xl md:blur-3xl"></div>
+
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 relative z-10">
+                <div class="flex items-center gap-3 md:gap-4">
+                    <div class="w-10 h-10 md:w-12 md:h-12 bg-white text-red-600 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-lg shrink-0">
+                        <i class="fas fa-bolt animate-flash-pulse"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none">KAGET DISKON LOKAL</h2>
+                        <p class="text-red-100 text-xs sm:text-sm font-medium mt-1 flex items-center gap-1.5">
+                            <i class="fas fa-location-dot"></i> Promo spesial material pilihan berakhir dalam:
+                        </p>
+                    </div>
+                </div>
+                {{-- Countdown Timer --}}
+                <div class="flex gap-1.5 md:gap-2 text-white font-black font-mono text-sm sm:text-lg md:text-xl" x-data="countdown('{{ $flashSaleEndTime ?? '' }}')">
+                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="hours">00</div><span class="py-1.5 md:py-2">:</span>
+                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="minutes">00</div><span class="py-1.5 md:py-2">:</span>
+                    <div class="bg-black/30 backdrop-blur-md px-2 py-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl" x-text="seconds">00</div>
+                </div>
+            </div>
+
+            {{-- Flash Sale Products Scroll --}}
+            <div class="flex gap-3 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-5 px-5 sm:mx-0 sm:px-0">
+                @foreach($flashSaleProducts as $fs)
+                    @php
+                        $harga_coret = $fs->harga;
+                        $harga_diskon = $harga_coret;
+                        
+                        if(isset($fs->harga_flash_sale) && $fs->harga_flash_sale > 0) {
+                            $harga_diskon = $fs->harga_flash_sale;
+                        } elseif(isset($fs->tipe_diskon) && $fs->tipe_diskon == 'PERSEN') {
+                            $harga_diskon = $harga_coret - ($harga_coret * ($fs->nilai_diskon / 100));
+                        } elseif(isset($fs->nilai_diskon) && $fs->nilai_diskon > 0) {
+                            $harga_diskon = $harga_coret - $fs->nilai_diskon;
+                        } else {
+                            $harga_diskon = $harga_coret * 0.8; 
+                        }
+
+                        $persen = round((($harga_coret - $harga_diskon) / $harga_coret) * 100);
+                        $terjual = $fs->stok_terjual ?? rand(10, 50);
+                        $total_stok = $fs->stok_flash_sale ?? 100;
+                        $persen_terjual = min(100, round(($terjual / $total_stok) * 100));
+                    @endphp
+                    <a href="{{ route('produk.detail', $fs->id) }}" class="snap-start shrink-0 w-[140px] sm:w-44 md:w-56 bg-white rounded-2xl p-2.5 md:p-3 shadow-lg hover:-translate-y-1 md:hover:-translate-y-2 transition-transform duration-300 group">
+                        <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-100 mb-2 md:mb-3">
+                            <img src="{{ asset('assets/uploads/products/'.($fs->gambar_utama ?? 'default.jpg')) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="{{ $fs->nama_barang }}">
+                            <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 bg-red-500 text-white text-[9px] md:text-[10px] font-black px-1.5 md:px-2 py-0.5 md:py-1 rounded-md">-{{ $persen }}%</div>
+                        </div>
+                        <h3 class="text-[11px] md:text-xs font-bold text-zinc-800 line-clamp-2 min-h-[1.75rem] md:min-h-[2rem] leading-snug mb-1">{{ $fs->nama_barang }}</h3>
+                        <div class="font-black text-red-600 text-sm md:text-lg mb-0.5 md:mb-1 truncate">Rp {{ number_format($harga_diskon, 0, ',', '.') }}</div>
+                        <div class="text-[9px] md:text-[10px] text-zinc-400 line-through mb-1.5 md:mb-2 truncate">Rp {{ number_format($harga_coret, 0, ',', '.') }}</div>
+
+                        <div class="w-full bg-red-100 rounded-full h-2.5 md:h-3.5 relative overflow-hidden">
+                            <div class="bg-red-500 h-full progress-bar-striped transition-all duration-1000" style="width: {{ $persen_terjual }}%"></div>
+                            <span class="absolute inset-0 flex items-center justify-center text-[7px] md:text-[8px] font-black text-white drop-shadow-md">TERJUAL {{ $terjual }}</span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+        {{-- ========================================================
+             5. MITRA TOKO TERPOPULER (GLOBAL NASIONAL)
+             ======================================================== --}}
+        @if(($settings['show_top_stores'] ?? '1') == '1' && isset($listToko) && count($listToko) > 0)
+        <section id="toko" class="relative w-full">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 md:mb-12 border-b border-zinc-100 pb-6 md:pb-8 gap-4 md:gap-6">
                 <div>
-                    <h2 class="text-[9px] md:text-[10px] font-black tracking-[0.2em] md:tracking-[0.3em] text-blue-600 uppercase mb-2 md:mb-3">Partner Resmi</h2>
-                    <h3 class="text-2xl md:text-3xl lg:text-4xl font-black text-black tracking-tight">{{ $tokoSectionTitle ?? 'Mitra Terverifikasi' }}</h3>
+                    <h2 class="text-[9px] md:text-[10px] font-black tracking-[0.2em] md:tracking-[0.3em] text-blue-600 uppercase mb-2 md:mb-3">Partner Resmi Nasional</h2>
+                    <h3 class="text-2xl md:text-3xl lg:text-4xl font-black text-black tracking-tight">Mitra Toko Terpopuler</h3>
                 </div>
 
                 <a href="{{ url('pages/semua_toko') }}"
@@ -497,7 +507,7 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 w-full">
-                @forelse($listToko ?? [] as $toko)
+                @foreach($listToko as $toko)
                     @php
                         $bannerPath = 'assets/uploads/banners/' . ($toko->banner_toko ?? '');
                         $hasBanner = !empty($toko->banner_toko) && file_exists(public_path($bannerPath));
@@ -605,136 +615,206 @@
                             </div>
                         </div>
                     </a>
-                @empty
-                    <div class="col-span-full py-16 md:py-20 text-center bg-zinc-50 rounded-3xl md:rounded-[3rem] border border-dashed border-zinc-200 w-full">
-                        <i class="fas fa-store-slash text-3xl md:text-4xl text-zinc-200 mb-3 md:mb-4"></i>
-                        <p class="text-zinc-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">Belum ada mitra di wilayah ini</p>
-                    </div>
-                @endforelse
+                @endforeach
             </div>
         </section>
         @endif
 
         {{-- ========================================================
-             8. PRODUK GRID
+             6. TOKO TERDEKAT (HYPER LOCAL)
              ======================================================== --}}
-        @if(($settings['show_best_selling'] ?? '1') == '1')
-            @foreach(['listProdukLokal' => ['title' => 'Rekomendasi Area Anda', 'badge' => 'TERDEKAT'], 'listProdukNasional' => ['title' => 'Tren Nasional', 'badge' => 'TERLARIS']] as $varName => $config)
-                @if(isset($$varName) && count($$varName) > 0)
-                <section class="relative mt-10 md:mt-12 w-full">
-                    <div class="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
-                        <div class="w-1 md:w-1.5 h-6 md:h-8 bg-blue-600 rounded-full"></div>
-                        <div>
-                            <span class="text-[8px] md:text-[9px] font-black tracking-[0.3em] md:tracking-[0.4em] text-blue-600/60 uppercase leading-none">{{ $config['badge'] }}</span>
-                            <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 tracking-tight mt-0.5 md:mt-1">{{ $config['title'] }}</h2>
+        @if(isset($listTokoTerdekat) && count($listTokoTerdekat) > 0)
+        <section id="toko-terdekat" class="relative w-full bg-blue-50/50 p-6 md:p-10 rounded-[2.5rem] border border-blue-100">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 border-b border-blue-200/50 pb-6 gap-4">
+                <div>
+                    <h2 class="text-[10px] font-black tracking-[0.3em] text-blue-600 uppercase mb-2 flex items-center gap-2">
+                        <i class="fas fa-location-crosshairs text-red-500 animate-pulse"></i> HYPER LOCAL
+                    </h2>
+                    <h3 class="text-2xl md:text-4xl font-black text-black tracking-tight">Toko Terdekat di Lokasi Anda</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+                @foreach($listTokoTerdekat as $toko)
+                    @php
+                        $bannerPath = 'assets/uploads/banners/' . ($toko->banner_toko ?? '');
+                        $hasBanner = !empty($toko->banner_toko) && file_exists(public_path($bannerPath));
+                        $initials = strtoupper(substr($toko->nama_toko ?? 'TK', 0, 2));
+                        $logoPath = 'assets/uploads/logos/' . ($toko->logo_toko ?? '');
+                        $hasLogo = !empty($toko->logo_toko) && file_exists(public_path($logoPath));
+                    @endphp
+                    <a href="{{ url('pages/toko?slug=' . ($toko->slug ?? '#')) }}" class="group bg-white rounded-[2rem] shadow-sm hover:-translate-y-2 flex flex-col border border-blue-100 hover:border-blue-400 transition-all overflow-hidden">
+                        <div class="h-32 bg-cover bg-center relative {{ !$hasBanner ? 'bg-gradient-to-br from-blue-600 to-blue-900' : '' }}" style="{{ $hasBanner ? "background-image: url(" . asset($bannerPath) . ");" : "" }}">
+                            <div class="absolute inset-0 bg-gradient-to-t from-zinc-900/90 to-transparent"></div>
+                            <div class="absolute top-3 right-3 px-2 py-1 rounded-full flex items-center gap-1 border bg-blue-500/80 text-white backdrop-blur">
+                                <i class="fas fa-map-marker-alt text-[8px]"></i><span class="text-[8px] font-black uppercase">{{ number_format($toko->jarak_km ?? 0, 1) }} KM</span>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 lg:gap-8 w-full">
-                        @foreach($$varName as $p)
-                        @php
-                            $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg';
-
-                            // Logika Diskon
-                            $harga_asli = $p->harga;
-                            $harga_tampil = $harga_asli;
-                            $ada_diskon = false;
-                            $badge_diskon = '';
-
-                            if(isset($p->nilai_diskon) && $p->nilai_diskon > 0) {
-                                $ada_diskon = true;
-                                if($p->tipe_diskon == 'PERSEN') {
-                                    $harga_tampil = $harga_asli - ($harga_asli * ($p->nilai_diskon / 100));
-                                    $badge_diskon = round($p->nilai_diskon) . '% OFF';
-                                } else {
-                                    $harga_tampil = $harga_asli - $p->nilai_diskon;
-                                    $badge_diskon = 'Diskon ' . number_format($p->nilai_diskon/1000, 0) . 'RB';
-                                }
-                            }
-
-                            // INTEGRASI DATA REAL DARI tb_review_produk
-                            $statUlasan = \Illuminate\Support\Facades\DB::table('tb_review_produk')
-                                            ->where('barang_id', $p->id)
-                                            ->selectRaw('COUNT(id) as total, AVG(rating) as rata')
-                                            ->first();
-
-                            $avg_rating = $statUlasan->rata ?? 0;
-                            $jumlah_ulasan = $statUlasan->total ?? 0;
-                            $terjual = $p->stok_terjual ?? rand(5, 100);
-                        @endphp
-
-                        <a href="{{ route('produk.detail', $p->id) }}"
-                           class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 md:hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(37,99,235,0.08)] flex flex-col overflow-hidden w-full">
-
-                            <div class="aspect-square bg-zinc-50 overflow-hidden relative">
-                                <img src="{{ asset($img) }}"
-                                     onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'"
-                                     class="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
-                                     alt="{{ $p->nama_barang }}">
-
-                                @if($ada_diskon)
-                                    <div class="absolute top-2 left-2 md:top-3 md:left-3 bg-red-500 text-white text-[9px] md:text-[10px] font-black px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-md shadow-md z-10">{{ $badge_diskon }}</div>
+                        <div class="pt-10 pb-6 px-6 bg-white relative rounded-t-[2rem] -mt-5 z-10 flex-1">
+                            <div class="absolute -top-10 left-6">
+                                @if($hasLogo)
+                                    <img src="{{ asset($logoPath) }}" class="w-16 h-16 rounded-xl object-cover border-[4px] border-white shadow-md bg-white">
+                                @else
+                                    <div class="w-16 h-16 rounded-xl text-white flex items-center justify-center font-black text-xl border-[4px] border-white shadow-md bg-blue-600">{{ $initials }}</div>
                                 @endif
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent"></div>
                             </div>
+                            <h4 class="font-black text-lg text-zinc-900 truncate">{{ $toko->nama_toko ?? 'Nama Toko' }}</h4>
+                            <p class="text-zinc-400 text-[10px] font-bold uppercase mt-1 text-blue-500"><i class="fas fa-map-pin"></i> Area Anda</p>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
 
-                            <div class="p-3 sm:p-4 md:p-6 flex flex-col flex-1 relative bg-white border-t border-zinc-50">
-                                <div class="absolute left-0 top-4 bottom-4 md:top-6 md:bottom-6 w-1 bg-blue-600 rounded-r-full scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"></div>
+        {{-- ========================================================
+             7. MATERIAL GLOBAL REKOMENDASI (TREN NASIONAL)
+             ======================================================== --}}
+        @if(isset($listProdukNasional) && count($listProdukNasional) > 0)
+        <section class="relative w-full">
+            <div class="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
+                <div class="w-1 md:w-1.5 h-6 md:h-8 bg-blue-600 rounded-full"></div>
+                <div>
+                    <span class="text-[8px] md:text-[9px] font-black tracking-[0.3em] md:tracking-[0.4em] text-blue-600/60 uppercase leading-none">TERLARIS</span>
+                    <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 tracking-tight mt-0.5 md:mt-1">Tren Nasional</h2>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 lg:gap-8 w-full">
+                @foreach($listProdukNasional as $p)
+                    @php
+                        $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg';
+                        $harga_tampil = $p->harga; $ada_diskon = false; $badge_diskon = '';
+                        if(isset($p->nilai_diskon) && $p->nilai_diskon > 0) {
+                            $ada_diskon = true;
+                            if($p->tipe_diskon == 'PERSEN') { $harga_tampil = $p->harga - ($p->harga * ($p->nilai_diskon / 100)); $badge_diskon = round($p->nilai_diskon) . '% OFF'; }
+                            else { $harga_tampil = $p->harga - $p->nilai_diskon; $badge_diskon = 'Diskon ' . number_format($p->nilai_diskon/1000, 0) . 'RB'; }
+                        }
 
-                                <h3 class="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-all duration-500 min-h-[2rem] md:min-h-[2.5rem] group-hover:pl-2 md:group-hover:pl-3">
-                                    {{ $p->nama_barang }}
-                               </h3>
-
-                                <div class="flex items-center gap-1 sm:gap-2 mt-1 mb-2 md:mb-4 group-hover:pl-2 md:group-hover:pl-3 transition-all duration-500">
-                                    <div class="flex text-amber-400 text-[9px] md:text-[10px]"><i class="fas fa-star"></i></div>
-                                    <span class="text-[10px] md:text-xs font-black text-zinc-900">{{ number_format($avg_rating, 1) }}</span>
-                                    <span class="text-[9px] md:text-[10px] font-bold text-zinc-400 truncate">({{ $jumlah_ulasan }} Ulasan)</span>
+                        $statUlasan = \Illuminate\Support\Facades\DB::table('tb_review_produk')->where('barang_id', $p->id)->selectRaw('COUNT(id) as total, AVG(rating) as rata')->first();
+                        $avg_rating = $statUlasan->rata ?? 0;
+                        $jumlah_ulasan = $statUlasan->total ?? 0;
+                        $terjual = $p->stok_terjual ?? rand(5, 100);
+                    @endphp
+                    <a href="{{ route('produk.detail', $p->id) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 hover:-translate-y-1 hover:shadow-xl flex flex-col overflow-hidden w-full transition-all">
+                        <div class="aspect-square bg-zinc-50 overflow-hidden relative">
+                            <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                            @if($ada_diskon) <div class="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">{{ $badge_diskon }}</div> @endif
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent"></div>
+                        </div>
+                        <div class="p-3 md:p-6 flex flex-col flex-1 relative bg-white">
+                            <div class="absolute left-0 top-4 bottom-4 md:top-6 md:bottom-6 w-1 bg-blue-600 rounded-r-full scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors min-h-[2rem]">{{ $p->nama_barang }}</h3>
+                            <div class="flex items-center gap-1 mt-1 mb-2">
+                                <div class="flex text-amber-400 text-[9px]"><i class="fas fa-star"></i></div>
+                                <span class="text-[10px] font-black text-zinc-900">{{ number_format($avg_rating, 1) }}</span>
+                                <span class="text-[9px] font-bold text-zinc-400 truncate">({{ $jumlah_ulasan }} Ulasan)</span>
+                            </div>
+                            <div class="mt-auto pt-3">
+                                <div class="text-base sm:text-lg md:text-xl font-black text-zinc-950 tracking-tight flex items-baseline gap-0.5 truncate">
+                                    <span class="text-[10px] md:text-xs font-bold text-blue-600">Rp</span><span>{{ number_format($harga_tampil, 0, ',', '.') }}</span>
                                 </div>
-
-                                <div class="mt-auto">
-                                    <div class="flex flex-col mb-3 md:mb-4 group-hover:pl-2 md:group-hover:pl-3 transition-all duration-500">
-                                        @if($ada_diskon)
-                                            <span class="text-[9px] md:text-[10px] text-zinc-400 line-through mb-0.5">Rp {{ number_format($harga_asli, 0, ',', '.') }}</span>
-                                        @else
-                                            <span class="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1 md:mb-1.5">Harga Satuan</span>
-                                        @endif
-                                        <div class="text-base sm:text-lg md:text-xl font-black text-zinc-950 tracking-tight flex items-baseline gap-0.5 truncate">
-                                            <span class="text-[10px] md:text-xs font-bold text-blue-600">Rp</span>
-                                            <span>{{ number_format($harga_tampil, 0, ',', '.') }}</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="pt-2.5 md:pt-4 border-t border-zinc-50 flex items-center justify-between group-hover:border-blue-50 transition-colors">
-                                        <div class="flex items-center gap-2 md:gap-2.5 min-w-0">
-                                            <div class="w-5 h-5 md:w-7 md:h-7 rounded-md md:rounded-lg bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100 group-hover:bg-blue-600 group-hover:border-blue-600 transition-all duration-500">
-                                                <i class="fas fa-store text-[8px] md:text-[10px] text-zinc-400 group-hover:text-white"></i>
-                                            </div>
-                                            <div class="flex flex-col min-w-0">
-                                                <span class="text-[9px] md:text-[10px] font-black text-zinc-900 truncate uppercase leading-none">{{ $p->nama_toko }}</span>
-                                                <span class="text-[8px] md:text-[9px] font-bold text-zinc-400 truncate mt-0.5">{{ $terjual }} Terjual</span>
-                                            </div>
-                                        </div>
+                                <div class="pt-2 md:pt-4 border-t border-zinc-50 mt-2 flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100 group-hover:bg-blue-600 group-hover:border-blue-600 transition-colors"><i class="fas fa-store text-[8px] text-zinc-400 group-hover:text-white"></i></div>
+                                    <div class="flex flex-col min-w-0">
+                                        <span class="text-[9px] font-black text-zinc-900 truncate uppercase">{{ $p->nama_toko }}</span>
+                                        <span class="text-[8px] md:text-[9px] font-bold text-zinc-400 truncate mt-0.5">{{ $terjual }} Terjual</span>
                                     </div>
                                 </div>
                             </div>
-                        </a>
-                        @endforeach
-                    </div>
-                </section>
-                @endif
-            @endforeach
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+        {{-- ========================================================
+             8. MATERIAL REKOMENDASI DARI TOKO TERDEKAT
+             ======================================================== --}}
+        @if(isset($listProdukLokal) && count($listProdukLokal) > 0)
+        <section class="relative w-full bg-blue-50/30 p-6 md:p-8 rounded-[2.5rem] border border-blue-50">
+            <div class="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
+                <div class="w-1 md:w-1.5 h-6 md:h-8 bg-blue-500 rounded-full"></div>
+                <div>
+                    <span class="text-[8px] md:text-[9px] font-black tracking-[0.3em] md:tracking-[0.4em] text-blue-500 uppercase leading-none flex items-center gap-1.5"><i class="fas fa-location-crosshairs animate-pulse"></i> TERDEKAT</span>
+                    <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 tracking-tight mt-0.5 md:mt-1">Rekomendasi Area Anda</h2>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 lg:gap-8 w-full">
+                @foreach($listProdukLokal as $p)
+                    @php
+                        $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg';
+                        $harga_tampil = $p->harga; $ada_diskon = false; $badge_diskon = '';
+                        if(isset($p->nilai_diskon) && $p->nilai_diskon > 0) {
+                            $ada_diskon = true;
+                            if($p->tipe_diskon == 'PERSEN') { $harga_tampil = $p->harga - ($p->harga * ($p->nilai_diskon / 100)); $badge_diskon = round($p->nilai_diskon) . '% OFF'; }
+                            else { $harga_tampil = $p->harga - $p->nilai_diskon; $badge_diskon = 'Diskon ' . number_format($p->nilai_diskon/1000, 0) . 'RB'; }
+                        }
+
+                        $statUlasan = \Illuminate\Support\Facades\DB::table('tb_review_produk')->where('barang_id', $p->id)->selectRaw('COUNT(id) as total, AVG(rating) as rata')->first();
+                        $avg_rating = $statUlasan->rata ?? 0;
+                        $jumlah_ulasan = $statUlasan->total ?? 0;
+                        $terjual = $p->stok_terjual ?? rand(5, 100);
+                    @endphp
+                    <a href="{{ route('produk.detail', $p->id) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-blue-100 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 flex flex-col overflow-hidden w-full transition-all">
+                        <div class="aspect-square bg-zinc-50 overflow-hidden relative">
+                            <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                            <div class="absolute bottom-2 right-2 bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow"><i class="fas fa-map-marker-alt"></i> Lokal</div>
+                            @if($ada_diskon) <div class="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">{{ $badge_diskon }}</div> @endif
+                        </div>
+                        <div class="p-3 md:p-6 flex flex-col flex-1 relative bg-white">
+                            <div class="absolute left-0 top-4 bottom-4 md:top-6 md:bottom-6 w-1 bg-blue-600 rounded-r-full scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors min-h-[2rem]">{{ $p->nama_barang }}</h3>
+                            <div class="flex items-center gap-1 mt-1 mb-2">
+                                <div class="flex text-amber-400 text-[9px]"><i class="fas fa-star"></i></div>
+                                <span class="text-[10px] font-black text-zinc-900">{{ number_format($avg_rating, 1) }}</span>
+                                <span class="text-[9px] font-bold text-zinc-400 truncate">({{ $jumlah_ulasan }} Ulasan)</span>
+                            </div>
+                            <div class="mt-auto pt-3">
+                                <div class="text-base sm:text-lg md:text-xl font-black text-zinc-950 tracking-tight flex items-baseline gap-0.5 truncate">
+                                    <span class="text-[10px] md:text-xs font-bold text-blue-600">Rp</span><span>{{ number_format($harga_tampil, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="pt-2 md:pt-4 border-t border-zinc-50 mt-2 flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100"><i class="fas fa-store text-[8px] text-blue-500"></i></div>
+                                    <div class="flex flex-col min-w-0"><span class="text-[9px] font-black text-zinc-900 truncate uppercase">{{ $p->nama_toko }}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </section>
         @endif
 
     </main>
 
     @include('partials.footer')
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
-
-    {{-- Tambahkan baris ini --}}
     @include('partials.chat')
 
-    {{-- Script Global Gabungan (Slider, Typewriter) --}}
     <script>
+        // AUTO GPS DETECTION (HYPER LOCAL)
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gpsRequested = sessionStorage.getItem('gps_requested');
+            
+            if (!urlParams.has('lat') && !gpsRequested && navigator.geolocation) {
+                sessionStorage.setItem('gps_requested', '1');
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        window.location.href = `/?lat=${lat}&lng=${lng}`;
+                    },
+                    function(error) {
+                        console.log("GPS ditolak atau timeout. Menampilkan data global/default.");
+                    },
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            }
+        });
+
         function landingPageData() {
             return {
                 showPopup: false,
@@ -764,15 +844,12 @@
             }
         }
 
-        // Logic Countdown Timer untuk Flash Sale
         document.addEventListener('alpine:init', () => {
             Alpine.data('countdown', (targetDate) => ({
                 hours: '00', minutes: '00', seconds: '00',
                 init() {
                     let target = new Date(targetDate).getTime();
-                    if (isNaN(target)) {
-                        target = new Date().getTime() + (2 * 60 * 60 * 1000); // Fallback +2 Jam
-                    }
+                    if (isNaN(target)) target = new Date().getTime() + (2 * 60 * 60 * 1000); 
 
                     setInterval(() => {
                         const now = new Date().getTime();
@@ -789,7 +866,6 @@
             }));
         });
 
-        /* === DYNAMIC BANNER SLIDER LOGIC === */
         const slider = document.getElementById('hero-slider');
         const dotsContainer = document.getElementById('slider-dots');
         let currentSlide = 0;
@@ -829,7 +905,6 @@
         function startSlideShow() { slideInterval = setInterval(() => moveSlider(1), 5000); }
         function resetSlideShow() { clearInterval(slideInterval); startSlideShow(); }
 
-        /* === TYPEWRITER EFFECT === */
         const typingText = document.querySelector(".typing-text");
         const phrases = ["Material Terlengkap", "Harga Pabrik Langsung", "Logistik Real-Time"];
         let phraseIndex = 0, charIndex = 0, isDeleting = false, typeSpeed = 100;

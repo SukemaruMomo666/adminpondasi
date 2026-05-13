@@ -129,7 +129,7 @@ class AuthController extends Controller
     }
 
     // ==========================================================
-    // 3B. PROSES LOGIN KHUSUS SELLER (YANG MEMBUAT ERROR TADI)
+    // 3B. PROSES LOGIN KHUSUS SELLER
     // ==========================================================
     public function loginSeller(Request $request)
     {
@@ -228,28 +228,31 @@ class AuthController extends Controller
     }
 
     // ==========================================================
-    // 6. REGISTER SELLER
+    // 6. REGISTER SELLER (DIPERBAIKI UNTUK BITESHIP & GPS)
     // ==========================================================
     public function showRegisterSeller()
     {
-        $provinces = DB::table('provinces')->orderBy('name', 'ASC')->get();
-        return view('auth.register_seller', compact('provinces'));
+        // Tidak perlu lagi manggil $provinces karena pakai fitur Live Search Biteship
+        return view('auth.register_seller');
     }
 
     public function registerSeller(Request $request)
     {
+        // Validasi diubah: Dulu minta province_id dkk, sekarang minta area_id
         $request->validate([
             'nama_pemilik' => 'required|string|max:255',
-            'username' => 'required|string|max:50|unique:tb_user,username',
-            'email' => 'required|email|unique:tb_user,email',
-            'password' => 'required|min:6',
+            'username'     => 'required|string|max:50|unique:tb_user,username',
+            'email'        => 'required|email|unique:tb_user,email',
+            'password'     => 'required|min:6',
             'telepon_toko' => 'required|numeric', 
-            'nama_toko' => 'required|string|max:100|unique:tb_toko,nama_toko',
-            'alamat_toko' => 'required|string',
-            'province_id' => 'required|exists:provinces,id',
-            'city_id' => 'required|exists:cities,id',
-            'district_id' => 'required|exists:districts,id',
-            'logo_toko' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'nama_toko'    => 'required|string|max:100|unique:tb_toko,nama_toko',
+            'alamat_toko'  => 'required|string',
+            'area_id'      => 'required|string', // Kunci dari Biteship
+            'latitude'     => 'nullable|string', // Kunci untuk jarak GPS toko terdekat
+            'longitude'    => 'nullable|string', 
+            'logo_toko'    => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+        ], [
+            'area_id.required' => 'Wilayah kecamatan/kelurahan wajib diisi melalui pilihan otomatis.'
         ]);
 
         DB::beginTransaction();
@@ -264,15 +267,15 @@ class AuthController extends Controller
             }
 
             $user = User::create([
-                'nama' => $request->nama_pemilik,
-                'username' => $request->username,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'no_telepon' => $request->telepon_toko, 
-                'level' => 'seller',
-                'status' => 'offline',
+                'nama'        => $request->nama_pemilik,
+                'username'    => $request->username,
+                'email'       => $request->email,
+                'password'    => Hash::make($request->password),
+                'no_telepon'  => $request->telepon_toko, 
+                'level'       => 'seller',
+                'status'      => 'offline',
                 'is_verified' => 1, 
-                'is_banned' => 0
+                'is_banned'   => 0
             ]);
 
             $slug = Str::slug($request->nama_toko);
@@ -280,17 +283,18 @@ class AuthController extends Controller
                 $slug .= '-' . time();
             }
 
+            // Simpan toko dengan Area ID dan GPS
             Toko::create([
-                'user_id' => $user->id,
-                'nama_toko' => $request->nama_toko,
-                'slug' => $slug,
-                'telepon_toko' => $request->telepon_toko,
-                'alamat_toko' => $request->alamat_toko,
-                'province_id' => $request->province_id,
-                'city_id' => $request->city_id,
-                'district_id' => $request->district_id,
-                'logo_toko' => $logoPath,
-                'status' => 'active', 
+                'user_id'            => $user->id,
+                'nama_toko'          => $request->nama_toko,
+                'slug'               => $slug,
+                'telepon_toko'       => $request->telepon_toko,
+                'alamat_toko'        => $request->alamat_toko,
+                'area_id'            => $request->area_id, // Masuk ke Biteship
+                'latitude'           => $request->latitude, // Masuk ke GPS Maps
+                'longitude'          => $request->longitude,
+                'logo_toko'          => $logoPath,
+                'status'             => 'active', 
                 'status_operasional' => 'Buka'
             ]);
 
@@ -305,24 +309,17 @@ class AuthController extends Controller
     }
 
     // ==========================================================
-    // 7. API WILAYAH (AJAX)
+    // 7. API WILAYAH (AJAX) - DIBEKUKAN / KOSONGKAN SAJA
+    // (Agar jika masih ada script lama yg nyasar tidak memunculkan error 404)
     // ==========================================================
     public function getCities($provinceId)
     {
-        $cities = DB::table('cities')
-            ->where('province_id', $provinceId)
-            ->orderBy('name', 'ASC')
-            ->get(); 
-        return response()->json($cities);
+        return response()->json([]);
     }
 
     public function getDistricts($cityId)
     {
-        $districts = DB::table('districts')
-            ->where('city_id', $cityId)
-            ->orderBy('name', 'ASC')
-            ->get();
-        return response()->json($districts);
+        return response()->json([]);
     }
 
     // 1. Mengarahkan user ke halaman login Google

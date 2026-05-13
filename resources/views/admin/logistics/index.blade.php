@@ -94,7 +94,7 @@
                 </div>
                 <h2 class="text-3xl font-black text-white tracking-tight mb-2">Logistik & Distribusi Platform</h2>
                 <p class="text-slate-400 text-sm font-bold m-0 max-w-2xl leading-relaxed">
-                    Atur ketersediaan ekspedisi API pihak ketiga dan regulasikan sistem pengiriman armada mandiri toko.
+                    Atur ketersediaan ekspedisi API pihak ketiga (Biteship) dan regulasikan sistem pengiriman armada mandiri toko.
                 </p>
             </div>
 
@@ -104,7 +104,7 @@
                     <i class="mdi mdi-api"></i>
                 </div>
                 <div>
-                    <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest">RajaOngkir</div>
+                    <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Biteship API</div>
                     <div class="text-sm font-black text-white"><span class="text-emerald-400">Tersinkronisasi</span></div>
                 </div>
             </div>
@@ -134,7 +134,7 @@
                         <div>
                             <strong class="block text-sm font-black text-slate-800 dark:text-white mb-1">Multi-Option Logistics (Berdampingan)</strong>
                             <p class="text-[11px] font-bold text-slate-600 dark:text-slate-400 m-0 leading-relaxed">
-                                Di sisi depan (Checkout), opsi <span class="text-blue-600 dark:text-blue-400">Armada Toko</span> dan <span class="text-emerald-600 dark:text-emerald-400">Ambil Sendiri</span> akan tampil berdampingan dengan <span class="text-slate-800 dark:text-slate-200">Kurir API Sistem</span>. Pembeli bebas memilih yang paling efisien!
+                                Di sisi depan (Checkout), opsi <span class="text-blue-600 dark:text-blue-400">Armada Toko</span> dan <span class="text-emerald-600 dark:text-emerald-400">Ambil Sendiri</span> akan tampil berdampingan dengan <span class="text-slate-800 dark:text-slate-200">Kurir API Sistem (Biteship)</span>. Pembeli bebas memilih yang paling efisien!
                             </p>
                         </div>
                     </div>
@@ -206,11 +206,11 @@
             <div class="bg-white dark:bg-slate-900 border-t-4 border-t-blue-500 border-x border-b border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm transition-colors duration-300 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 dark:border-slate-800 bg-blue-50/30 dark:bg-transparent">
                     <h3 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 m-0">
-                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Ekspedisi Sistem (API)
+                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Ekspedisi Sistem (API Biteship)
                     </h3>
                     <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mt-4">
                         <p class="text-[11px] font-bold text-amber-700 m-0 leading-relaxed">
-                            <i class="mdi mdi-alert"></i> <strong>Peringatan API:</strong> Centang HANYA kurir yang didukung oleh paket RajaOngkir Anda saat ini (Starter: <strong>JNE, POS, TIKI</strong>). Mengaktifkan kurir lain akan menyebabkan error saat pembeli checkout. Jika Anda sudah upgrade ke PRO, Anda bebas mencentang kurir lain.
+                            <i class="mdi mdi-alert"></i> <strong>Peringatan API:</strong> Centang HANYA kurir yang telah Anda aktifkan di <strong>Dashboard Biteship</strong> Anda. Mengaktifkan kurir di sini tanpa mengaktifkannya di Biteship akan menyebabkan error gagal hitung ongkir saat pembeli melakukan checkout.
                         </p>
                     </div>
                 </div>

@@ -17,22 +17,20 @@ class PageController extends Controller
     {
         $categories = DB::table('tb_kategori')->orderBy('nama_kategori', 'ASC')->get();
 
+        // Mengambil area_id unik dari toko karena tabel cities sudah dihapus
         $locations = DB::table('tb_toko as t')
-            ->join('cities as c', 't.city_id', '=', 'c.id')
-            ->select('t.city_id', 'c.name as nama_kota')
+            ->select('t.area_id as city_id', 't.area_id as nama_kota') // Alias fiktif agar view tidak error
             ->where('t.status', 'active')
-            ->whereNotNull('t.city_id')
+            ->whereNotNull('t.area_id')
             ->distinct()
-            ->orderBy('c.name', 'ASC')
+            ->orderBy('t.area_id', 'ASC')
             ->get();
 
-        // TAMBAHKAN 't.tier_toko' DI SINI AGAR BADGE MUNCUL
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
             ->select(
                 'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
-                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 'c.name as nama_kota'
+                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.area_id as nama_kota'
             )
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
@@ -61,7 +59,7 @@ class PageController extends Controller
 
         // FILTER 4: Lokasi & Harga
         if ($request->filled('lokasi')) {
-            $query->where('t.city_id', $request->lokasi);
+            $query->where('t.area_id', $request->lokasi);
         }
         if ($request->filled('harga_min')) {
             $query->where('b.harga', '>=', $request->harga_min);
@@ -77,7 +75,7 @@ class PageController extends Controller
             });
         }
 
-        // SORTING (Paling Baru, Termurah, Termahal)
+        // SORTING
         if ($request->filled('sort')) {
             if ($request->sort == 'termurah') {
                 $query->orderBy('b.harga', 'ASC');
@@ -112,11 +110,9 @@ class PageController extends Controller
 
         $categories = DB::table('tb_kategori')->orderBy('nama_kategori', 'ASC')->get();
 
-        // TAMBAHKAN 't.tier_toko' DI SINI AGAR BADGE MUNCUL
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 'c.name as kota_toko')
+            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 't.area_id as kota_toko')
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
             ->where('t.status', 'active');
@@ -132,7 +128,6 @@ class PageController extends Controller
             $query->where('b.kategori_id', $kategoriId);
         }
 
-        // FILTER JENIS MITRA UNTUK HALAMAN SEARCH
         if ($request->has('tier_toko') && is_array($request->tier_toko)) {
             $query->whereIn('t.tier_toko', $request->tier_toko);
         }
@@ -151,8 +146,7 @@ class PageController extends Controller
 
         $produk = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-            ->select('b.*', 't.nama_toko', 't.slug as toko_slug', 'c.name as kota_toko', 't.logo_toko')
+            ->select('b.*', 't.nama_toko', 't.slug as toko_slug', 't.area_id as kota_toko', 't.logo_toko')
             ->where('b.id', $id)
             ->first();
 
@@ -179,19 +173,17 @@ class PageController extends Controller
         $filter_lokasi = $request->query('lokasi', 'semua');
 
         $locations = DB::table('tb_toko as t')
-            ->join('cities as c', 't.city_id', '=', 'c.id')
-            ->select('t.city_id', 'c.name as city_name')
+            ->select('t.area_id as city_id', 't.area_id as city_name')
             ->where('t.status', 'active')
-            ->whereNotNull('t.city_id')
+            ->whereNotNull('t.area_id')
             ->distinct()
-            ->orderBy('c.name', 'ASC')
+            ->orderBy('t.area_id', 'ASC')
             ->get();
 
-$query = DB::table('tb_toko as t')
-            ->join('cities as c', 't.city_id', '=', 'c.id')
+        $query = DB::table('tb_toko as t')
             ->select(
                 't.id', 't.nama_toko', 't.slug', 't.deskripsi_toko',
-                't.logo_toko', 't.banner_toko', 't.tier_toko', 't.city_id', 'c.name as city_name' // <--- Tambahkan t.tier_toko di sini
+                't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as city_id', 't.area_id as city_name'
             )
             ->selectSub(function ($q) {
                 $q->from('tb_barang')
@@ -208,7 +200,7 @@ $query = DB::table('tb_toko as t')
             ->where('t.status', 'active');
 
         if ($filter_lokasi !== 'semua' && !empty($filter_lokasi)) {
-            $query->where('t.city_id', $filter_lokasi);
+            $query->where('t.area_id', $filter_lokasi);
         }
 
         $query->orderBy('t.nama_toko', 'ASC');
@@ -225,8 +217,7 @@ $query = DB::table('tb_toko as t')
         $slug = $request->query('slug');
 
         $toko = DB::table('tb_toko as t')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-            ->select('t.*', 'c.name as kota')
+            ->select('t.*', 't.area_id as kota')
             ->where('t.slug', $slug)
             ->where('t.status', 'active')
             ->first();
@@ -338,7 +329,7 @@ $query = DB::table('tb_toko as t')
     }
 
     // =================================================================
-    // 8. HALAMAN CHECKOUT (SUDAH FIX count() ERROR)
+    // 8. HALAMAN CHECKOUT
     // =================================================================
     public function checkout(Request $request)
     {
@@ -349,16 +340,13 @@ $query = DB::table('tb_toko as t')
         $userId = Auth::id();
         $userEmail = Auth::user()->email ?? 'customer@example.com';
 
+        // Hanya mengambil dari tb_user_alamat (tabel wilayah sudah dihapus)
         $alamatUser = DB::table('tb_user_alamat as ua')
-            ->leftJoin('provinces as p', 'ua.province_id', '=', 'p.id')
-            ->leftJoin('cities as c', 'ua.city_id', '=', 'c.id')
-            ->leftJoin('districts as d', 'ua.district_id', '=', 'd.id')
-            ->select('ua.*', 'p.name as province_name', 'c.name as city_name', 'd.name as district_name')
             ->where('ua.user_id', $userId)
             ->where('ua.is_utama', 1)
             ->first();
 
-        $isAlamatIncomplete = !$alamatUser || empty($alamatUser->nama_penerima) || empty($alamatUser->alamat_lengkap);
+        $isAlamatIncomplete = !$alamatUser || empty($alamatUser->nama_penerima) || empty($alamatUser->alamat_lengkap) || empty($alamatUser->area_id);
 
         $addressData = null;
         if ($alamatUser) {
@@ -367,10 +355,10 @@ $query = DB::table('tb_toko as t')
                 'nama'      => $alamatUser->nama_penerima ?? '',
                 'telepon'   => $alamatUser->telepon_penerima ?? '',
                 'alamat'    => $alamatUser->alamat_lengkap ?? '',
-                'kecamatan' => $alamatUser->district_name ?? '',
-                'kota'      => $alamatUser->city_name ?? '',
-                'provinsi'  => $alamatUser->province_name ?? '',
-                'kodepos'   => $alamatUser->kode_pos ?? ''
+                'area_id'   => $alamatUser->area_id ?? '',
+                'kodepos'   => $alamatUser->kode_pos ?? '',
+                // Fallback kosong untuk menghindari error di view lama
+                'kecamatan' => '', 'kota' => '', 'provinsi' => ''
             ];
         }
 
@@ -385,8 +373,7 @@ $query = DB::table('tb_toko as t')
 
             $item = DB::table('tb_barang as b')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-                ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-                ->select('b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.stok', 't.id as toko_id', 't.nama_toko', 'c.name as kota_toko')
+                ->select('b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.stok', 't.id as toko_id', 't.nama_toko', 't.area_id as kota_toko')
                 ->where('b.id', $productId)
                 ->first();
 
@@ -401,7 +388,6 @@ $query = DB::table('tb_toko as t')
         } else {
             $rawSelectedItems = $request->input('selected_items') ?? session('selected_items');
 
-            // PAKSA MENJADI ARRAY AGAR TIDAK ERROR "COUNT()"
             $selectedItems = [];
             if (is_array($rawSelectedItems)) {
                 $selectedItems = $rawSelectedItems;
@@ -418,8 +404,7 @@ $query = DB::table('tb_toko as t')
             $items = DB::table('tb_keranjang as k')
                 ->join('tb_barang as b', 'k.barang_id', '=', 'b.id')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-                ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
-                ->select('k.id as keranjang_id', 'b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'k.jumlah', 't.id as toko_id', 't.nama_toko', 'c.name as kota_toko')
+                ->select('k.id as keranjang_id', 'b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'k.jumlah', 't.id as toko_id', 't.nama_toko', 't.area_id as kota_toko')
                 ->where('k.user_id', $userId)
                 ->whereIn('k.id', $selectedItems)
                 ->get();
@@ -455,7 +440,6 @@ $query = DB::table('tb_toko as t')
 
             $biayaPengiriman = $grandTotal - $request->input('total_produk_subtotal');
 
-            // 1. Simpan Transaksi Induk
             $transaksiId = DB::table('tb_transaksi')->insertGetId([
                 'kode_invoice'              => $orderId,
                 'sumber_transaksi'          => 'ONLINE',
@@ -480,7 +464,6 @@ $query = DB::table('tb_toko as t')
                 'tanggal_transaksi'         => now()
             ]);
 
-            // 2. Simpan Rincian Barang
             if ($request->has('direct_purchase')) {
                 $produk = DB::table('tb_barang')->where('id', $request->input('product_id'))->first();
                 if ($produk) {
@@ -516,7 +499,7 @@ $query = DB::table('tb_toko as t')
                 DB::table('tb_keranjang')->where('user_id', $user->id)->whereIn('id', $selectedIds)->delete();
             }
 
-            // 3. Midtrans Logic
+            // Midtrans Logic
             $settings = DB::table('tb_pengaturan')->whereIn('setting_nama', ['midtrans_server_key', 'midtrans_is_production'])->pluck('setting_nilai', 'setting_nama');
             \Midtrans\Config::$serverKey = $settings['midtrans_server_key'] ?? '';
             \Midtrans\Config::$isProduction = ($settings['midtrans_is_production'] ?? '0') == '1';
@@ -594,16 +577,15 @@ $query = DB::table('tb_toko as t')
     {
         if (!Auth::check()) { return redirect()->route('login'); }
         $user = Auth::user();
+        
         $alamatUtama = DB::table('tb_user_alamat as ua')
-            ->leftJoin('districts as d', 'ua.district_id', '=', 'd.id')
-            ->leftJoin('cities as c', 'ua.city_id', '=', 'c.id')
-            ->leftJoin('provinces as p', 'ua.province_id', '=', 'p.id')
-            ->select('ua.*', 'd.name as district_name', 'c.name as city_name', 'p.name as province_name')
-            ->where('ua.user_id', $user->id)->where('ua.is_utama', 1)->first();
+            ->where('ua.user_id', $user->id)
+            ->where('ua.is_utama', 1)
+            ->first();
 
         $alamatLengkapFormatted = '-';
         if ($alamatUtama) {
-            $alamatLengkapFormatted = $alamatUtama->alamat_lengkap . '<br>Kec. ' . ($alamatUtama->district_name ?? 'Tidak Diketahui') . ', ' . ($alamatUtama->city_name ?? 'Tidak Diketahui') . ',<br>' . ($alamatUtama->province_name ?? 'Tidak Diketahui') . (!empty($alamatUtama->kode_pos) ? ', ' . $alamatUtama->kode_pos : '');
+            $alamatLengkapFormatted = $alamatUtama->alamat_lengkap . (!empty($alamatUtama->kode_pos) ? ' (Kode Pos: ' . $alamatUtama->kode_pos . ')' : '');
         }
 
         return view('pages.profil', compact('user', 'alamatLengkapFormatted'));
@@ -613,11 +595,11 @@ $query = DB::table('tb_toko as t')
     {
         if (!Auth::check()) return redirect()->route('login');
         $user = Auth::user();
+        
+        // Hanya mengirim $alamatUtama. Variabel wilayah dibuang.
         $alamatUtama = DB::table('tb_user_alamat')->where('user_id', $user->id)->where('is_utama', 1)->first();
-        $provinces = DB::table('provinces')->orderBy('name', 'ASC')->get();
-        $cities = $alamatUtama ? DB::table('cities')->where('province_id', $alamatUtama->province_id)->orderBy('name', 'ASC')->get() : [];
-        $districts = $alamatUtama ? DB::table('districts')->where('city_id', $alamatUtama->city_id)->orderBy('name', 'ASC')->get() : [];
-        return view('pages.edit_profil', compact('user', 'alamatUtama', 'provinces', 'cities', 'districts'));
+        
+        return view('pages.edit_profil', compact('user', 'alamatUtama'));
     }
 
     public function updateProfil(Request $request)
@@ -626,23 +608,37 @@ $query = DB::table('tb_toko as t')
 
         $user = Auth::user();
 
+        // 1. Validasi Input
         $request->validate([
             'nama' => 'required|string|max:255',
-            'province_id' => 'required',
-            'city_id' => 'required',
-            'district_id' => 'required',
+            'area_id' => 'required',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Maksimal 2MB
         ], [
-            'province_id.required' => 'Provinsi wajib diisi.',
-            'city_id.required' => 'Kota wajib diisi.',
-            'district_id.required' => 'Kecamatan wajib diisi.',
+            'area_id.required' => 'Area / Kecamatan wajib dipilih dari dropdown Biteship yang muncul.',
+            'foto.image' => 'File harus berupa gambar JPG/PNG.',
+            'foto.max' => 'Ukuran foto maksimal 2MB.'
         ]);
 
+        // 2. Logika Upload Foto Profil
+        $fotoName = $user->profile_picture_url ?? null; // Ambil foto lama jika ada
+        if ($request->hasFile('foto')) {
+            $file = $request->file('foto');
+            $fotoName = time() . '_avatar_' . $user->id . '.' . $file->getClientOriginalExtension();
+            // Pindahkan file ke folder assets/uploads/avatars/
+            $file->move(public_path('assets/uploads/avatars'), $fotoName);
+        }
+
+        // 3. Update Data Pribadi ke tb_user
         DB::table('tb_user')->where('id', $user->id)->update([
             'nama' => $request->nama,
             'no_telepon' => $request->no_telepon,
+            'tanggal_lahir' => $request->tanggal_lahir,
+            'jenis_kelamin' => $request->jenis_kelamin,
+            'profile_picture_url' => $fotoName, // Simpan nama foto
             'updated_at' => now()
         ]);
 
+        // 4. Update Titik Lokasi ke tb_user_alamat
         $alamatUtama = DB::table('tb_user_alamat')
             ->where('user_id', $user->id)
             ->where('is_utama', 1)
@@ -655,19 +651,17 @@ $query = DB::table('tb_toko as t')
             'label_alamat'     => $request->label_alamat ?? 'Rumah',
             'alamat_lengkap'   => $request->alamat_lengkap,
             'kode_pos'         => $request->kode_pos,
-            'province_id'      => $request->province_id,
-            'city_id'          => $request->city_id,
-            'district_id'      => $request->district_id,
+            'area_id'          => $request->area_id, // Area ID dari Biteship
             'latitude'         => $request->latitude,
             'longitude'        => $request->longitude,
             'is_utama'         => 1,
-            'updated_at'       => now()
+            // HAPUS 'updated_at' => now()
         ];
 
         if ($alamatUtama) {
             DB::table('tb_user_alamat')->where('id', $alamatUtama->id)->update($dataAlamat);
         } else {
-            $dataAlamat['created_at'] = now();
+            // HAPUS $dataAlamat['created_at'] = now();
             DB::table('tb_user_alamat')->insert($dataAlamat);
         }
 
@@ -685,84 +679,32 @@ $query = DB::table('tb_toko as t')
     }
 
     // =================================================================
-    // 14. API: LAZY LOAD / ON-DEMAND DISTRICTS (KECAMATAN)
+    // 14. API: BITESHIP AUTOCOMPLETE SEARCH PROXY
+    // Fungsi ini menggantikan API Lazy Load RajaOngkir lama
     // =================================================================
-    public function getDistrictsOnDemand($city_id)
+    public function searchBiteshipAPI(Request $request)
     {
-        $districts = DB::table('districts')->where('city_id', $city_id)->orderBy('name', 'ASC')->get();
-
-        if ($districts->count() > 0) {
-            return response()->json($districts);
+        $keyword = $request->query('q');
+        
+        if (empty($keyword) || strlen($keyword) < 3) {
+            return response()->json(['areas' => []]);
         }
 
-        $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'rajaongkir_api_key')->value('setting_nilai');
+        // Mengambil rahasia API Key dari tb_pengaturan
+        $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'biteship_api_key')->value('setting_nilai');
 
-        if ($apiKey) {
-            $resDist = \Illuminate\Support\Facades\Http::withHeaders(['key' => $apiKey])
-                ->get("https://rajaongkir.komerce.id/api/v1/destination/district/{$city_id}");
-
-            if ($resDist->successful() && isset($resDist['data'])) {
-                foreach ($resDist['data'] as $dist) {
-                    DB::table('districts')->updateOrInsert(
-                        ['id'      => $dist['id']],
-                        [
-                            'city_id' => $city_id,
-                            'name'    => strtoupper($dist['name'])
-                        ]
-                    );
-                }
-                $districts = DB::table('districts')->where('city_id', $city_id)->orderBy('name', 'ASC')->get();
-            }
-        }
-
-        return response()->json($districts);
-    }
-
-    // =================================================================
-    // 15. API: BIKIN KECAMATAN OTOMATIS JIKA TIDAK ADA DI DATABASE
-    // =================================================================
-    public function getOrCreateDistrict(Request $request)
-    {
-        $request->validate([
-            'city_id' => 'required',
-            'name' => 'required|string'
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => $apiKey
+        ])->get("https://api.biteship.com/v1/maps/areas", [
+            'countries' => 'ID',
+            'input' => $keyword,
+            'type' => 'single'
         ]);
 
-        $cityId = $request->city_id;
-        // Rapikan teks (contoh: "cibogo" jadi "Cibogo")
-        $distName = ucwords(strtolower(trim($request->name)));
-
-        // Cek apakah kecamatan sudah ada di tabel districts
-        $existing = DB::table('districts')
-            ->where('city_id', $cityId)
-            ->whereRaw('LOWER(name) = ?', [strtolower($distName)])
-            ->first();
-
-        // Kalau ternyata sudah ada, kembalikan datanya
-        if ($existing) {
-            return response()->json([
-                'id' => $existing->id,
-                'name' => $existing->name
-            ]);
+        if ($response->successful()) {
+            return $response->json();
         }
 
-        // KALAU BELUM ADA, BIKIN BARU!
-        try {
-            $newId = DB::table('districts')->insertGetId([
-                'city_id' => $cityId,
-                'name' => $distName
-            ]);
-
-            return response()->json([
-                'id' => $newId,
-                'name' => $distName
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error', 
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json(['areas' => []], 500);
     }
 }
