@@ -35,17 +35,18 @@ class ShopController extends Controller
         return view('seller.shop.profile', compact('toko'));
     }
 
-public function updateProfile(Request $request)
+    public function updateProfile(Request $request)
     {
         $toko = $this->getToko();
 
-        // 1. Validasi Komprehensif (Sesuai dengan semua input di Blade)
+        // 1. Validasi Komprehensif (Diperbaiki: alamat_toko & area_id wajib ada)
         $request->validate([
             'nama_toko'      => 'required|string|max:50',
             'slogan'         => 'nullable|string|max:100',
-            'deskripsi_toko' => 'nullable|string|max:1000', // Sesuai name di Blade
+            'deskripsi_toko' => 'nullable|string|max:1000',
             'no_telepon'     => 'required|string|max:20',
-            'alamat_lengkap' => 'required|string|max:255',
+            'alamat_toko'    => 'required|string|max:500', // <-- FIX: Harus alamat_toko
+            'area_id'        => 'required|string|max:255', // <-- FIX: Wajib untuk Biteship
             'kode_pos'       => 'required|numeric|digits_between:5,6',
             'latitude'       => 'required|numeric',
             'longitude'      => 'required|numeric',
@@ -55,15 +56,18 @@ public function updateProfile(Request $request)
             'banner_toko'    => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'dokumen_nib'    => 'nullable|mimes:pdf,jpg,jpeg,png|max:5120',
             'dokumen_npwp'   => 'nullable|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'area_id.required' => 'Kecamatan Biteship wajib dicari dan diklik dari pilihan dropdown.'
         ]);
 
-        // 2. Persiapan Data Teks & Koordinat
+        // 2. Persiapan Data Teks & Koordinat (Diperbaiki agar area_id tersimpan ke database)
         $dataUpdate = [
             'nama_toko'      => $request->nama_toko,
             'slogan'         => $request->slogan,
             'deskripsi_toko' => $request->deskripsi_toko,
             'telepon_toko'   => $request->no_telepon,
-            'alamat_toko'    => $request->alamat_lengkap,
+            'alamat_toko'    => $request->alamat_toko,     // <-- FIX: Sinkron dengan database & Blade
+            'area_id'        => $request->area_id,         // <-- FIX: INI YANG BIKIN BITESHIP TERSIMPAN!
             'kode_pos'       => $request->kode_pos,
             'latitude'       => $request->latitude,
             'longitude'      => $request->longitude,
@@ -76,8 +80,8 @@ public function updateProfile(Request $request)
         $fileFields = [
             'logo_toko'    => 'logos',
             'banner_toko'  => 'banners',
-            'dokumen_nib'  => 'documents',
-            'dokumen_npwp' => 'documents'
+            'dokumen_nib'  => 'legalitas', // Penyesuaian nama folder agar lebih aman
+            'dokumen_npwp' => 'legalitas'
         ];
 
         foreach ($fileFields as $field => $folder) {

@@ -301,12 +301,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Manual)</label>
-                            <textarea id="mainAlamatDetail" name="alamat_lengkap" class="input-readonly custom-scrollbar w-full text-sm font-medium rounded-xl px-4 py-4 outline-none min-h-[90px] resize-none leading-relaxed" readonly required placeholder="Diatur melalui Modal Peta...">{{ old('alamat_lengkap', $toko->alamat_toko ?? '') }}</textarea>
+                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Detail Alamat Toko)</label>
+                            <textarea id="mainAlamatDetail" name="alamat_toko" class="input-readonly custom-scrollbar w-full text-sm font-medium rounded-xl px-4 py-4 outline-none min-h-[90px] resize-none leading-relaxed" readonly required placeholder="Diatur melalui Modal Peta...">{{ old('alamat_toko', $toko->alamat_toko ?? '') }}</textarea>
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Wilayah Ekspedisi (Biteship)</label>
+                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Wilayah Ekspedisi</label>
                             <div class="relative">
                                 <input type="text" id="mainBiteshipLabel" class="input-readonly w-full text-sm font-bold rounded-xl px-4 py-3.5 outline-none" readonly placeholder="Diatur melalui Modal Peta..." value="{{ old('area_id', $toko->area_id ?? '') != '' ? 'Wilayah Terpilih (ID: '.old('area_id', $toko->area_id ?? '').')' : '' }}">
                                 <i class="fas fa-lock absolute right-4 top-4 text-zinc-400 text-sm"></i>
@@ -428,14 +428,14 @@
 
             {{-- ALAMAT MANUAL (DALAM MODAL) --}}
             <div>
-                <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Manual) <span class="text-red-500">*</span></label>
+                <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Detail Alamat Toko) <span class="text-red-500">*</span></label>
                 <textarea id="modalAlamatDetail" class="input-premium custom-scrollbar w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm font-medium rounded-xl px-4 py-4 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none min-h-[90px] resize-none leading-relaxed" placeholder="Contoh: Jl. Raya Pantura No. 45. Gudang atap seng biru, gerbang besi hitam."></textarea>
             </div>
 
             {{-- BITESHIP AUTOCOMPLETE SEARCH (DALAM MODAL) --}}
             <div class="border-t border-zinc-100 pt-6">
                 <div class="flex items-center justify-between mb-2">
-                    <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest">Kecamatan Ekspedisi (Biteship) <span class="text-red-500">*</span></label>
+                    <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest">Kecamatan Ekspedisi<span class="text-red-500">*</span></label>
                 </div>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" id="search-icon">
@@ -829,6 +829,41 @@ window.saveMapLocation = function() {
                 btn.disabled = true;
             }, 10);
         });
+
+
+
+        // ==========================================
+        // 7. TRIK HACK: AUTO-LOAD KOTA DARI KOORDINAT
+        // ==========================================
+        async function autoLoadKota() {
+            const lat = document.getElementById('mainLat').value;
+            const lng = document.getElementById('mainLng').value;
+            const fieldKota = document.getElementById('inputKota');
+
+            // Cek jika koordinat ada dan kolom kota masih kosong
+            if (lat && lng && fieldKota.value.trim() === '') {
+                fieldKota.value = "Menerjemahkan satelit...";
+                try {
+                    // Tembak API OpenStreetMap secara diam-diam di background
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                    const data = await response.json();
+                    
+                    if(data && data.address) {
+                        const addr = data.address;
+                        // Cari nama kota/kabupaten yang paling cocok
+                        const cityName = addr.city || addr.town || addr.municipality || addr.county || addr.state_district || "Tidak Ditemukan";
+                        fieldKota.value = cityName; // Tampilkan ke layar!
+                    } else {
+                        fieldKota.value = "Tidak Ditemukan";
+                    }
+                } catch (error) {
+                    fieldKota.value = "Gagal memuat kota";
+                }
+            }
+        }
+
+        // Jalankan trik ini otomatis saat halaman selesai dimuat!
+        autoLoadKota();
 
     });
 </script>

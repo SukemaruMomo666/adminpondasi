@@ -10,27 +10,45 @@ use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
-    // =================================================================
+ // =================================================================
     // 1. HALAMAN DAFTAR PRODUK (Katalog Utama Lengkap dengan Filter)
     // =================================================================
     public function produk(Request $request)
     {
         $categories = DB::table('tb_kategori')->orderBy('nama_kategori', 'ASC')->get();
 
-        // Mengambil area_id unik dari toko karena tabel cities sudah dihapus
-        $locations = DB::table('tb_toko as t')
-            ->select('t.area_id as city_id', 't.area_id as nama_kota') // Alias fiktif agar view tidak error
-            ->where('t.status', 'active')
-            ->whereNotNull('t.area_id')
-            ->distinct()
-            ->orderBy('t.area_id', 'ASC')
-            ->get();
+        // 1. PERBAIKAN: Karena tabel 'cities' dihapus, kita sediakan list kota Populer.
+        // Ini mencegah munculnya kode aneh Biteship (IDNP...) di dropdown pencarian.
+        $cityList = [
+            'Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung',
+            'Surabaya', 'Semarang', 'Yogyakarta', 'Surakarta', 'Medan', 'Makassar',
+            'Denpasar', 'Balikpapan', 'Samarinda', 'Batam', 'Padang', 'Subang',
+            'Purwakarta', 'Karawang', 'Cirebon', 'Cimahi', 'Tasikmalaya', 'Garut', 'Sukabumi', 'Majalengka', 'Sumedang', 'Indramayu'
+        ];
 
+        // Jika fitur auto-detect lokasi di Javascript menemukan kota pengguna (meskipun tidak ada di list atas), 
+        // kita tambahkan otomatis agar selalu valid di dropdown.
+        if ($request->filled('lokasi') && !in_array($request->lokasi, $cityList)) {
+            $cityList[] = $request->lokasi;
+        }
+        
+        // Urutkan sesuai abjad
+        sort($cityList);
+
+        // Ubah array jadi object agar sesuai dengan format view Blade kamu ($l->nama_kota)
+        $locations = collect($cityList)->map(function($city) {
+            return (object) [
+                'city_id' => $city, 
+                'nama_kota' => $city
+            ];
+        });
+
+        // 2. PERBAIKAN QUERY: Ambil alamat_toko sebagai nama_kota untuk tampilan card produk
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
                 'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
-                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.area_id as nama_kota'
+                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.alamat_toko as nama_kota'
             )
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
@@ -57,16 +75,21 @@ class PageController extends Controller
             $query->whereIn('t.tier_toko', $request->tier_toko);
         }
 
-        // FILTER 4: Lokasi & Harga
+        // FILTER 4: Lokasi (PERBAIKAN: Cari berdasarkan teks alamat_toko, bukan ID Biteship)
         if ($request->filled('lokasi')) {
-            $query->where('t.area_id', $request->lokasi);
+            // Karena alamat berisi teks panjang, kita gunakan LIKE untuk mencocokkan nama kotanya
+            $query->where('t.alamat_toko', 'LIKE', '%' . $request->lokasi . '%');
         }
+
+        // FILTER 5: Harga
         if ($request->filled('harga_min')) {
             $query->where('b.harga', '>=', $request->harga_min);
         }
         if ($request->filled('harga_max')) {
             $query->where('b.harga', '<=', $request->harga_max);
         }
+
+        // FILTER 6: Pencarian Teks
         if ($request->filled('query')) {
             $keyword = '%' . $request->query('query') . '%';
             $query->where(function($q) use ($keyword) {
@@ -99,7 +122,6 @@ class PageController extends Controller
             'filter_kategori', 'filter_lokasi', 'filter_harga_min', 'filter_harga_max'
         ));
     }
-
     // =================================================================
     // 2. HALAMAN HASIL PENCARIAN (Search Bar & Filter Kategori)
     // =================================================================

@@ -49,7 +49,7 @@
 
         /* Animasi Accordion Kategori */
         .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .accordion-content.open { max-height: 400px; /* Angka besar agar muat */ }
+        .accordion-content.open { max-height: 500px; } 
 
         /* BADGE TOKO */
         .badge-store { display: inline-flex; align-items: center; justify-content: center; padding: 2px 5px; border-radius: 4px; font-size: 0.65rem; margin-left: 4px;}
@@ -81,7 +81,7 @@
     <div class="max-w-[1400px] mx-auto px-4 lg:px-8 py-8 flex flex-col lg:flex-row items-start gap-8">
 
         {{-- MOBILE OVERLAY --}}
-        <div id="filter-overlay" class="fixed inset-0 bg-zinc-950/60 z-[60] hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+        <div id="filter-overlay" class="fixed inset-0 bg-zinc-950/60 z-[60] hidden lg:hidden backdrop-blur-sm transition-opacity opacity-0"></div>
 
         {{-- SIDEBAR FILTER (KIRI) --}}
         <aside id="sidebar-filters" class="fixed inset-y-0 left-0 z-[70] w-[280px] bg-white transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-mobile-drawer lg:relative lg:translate-x-0 lg:w-[280px] lg:shadow-none lg:bg-transparent lg:z-0 lg:shrink-0 lg:sticky lg:top-28">
@@ -102,15 +102,18 @@
                     <h3 class="text-xs font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2">
                         <i class="fas fa-sliders-h text-blue-600"></i> Filter
                     </h3>
-                    @if(request()->except('page'))
+                    @if(request()->except('page', 'sort'))
                         <a href="{{ route('produk.index') }}" class="text-[10px] font-bold text-red-500 hover:text-red-600 uppercase tracking-widest transition-colors">Reset</a>
                     @endif
                 </div>
 
                 {{-- Form Element --}}
-                <form action="{{ route('produk.index') }}" method="GET" id="filterForm" class="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-8">
+                <form action="{{ route('produk.index') }}" method="GET" id="filterForm" class="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-8 relative">
                     @if(request()->has('query'))
                         <input type="hidden" name="query" value="{{ request('query') }}">
+                    @endif
+                    @if(request()->has('sort'))
+                        <input type="hidden" name="sort" value="{{ request('sort') }}">
                     @endif
 
                     {{-- FILTER: KATEGORI (ACCORDION) --}}
@@ -225,6 +228,7 @@
                             </div>
 
                     </div>
+
                     {{-- FILTER: JENIS TOKO --}}
                     <div>
                         <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Jenis Mitra</h4>
@@ -248,13 +252,15 @@
                     <div>
                         <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Lokasi Pengiriman</h4>
                         <div class="relative">
-                            <select name="lokasi" id="lokasi-select" onchange="showApplyButton()" class="w-full bg-zinc-50 border border-zinc-200 text-zinc-700 text-sm font-bold rounded-xl px-4 py-3 appearance-none outline-none focus:border-blue-600 transition-colors cursor-pointer">
+                            <select name="lokasi" id="lokasi-select" onchange="document.getElementById('filterForm').submit()" class="w-full bg-zinc-50 border border-zinc-200 text-zinc-700 text-sm font-bold rounded-xl px-4 py-3 appearance-none outline-none focus:border-blue-600 transition-colors cursor-pointer">
                                 <option value="">Seluruh Indonesia</option>
-                                @foreach($locations as $l)
-                                    <option value="{{ $l->city_id }}" {{ request('lokasi') == $l->city_id ? 'selected' : '' }}>
-                                        {{ $l->nama_kota }}
-                                    </option>
-                                @endforeach
+                                @if(isset($locations) && count($locations) > 0)
+                                    @foreach($locations as $l)
+                                        <option value="{{ $l->nama_kota }}" {{ request('lokasi') == $l->nama_kota ? 'selected' : '' }}>
+                                            {{ $l->nama_kota }}
+                                        </option>
+                                    @endforeach
+                                @endif
                             </select>
                             <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                                 <i class="fas fa-chevron-down text-[10px] text-zinc-400"></i>
@@ -286,7 +292,7 @@
                     </div>
 
                     {{-- Button Apply Mobile --}}
-                    <div class="lg:hidden mt-auto pt-6">
+                    <div class="lg:hidden mt-auto pt-6 pb-2">
                         <button type="submit" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg">
                             Tampilkan Hasil
                         </button>
@@ -303,7 +309,7 @@
             {{-- HEADER HASIL PENCARIAN (Sorting) --}}
             <div class="bg-white rounded-[1.5rem] shadow-sm border border-zinc-100 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
                 <div class="text-sm font-medium text-zinc-500 px-2">
-                    Menampilkan <span class="font-black text-zinc-900">{{ $products->count() }}</span> produk dari total <span class="font-black text-zinc-900">{{ $products->total() }}</span>
+                    Menampilkan <span class="font-black text-zinc-900">{{ $products->count() ?? 0 }}</span> produk dari total <span class="font-black text-zinc-900">{{ $products->total() ?? 0 }}</span>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -361,7 +367,7 @@
                                 <div class="text-base sm:text-lg font-black text-zinc-900 tracking-tight mb-2.5">Rp{{ number_format($b->harga, 0, ',', '.') }}</div>
 
                                 <div class="pt-3 border-t border-zinc-100/80 space-y-1.5">
-                                    {{-- INFO TOKO DAN BADGE (Ditambahkan) --}}
+                                    {{-- INFO TOKO DAN BADGE --}}
                                     <div class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-zinc-500">
                                         <i class="fas fa-store text-blue-500 w-3.5"></i>
                                         <span class="truncate max-w-[120px]">{{ $b->nama_toko }}</span>
@@ -369,7 +375,7 @@
                                         {{-- LOGIKA BADGE TOKO --}}
                                         @if(isset($b->tier_toko) && $b->tier_toko == 'official_store')
                                             <span class="badge-store badge-official" title="Official Store"><i class="fas fa-crown"></i></span>
-                                        @elseif(isset($b->tier_toko) && $b->tier_toko == 'pro_merchant')
+                                        @elseif(isset($b->tier_toko) && $b->tier_toko == 'power_merchant' || (isset($b->tier_toko) && $b->tier_toko == 'pro_merchant'))
                                             <span class="badge-store badge-pro" title="Pro Merchant"><i class="fas fa-check-circle"></i></span>
                                         @endif
                                     </div>
@@ -399,22 +405,21 @@
 
             {{-- PAGINASI --}}
             <div class="pagination-wrap">
-                {{ $products->appends(request()->query())->links('pagination::tailwind') }}
+                @if(isset($products) && $products->hasPages())
+                    {{ $products->appends(request()->query())->links('pagination::tailwind') }}
+                @endif
             </div>
 
         </main>
     </div>
 
-    {{-- Tambahkan baris ini --}}
+    {{-- Partial Includes --}}
     @include('partials.chat')
     @include('partials.footer')
-
-    @include('partials.chat')
     
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
 
-    {{-- LOGIKA INTERAKSI (Termasuk Accordion & Mobile Sidebar) --}}
-{{-- LOGIKA INTERAKSI (Termasuk Accordion, Mobile Sidebar & Auto Detect DEBUG) --}}
+    {{-- LOGIKA INTERAKSI & AUTO DETECT HYPERLOCAL --}}
     <script>
         // 1. Munculkan Tombol "Terapkan" saat ada interaksi filter
         function showApplyButton() {
@@ -427,7 +432,9 @@
 
         document.addEventListener('DOMContentLoaded', function() {
 
-            // ... (Kode Sidebar dan Accordion tetap sama seperti sebelumnya) ...
+            // ==========================================
+            // A. MOBILE SIDEBAR LOGIC
+            // ==========================================
             const mobileFilterBtn = document.getElementById('mobile-filter-btn');
             const sidebarFilters = document.getElementById('sidebar-filters');
             const closeFilterBtn = document.getElementById('close-filter-btn');
@@ -451,7 +458,13 @@
             if (closeFilterBtn) closeFilterBtn.addEventListener('click', closeFilter);
             if (filterOverlay) filterOverlay.addEventListener('click', closeFilter);
 
+
+            // ==========================================
+            // B. KATEGORI ACCORDION LOGIC
+            // ==========================================
             const accordionHeaders = document.querySelectorAll('.accordion-header');
+            
+            // Buka otomatis jika ada checkbox yang tercentang di dalamnya
             document.querySelectorAll('.accordion-item').forEach(item => {
                 if (item.querySelector('input[type="checkbox"]:checked')) {
                     item.querySelector('.accordion-content').classList.add('open');
@@ -459,40 +472,44 @@
                 }
             });
 
+            // Toggle klik
             accordionHeaders.forEach(header => {
-                header.addEventListener('click', function() {
+                header.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
                     const currentContent = this.nextElementSibling;
                     const currentIcon = this.querySelector('.icon-arrow');
                     const isOpen = currentContent.classList.contains('open');
 
-                    document.querySelectorAll('.accordion-content').forEach(content => content.classList.remove('open'));
-                    document.querySelectorAll('.icon-arrow').forEach(icon => icon.classList.remove('rotate-180'));
-
                     if (!isOpen) {
                         currentContent.classList.add('open');
                         currentIcon.classList.add('rotate-180');
+                    } else {
+                        currentContent.classList.remove('open');
+                        currentIcon.classList.remove('rotate-180');
                     }
                 });
             });
 
             // ==========================================
-            // 4. AUTO DETECT LOCATION (VERSI DEBUG ALERT)
+            // C. AUTO DETECT LOCATION (HYPERLOCAL)
             // ==========================================
             const urlParams = new URLSearchParams(window.location.search);
 
-            if (!urlParams.has('lokasi') && !sessionStorage.getItem('auto_lokasi_debug')) {
-
+            // Cek apakah parameter '?lokasi' ada di URL. 
+            // Jika TIDAK ADA, berarti user baru pertama kali buka halaman Katalog.
+            if (!urlParams.has('lokasi')) {
+                
+                // Gunakan IP API untuk melacak kota user saat ini secara diam-diam
                 fetch('https://ipapi.co/json/')
                     .then(res => res.ok ? res.json() : fetch('http://ip-api.com/json').then(r => r.json()))
                     .then(data => {
                         let detectedCity = (data.city || "").toLowerCase();
+                        
+                        // Bersihkan kata-kata tambahan agar mudah dicocokkan
+                        let cleanCity = detectedCity.replace(/kabupaten|kota|kab\./g, '').trim();
 
-                        // POPUP UNTUK MEMBUKTIKAN KOTA APA YANG TERBACA
-                        alert("Sistem melacak internet Anda berada di Kota: " + data.city + "\n\nSistem akan mencoba mencari kota ini di dalam dropdown filter.");
-
-                        detectedCity = detectedCity.replace(/kabupaten|kota|kab\./g, '').trim();
-
-                        if (detectedCity) {
+                        if (cleanCity) {
                             let selectLokasi = document.getElementById('lokasi-select');
                             let options = selectLokasi.options;
                             let matchFound = false;
@@ -500,25 +517,27 @@
                             for (let i = 0; i < options.length; i++) {
                                 let optionText = options[i].text.toLowerCase().replace(/kabupaten|kota|kab\./g, '').trim();
 
-                                if (optionText.includes(detectedCity) || detectedCity.includes(optionText)) {
+                                if (optionText === cleanCity || optionText.includes(cleanCity) || cleanCity.includes(optionText)) {
                                     selectLokasi.selectedIndex = i;
                                     matchFound = true;
                                     break;
                                 }
                             }
 
-                            if (matchFound) {
-                                sessionStorage.setItem('auto_lokasi_debug', 'true');
-                                alert("Kecocokan ditemukan! Filter akan diarahkan ke: " + selectLokasi.options[selectLokasi.selectedIndex].text);
-                                document.getElementById('filterForm').submit();
-                            } else {
-                                alert("Karena '" + data.city + "' TIDAK ADA di pilihan dropdown, maka sistem akan tetap menampilkan 'Seluruh Indonesia'.");
+                            // Jika kotanya tidak ada di daftar dropdown (belum ada toko dari sana), 
+                            // kita buatkan opsi baru agar filter tetap mencerminkan kota dia.
+                            if (!matchFound) {
+                                // Huruf pertama kapital untuk estetika
+                                let formattedCity = cleanCity.charAt(0).toUpperCase() + cleanCity.slice(1);
+                                let newOption = new Option(formattedCity, formattedCity, true, true);
+                                selectLokasi.add(newOption);
                             }
+
+                            // Submit otomatis ke kota tersebut!
+                            document.getElementById('filterForm').submit();
                         }
                     })
-                    .catch(error => {
-                        console.log('Pelacak diblokir', error);
-                    });
+                    .catch(error => console.log('Sistem gagal melacak lokasi otomatis.', error));
             }
 
         });
