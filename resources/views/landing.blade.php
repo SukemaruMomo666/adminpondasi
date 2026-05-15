@@ -529,6 +529,8 @@
                             $arrowBg = "group-hover:bg-purple-600 group-hover:shadow-[0_10px_20px_rgba(168,85,247,0.3)]";
                             $miniIconColor = "text-purple-600";
                             $miniIconBg = "bg-purple-50 border-purple-200";
+                            $locIconColor = "text-purple-500";
+                            $locBgColor = "bg-purple-50";
                         } elseif ($tier == 'power_merchant') {
                             $cardBorder = "border-emerald-100 hover:border-emerald-300 hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)]";
                             $fallbackBg = "bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-900";
@@ -541,6 +543,8 @@
                             $arrowBg = "group-hover:bg-emerald-500 group-hover:shadow-[0_10px_20px_rgba(16,185,129,0.3)]";
                             $miniIconColor = "text-emerald-600";
                             $miniIconBg = "bg-emerald-50 border-emerald-200";
+                            $locIconColor = "text-emerald-500";
+                            $locBgColor = "bg-emerald-50";
                         } else {
                             $cardBorder = "border-zinc-200 hover:border-blue-400 hover:shadow-[0_20px_40px_rgba(37,99,235,0.1)]";
                             $fallbackBg = "bg-gradient-to-br from-slate-700 via-zinc-800 to-zinc-950";
@@ -553,6 +557,8 @@
                             $arrowBg = "group-hover:bg-blue-600 group-hover:shadow-[0_10px_20px_rgba(37,99,235,0.3)]";
                             $miniIconColor = "text-white";
                             $miniIconBg = "bg-blue-600 border-white";
+                            $locIconColor = "text-blue-500";
+                            $locBgColor = "bg-blue-50";
                         }
                     @endphp
 
@@ -594,12 +600,17 @@
                                 </div>
                             </div>
 
-                            <div class="space-y-1">
+                            <div class="space-y-1.5">
                                 <h4 class="font-black text-lg md:text-xl text-zinc-900 transition-colors truncate tracking-tight {{ $nameColor }}">
                                     {{ $toko->nama_toko ?? 'Nama Toko' }}
                                 </h4>
-                                <p class="text-zinc-400 text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="fas fa-location-dot {{ $tier == 'regular' ? 'text-blue-500/50' : ($tier == 'official_store' ? 'text-purple-500/50' : 'text-emerald-500/50') }}"></i> {{ $toko->kota ?? 'Indonesia' }}
+                                
+                                {{-- PERBAIKAN: Menampilkan Nama Kota dengan Icon yang Menyesuaikan Tema Tier Toko --}}
+                                <p class="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                    <span class="w-5 h-5 rounded-full flex items-center justify-center {{ $locBgColor }} {{ $locIconColor }}">
+                                        <i class="fas fa-map-marker-alt text-[10px]"></i>
+                                    </span>
+                                    <span class="truncate">{{ $toko->kota ?? 'Nasional' }}</span>
                                 </p>
                             </div>
 
@@ -659,7 +670,12 @@
                                 @endif
                             </div>
                             <h4 class="font-black text-lg text-zinc-900 truncate">{{ $toko->nama_toko ?? 'Nama Toko' }}</h4>
-                            <p class="text-zinc-400 text-[10px] font-bold uppercase mt-1 text-blue-500"><i class="fas fa-map-pin"></i> Area Anda</p>
+                            
+                            {{-- PERBAIKAN: Menampilkan Kota Spesifik untuk Toko Terdekat --}}
+                            <p class="text-zinc-500 text-[10px] font-bold uppercase mt-1.5 flex items-center gap-1.5">
+                                <i class="fas fa-map-pin text-red-500"></i>
+                                <span class="truncate">{{ $toko->kota ?? 'Area Anda' }}</span>
+                            </p>
                         </div>
                     </a>
                 @endforeach

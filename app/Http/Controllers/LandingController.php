@@ -72,7 +72,8 @@ class LandingController extends Controller
         // SECTION 1: MITRA TOKO TERPOPULER (GLOBAL NASIONAL)
         // ---------------------------------------------------------
         $listToko = DB::table('tb_toko as t')
-            ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as kota')
+            // FIX: Mengambil kolom kota secara langsung, BUKAN area_id
+            ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
             ->selectSub(function ($query) {
                 $query->from('tb_barang')
                     ->whereColumn('toko_id', 't.id')
@@ -94,7 +95,8 @@ class LandingController extends Controller
         // SECTION 2: TOKO TERDEKAT (HYPER LOCAL 1 KOTA / 50 KM)
         // ---------------------------------------------------------
         $listTokoTerdekat = DB::table('tb_toko as t')
-            ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as kota')
+            // FIX: Mengambil kolom kota secara langsung, BUKAN area_id
+            ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$userLat, $userLng, $userLat])
             ->where('t.status', 'active')
             ->where('t.status_operasional', 'Buka')
@@ -106,7 +108,8 @@ class LandingController extends Controller
         // Fallback: Jika tidak ada toko dalam radius 50km, ambilkan yang paling dekat saja agar "TAMPIL TERUS"
         if ($listTokoTerdekat->isEmpty()) {
             $listTokoTerdekat = DB::table('tb_toko as t')
-                ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as kota')
+                // FIX: Mengambil kolom kota secara langsung, BUKAN area_id
+                ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
                 ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$userLat, $userLng, $userLat])
                 ->where('t.status', 'active')
                 ->where('t.status_operasional', 'Buka')
@@ -140,7 +143,8 @@ class LandingController extends Controller
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
                 ->select(
                     'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
-                    'fsp.harga_flash_sale', 'fsp.stok_flash_sale', 't.area_id as kota_toko'
+                    // FIX: Mengambil kolom kota secara langsung
+                    'fsp.harga_flash_sale', 'fsp.stok_flash_sale', 't.kota as kota_toko'
                 )
                 ->selectSub(function ($q) {
                     $q->from('tb_detail_transaksi')
@@ -160,7 +164,8 @@ class LandingController extends Controller
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
                 'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
-                DB::raw('NULL as harga_flash_sale'), DB::raw('100 as stok_flash_sale'), 't.area_id as kota_toko'
+                // FIX: Mengambil kolom kota secara langsung
+                DB::raw('NULL as harga_flash_sale'), DB::raw('100 as stok_flash_sale'), 't.kota as kota_toko'
             )
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$userLat, $userLng, $userLat])
             ->selectSub(function ($q) {
@@ -253,14 +258,16 @@ class LandingController extends Controller
 
             // Top Stores Global
             $stores = DB::table('tb_toko as t')
-                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as kota')
+                // FIX: Mengambil kolom kota secara langsung
+                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
                 ->where('t.status', 'active')
                 ->where('t.status_operasional', 'Buka')
                 ->limit(4)->get();
 
             // Nearby Stores Hyper Local
             $nearbyStores = DB::table('tb_toko as t')
-                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as kota')
+                // FIX: Mengambil kolom kota secara langsung
+                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
                 ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$userLat, $userLng, $userLat])
                 ->where('t.status', 'active')
                 ->where('t.status_operasional', 'Buka')
@@ -312,7 +319,8 @@ class LandingController extends Controller
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
                 'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
-                't.nama_toko', 't.slug as slug_toko', 't.area_id as kota_toko'
+                // FIX: Mengambil kolom kota secara langsung
+                't.nama_toko', 't.slug as slug_toko', 't.kota as kota_toko'
             )
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved');

@@ -12,16 +12,15 @@ class ProductController extends Controller
     // =========================================================================
     public function index(Request $request)
     {
-        // Query Dasar (Join ke Toko, Kota, dan Kategori untuk kebutuhan tampilan)
+        // Query Dasar (Join ke Toko dan Kategori saja, TIDAK ADA TABEL CITIES)
         $query = DB::table('tb_barang as p')
             ->join('tb_toko as t', 'p.toko_id', '=', 't.id')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
             ->leftJoin('tb_kategori as k', 'p.kategori_id', '=', 'k.id')
             ->select(
                 'p.*',
                 'k.nama_kategori',
                 't.id AS toko_id', 't.nama_toko', 't.slug AS slug_toko', 't.logo_toko', 't.tier_toko',
-                'c.name as nama_kota_toko',
+                't.kota as nama_kota_toko', // FIX: Langsung ambil kolom kota dari tb_toko
                 // FITUR DEWA: Menghitung jumlah terjual real-time dari tabel detail_transaksi
                 DB::raw("(SELECT COALESCE(SUM(jumlah), 0) FROM tb_detail_transaksi WHERE barang_id = p.id AND status_pesanan_item NOT IN ('dibatalkan', 'pengembalian_disetujui')) as stok_terjual")
             )
@@ -38,9 +37,9 @@ class ProductController extends Controller
             $query->whereIn('k.nama_kategori', $request->kategori_text);
         }
 
-        // C. Filter Lokasi Kota
+        // C. Filter Lokasi Kota (FIX: Gunakan t.kota)
         if ($request->has('lokasi') && $request->lokasi != '') {
-            $query->where('t.city_id', $request->lokasi);
+            $query->where('t.kota', $request->lokasi);
         }
 
         // D. Filter Rentang Harga
@@ -78,7 +77,31 @@ class ProductController extends Controller
 
         // --- Data Pendukung untuk Sidebar Filter ---
         $categories = DB::table('tb_kategori')->get();
-        $locations = DB::table('cities')->select('id as city_id', 'name as nama_kota')->get();
+        
+        // FIX: Ambil Lokasi Kota dari tb_toko langsung (Bukan tabel cities)
+        $dbCities = DB::table('tb_toko')
+            ->where('status', 'active')
+            ->whereNotNull('kota')
+            ->where('kota', '!=', '')
+            ->distinct()
+            ->pluck('kota')
+            ->toArray();
+
+        $fallbackCities = [
+            'Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung',
+            'Surabaya', 'Semarang', 'Yogyakarta', 'Surakarta', 'Medan', 'Makassar',
+            'Denpasar', 'Balikpapan', 'Samarinda', 'Batam', 'Padang', 'Subang'
+        ];
+
+        $cityList = array_unique(array_merge($dbCities, $fallbackCities));
+        if ($request->has('lokasi') && $request->lokasi != '' && !in_array($request->lokasi, $cityList)) {
+            $cityList[] = $request->lokasi;
+        }
+        sort($cityList);
+
+        $locations = collect($cityList)->map(function($city) {
+            return (object) ['city_id' => $city, 'nama_kota' => $city];
+        });
 
         return view('pages.produk.index', compact('products', 'categories', 'locations'));
     }
@@ -89,16 +112,15 @@ class ProductController extends Controller
     // =========================================================================
     public function detail($id)
     {
-        // 1. Ambil Data Produk + Kategori + Toko + Kota
+        // 1. Ambil Data Produk + Kategori + Toko (TIDAK ADA TABEL CITIES)
         $product = DB::table('tb_barang as p')
             ->leftJoin('tb_kategori as k', 'p.kategori_id', '=', 'k.id')
             ->join('tb_toko as t', 'p.toko_id', '=', 't.id')
-            ->leftJoin('cities as c', 't.city_id', '=', 'c.id')
             ->select(
                 'p.*',
                 'k.nama_kategori',
                 't.id AS toko_id', 't.nama_toko', 't.slug AS slug_toko', 't.logo_toko', 't.tier_toko',
-                'c.name as nama_kota_toko',
+                't.kota as nama_kota_toko', // FIX: Langsung ambil kolom kota dari tb_toko
                 // FITUR DEWA: Menghitung jumlah terjual real-time dari tabel detail_transaksi
                 DB::raw("(SELECT COALESCE(SUM(jumlah), 0) FROM tb_detail_transaksi WHERE barang_id = p.id AND status_pesanan_item NOT IN ('dibatalkan', 'pengembalian_disetujui')) as stok_terjual")
             )

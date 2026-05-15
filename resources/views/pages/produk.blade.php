@@ -351,6 +351,10 @@
                 @forelse($products as $b)
                     @php
                         $img = !empty($b->gambar_utama) ? 'assets/uploads/products/'.$b->gambar_utama : 'assets/uploads/products/default.jpg';
+                        
+                        // Menentukan warna icon lokasi berdasarkan tier toko
+                        $tier = $b->tier_toko ?? 'regular';
+                        $locIconColor = $tier == 'official_store' ? 'text-purple-500' : ($tier == 'power_merchant' ? 'text-emerald-500' : 'text-blue-500');
                     @endphp
                     <a href="{{ route('produk.detail', $b->id) }}" class="bg-white rounded-[1.5rem] shadow-sm hover:shadow-hover transition-all duration-300 overflow-hidden flex flex-col group border border-zinc-100 hover:border-blue-200 hover:-translate-y-1 relative">
 
@@ -366,10 +370,10 @@
                             <div class="mt-auto">
                                 <div class="text-base sm:text-lg font-black text-zinc-900 tracking-tight mb-2.5">Rp{{ number_format($b->harga, 0, ',', '.') }}</div>
 
-                                <div class="pt-3 border-t border-zinc-100/80 space-y-1.5">
+                                <div class="pt-3 border-t border-zinc-100/80 space-y-2">
                                     {{-- INFO TOKO DAN BADGE --}}
                                     <div class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-zinc-500">
-                                        <i class="fas fa-store text-blue-500 w-3.5"></i>
+                                        <i class="fas fa-store text-zinc-400 w-3.5"></i>
                                         <span class="truncate max-w-[120px]">{{ $b->nama_toko }}</span>
 
                                         {{-- LOGIKA BADGE TOKO --}}
@@ -380,8 +384,9 @@
                                         @endif
                                     </div>
 
+                                    {{-- LOKASI DENGAN WARNA DINAMIS TIER TOKO --}}
                                     <div class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-zinc-400">
-                                        <i class="fas fa-map-marker-alt text-red-400 w-3.5"></i>
+                                        <i class="fas fa-map-marker-alt {{ $locIconColor }} w-3.5"></i>
                                         <span class="truncate">{{ $b->nama_kota ?? 'Nasional' }}</span>
                                     </div>
                                 </div>
@@ -492,14 +497,17 @@
             });
 
             // ==========================================
-            // C. AUTO DETECT LOCATION (HYPERLOCAL)
+            // C. AUTO DETECT LOCATION (HYPERLOCAL) - DIPERBAIKI
             // ==========================================
             const urlParams = new URLSearchParams(window.location.search);
 
             // Cek apakah parameter '?lokasi' ada di URL. 
-            // Jika TIDAK ADA, berarti user baru pertama kali buka halaman Katalog.
-            if (!urlParams.has('lokasi')) {
+            // Jika TIDAK ADA, dan sesi pencarian otomatis belum dilakukan, jalankan IP Geolocation.
+            if (!urlParams.has('lokasi') && !sessionStorage.getItem('auto_lokasi_katalog_done')) {
                 
+                // Tandai bahwa sesi auto-lokasi sudah berjalan agar tidak terjadi infinite loop
+                sessionStorage.setItem('auto_lokasi_katalog_done', '1');
+
                 // Gunakan IP API untuk melacak kota user saat ini secara diam-diam
                 fetch('https://ipapi.co/json/')
                     .then(res => res.ok ? res.json() : fetch('http://ip-api.com/json').then(r => r.json()))

@@ -35,6 +35,9 @@
     .service-input:checked + .service-content .icon-box { background-color: #2563eb; color: #ffffff; border-color: #2563eb; }
 
     .icon-box { width: 3rem; height: 3rem; border-radius: 0.5rem; background-color: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #64748b; transition: all 0.2s; flex-shrink: 0; }
+    
+    /* Tambahan khusus styling Biteship agar beda dari Armada Toko */
+    .icon-box-biteship { background-color: #e0e7ff; color: #4f46e5; border-color: #c7d2fe; }
 
     .check-icon { position: absolute; top: 1rem; right: 1rem; color: #2563eb; opacity: 0; transform: scale(0.5); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.25rem; }
 
@@ -81,7 +84,7 @@
             <div>
                 <h5 class="text-sm font-bold text-blue-900 mb-1">Strategi Pengiriman Material B2B</h5>
                 <p class="text-xs font-medium text-blue-800/80 m-0 leading-relaxed">
-                    Pesanan barang berat (seperti sak semen, besi beton) wajib dikirim menggunakan <b>Armada Internal Toko</b>. Sementara untuk barang ringan (paku, engsel), Anda dapat mengandalkan <b>Ekspedisi Nasional</b> yang tarifnya dihitung secara otomatis oleh sistem pusat.
+                    Pesanan barang berat (seperti sak semen, besi beton) wajib dikirim menggunakan <b>Armada Internal Toko</b>. Sementara untuk barang ringan (paku, engsel), Anda dapat mengandalkan <b>Ekspedisi Nasional (Biteship)</b> yang tarifnya dihitung secara otomatis oleh sistem pusat.
                 </p>
             </div>
         </div>
@@ -205,16 +208,18 @@
                 </div>
 
                 {{-- ================================================= --}}
-                {{-- KANAN: EKSPEDISI NASIONAL (API RAJAONGKIR)        --}}
+                {{-- KANAN: EKSPEDISI NASIONAL (API BITESHIP)          --}}
                 {{-- ================================================= --}}
                 <div class="space-y-6">
 
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-slate-100 bg-blue-50/30 flex justify-between items-center">
+                        {{-- FIX UI: Mengubah header menjadi nuansa Biteship --}}
+                        <div class="px-6 py-4 border-b border-slate-100 bg-indigo-50/50 flex justify-between items-center">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center"><i class="mdi mdi-api"></i></div>
+                                <div class="w-8 h-8 rounded bg-indigo-600 text-white flex items-center justify-center"><i class="mdi mdi-api"></i></div>
                                 <div>
-                                    <h3 class="text-base font-bold text-slate-800 m-0">Ekspedisi Sistem (API)</h3>
+                                    <h3 class="text-base font-bold text-slate-800 m-0">Ekspedisi Nasional</h3>
+                                    <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest m-0">Powered by Biteship</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-600">
@@ -231,7 +236,7 @@
                             $seller_active_couriers = json_decode($toko->active_api_couriers ?? '[]', true);
                             if(!is_array($seller_active_couriers)) $seller_active_couriers = [];
 
-                            // 3. Master Kamus Kurir (Hanya untuk Referensi Tampilan)
+                            // 3. Master Kamus Kurir Biteship (Referensi Tampilan & Ikon)
                             $master_couriers = [
                                 'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-fast'],
                                 'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler', 'icon' => 'mdi-postbox'],
@@ -241,6 +246,10 @@
                                 'ninja'    => ['name' => 'Ninja Xpress', 'type' => 'Reguler', 'icon' => 'mdi-ninja'],
                                 'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler', 'icon' => 'mdi-airplane-takeoff'],
                                 'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-check'],
+                                'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday Delivery', 'icon' => 'mdi-package-variant'],
+                                'gosend'   => ['name' => 'GoSend', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
+                                'grab'     => ['name' => 'GrabExpress', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
+                                'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Kargo', 'icon' => 'mdi-truck-flatbed'],
                                 'indah'    => ['name' => 'Indah Logistik', 'type' => 'Kargo Berat', 'icon' => 'mdi-truck-flatbed'],
                                 'wahana'   => ['name' => 'Wahana Express', 'type' => 'Kargo & Ekonomi', 'icon' => 'mdi-weight-kilogram'],
                                 'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler', 'icon' => 'mdi-map-marker-path'],
@@ -251,7 +260,7 @@
                         @endphp
 
                         <div class="p-6">
-                            <p class="text-xs font-medium text-slate-500 mb-4">Pilih layanan kurir pihak ketiga untuk paket reguler (paku, engsel, dll). Opsi yang muncul di bawah ini adalah ekspedisi yang telah diizinkan oleh Admin Pusat.</p>
+                            <p class="text-xs font-medium text-slate-500 mb-4">Pilih layanan ekspedisi untuk pengiriman reguler, kargo, atau instan. Opsi yang muncul di bawah ini adalah ekspedisi yang telah diizinkan dan diaktifkan oleh Admin Pusat.</p>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 @forelse($admin_api_couriers as $code)
@@ -259,7 +268,8 @@
                                         <label class="service-tile w-full" for="api_{{ $code }}">
                                             <input type="checkbox" name="api_couriers[]" value="{{ $code }}" id="api_{{ $code }}" class="service-input" {{ in_array($code, $seller_active_couriers) ? 'checked' : '' }}>
                                             <div class="service-content">
-                                                <div class="icon-box">
+                                                {{-- Menggunakan class icon-box-biteship --}}
+                                                <div class="icon-box icon-box-biteship">
                                                     <i class="mdi {{ $master_couriers[$code]['icon'] }}"></i>
                                                 </div>
                                                 <div class="flex-1 pr-4">
@@ -273,7 +283,7 @@
                                 @empty
                                     <div class="col-span-full p-5 bg-red-50 text-red-600 rounded-xl text-sm font-bold text-center border border-red-200">
                                         <i class="mdi mdi-alert-circle outline text-2xl block mb-2"></i>
-                                        Admin pusat belum mengaktifkan ekspedisi apapun. Hubungi Admin.
+                                        Sistem Pusat belum mengaktifkan ekspedisi Biteship apapun. Harap hubungi Admin.
                                     </div>
                                 @endforelse
                             </div>

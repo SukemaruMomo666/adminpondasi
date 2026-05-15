@@ -10,24 +10,34 @@ use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
- // =================================================================
+    // =================================================================
     // 1. HALAMAN DAFTAR PRODUK (Katalog Utama Lengkap dengan Filter)
     // =================================================================
     public function produk(Request $request)
     {
         $categories = DB::table('tb_kategori')->orderBy('nama_kategori', 'ASC')->get();
 
-        // 1. PERBAIKAN: Karena tabel 'cities' dihapus, kita sediakan list kota Populer.
-        // Ini mencegah munculnya kode aneh Biteship (IDNP...) di dropdown pencarian.
-        $cityList = [
+        // 1. PERBAIKAN: Ambil daftar kota langsung dari database toko yang aktif
+        $dbCities = DB::table('tb_toko')
+            ->where('status', 'active')
+            ->whereNotNull('kota')
+            ->where('kota', '!=', '')
+            ->distinct()
+            ->pluck('kota')
+            ->toArray();
+
+        // Fallback kota populer untuk jaga-jaga
+        $fallbackCities = [
             'Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung',
             'Surabaya', 'Semarang', 'Yogyakarta', 'Surakarta', 'Medan', 'Makassar',
             'Denpasar', 'Balikpapan', 'Samarinda', 'Batam', 'Padang', 'Subang',
             'Purwakarta', 'Karawang', 'Cirebon', 'Cimahi', 'Tasikmalaya', 'Garut', 'Sukabumi', 'Majalengka', 'Sumedang', 'Indramayu'
         ];
 
-        // Jika fitur auto-detect lokasi di Javascript menemukan kota pengguna (meskipun tidak ada di list atas), 
-        // kita tambahkan otomatis agar selalu valid di dropdown.
+        // Gabungkan dan hapus duplikat
+        $cityList = array_unique(array_merge($dbCities, $fallbackCities));
+
+        // Jika fitur auto-detect lokasi di Javascript menemukan kota pengguna, tambahkan otomatis
         if ($request->filled('lokasi') && !in_array($request->lokasi, $cityList)) {
             $cityList[] = $request->lokasi;
         }
@@ -35,7 +45,7 @@ class PageController extends Controller
         // Urutkan sesuai abjad
         sort($cityList);
 
-        // Ubah array jadi object agar sesuai dengan format view Blade kamu ($l->nama_kota)
+        // Ubah array jadi object agar sesuai dengan format view Blade
         $locations = collect($cityList)->map(function($city) {
             return (object) [
                 'city_id' => $city, 
@@ -43,12 +53,12 @@ class PageController extends Controller
             ];
         });
 
-        // 2. PERBAIKAN QUERY: Ambil alamat_toko sebagai nama_kota untuk tampilan card produk
+        // 2. PERBAIKAN QUERY: Gunakan t.kota (bukan alamat_toko apalagi area_id)
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
                 'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
-                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.alamat_toko as nama_kota'
+                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota'
             )
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
@@ -75,10 +85,9 @@ class PageController extends Controller
             $query->whereIn('t.tier_toko', $request->tier_toko);
         }
 
-        // FILTER 4: Lokasi (PERBAIKAN: Cari berdasarkan teks alamat_toko, bukan ID Biteship)
+        // FILTER 4: Lokasi (PERBAIKAN: Cari berdasarkan kecocokan nama kota)
         if ($request->filled('lokasi')) {
-            // Karena alamat berisi teks panjang, kita gunakan LIKE untuk mencocokkan nama kotanya
-            $query->where('t.alamat_toko', 'LIKE', '%' . $request->lokasi . '%');
+            $query->where('t.kota', $request->lokasi);
         }
 
         // FILTER 5: Harga
@@ -122,7 +131,8 @@ class PageController extends Controller
             'filter_kategori', 'filter_lokasi', 'filter_harga_min', 'filter_harga_max'
         ));
     }
-    // =================================================================
+
+// =================================================================
     // 2. HALAMAN HASIL PENCARIAN (Search Bar & Filter Kategori)
     // =================================================================
     public function search(Request $request)
@@ -132,13 +142,43 @@ class PageController extends Controller
 
         $categories = DB::table('tb_kategori')->orderBy('nama_kategori', 'ASC')->get();
 
+        // 1. SIAPKAN DATA LOKASI UNTUK DROPDOWN FILTER
+        $dbCities = DB::table('tb_toko')
+            ->where('status', 'active')
+            ->whereNotNull('kota')
+            ->where('kota', '!=', '')
+            ->distinct()
+            ->pluck('kota')
+            ->toArray();
+
+        // Fallback kota populer
+        $fallbackCities = [
+            'Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung',
+            'Surabaya', 'Semarang', 'Yogyakarta', 'Surakarta', 'Medan', 'Makassar',
+            'Denpasar', 'Balikpapan', 'Samarinda', 'Batam', 'Padang', 'Subang',
+            'Purwakarta', 'Karawang', 'Cirebon', 'Cimahi', 'Tasikmalaya', 'Garut', 'Sukabumi', 'Majalengka', 'Sumedang', 'Indramayu'
+        ];
+
+        // Gabungkan dan urutkan abjad
+        $cityList = array_unique(array_merge($dbCities, $fallbackCities));
+        if ($request->filled('lokasi') && $request->lokasi !== 'semua' && !in_array($request->lokasi, $cityList)) {
+            $cityList[] = $request->lokasi;
+        }
+        sort($cityList);
+
+        $locations = collect($cityList)->map(function($city) {
+            return (object) ['city_id' => $city, 'city_name' => $city];
+        });
+
+        // 2. QUERY UTAMA PRODUK
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 't.area_id as kota_toko')
+            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 't.kota as kota_toko')
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
             ->where('t.status', 'active');
 
+        // 3. FILTER PENCARIAN TEKS (KEYWORD)
         if (!empty($keyword)) {
             $query->where(function($q) use ($keyword) {
                 $q->where('b.nama_barang', 'like', '%' . $keyword . '%')
@@ -146,91 +186,183 @@ class PageController extends Controller
             });
         }
 
+        // 4. FILTER KATEGORI (Dari URL atau Tombol Sidebar)
         if (!empty($kategoriId)) {
             $query->where('b.kategori_id', $kategoriId);
         }
 
+        // 5. FILTER KATEGORI (Dari Checkbox Accordion)
+        if ($request->has('kategori_text') && is_array($request->kategori_text)) {
+            $query->where(function($q) use ($request) {
+                foreach ($request->kategori_text as $text) {
+                    $q->orWhere('b.nama_barang', 'LIKE', '%' . $text . '%');
+                }
+            });
+        }
+
+        // 6. FILTER JENIS MITRA TOKO (Official / Pro)
         if ($request->has('tier_toko') && is_array($request->tier_toko)) {
             $query->whereIn('t.tier_toko', $request->tier_toko);
         }
 
+        // 7. FILTER LOKASI PENGIRIMAN
+        if ($request->filled('lokasi') && $request->lokasi !== 'semua') {
+            $query->where('t.kota', $request->lokasi);
+        }
+
+        // 8. FILTER RENTANG HARGA
+        if ($request->filled('harga_min')) {
+            $query->where('b.harga', '>=', $request->harga_min);
+        }
+        if ($request->filled('harga_max')) {
+            $query->where('b.harga', '<=', $request->harga_max);
+        }
+
+        // 9. LOGIKA SORTING (Terbaru / Termurah / Termahal)
+        if ($request->filled('sort')) {
+            if ($request->sort == 'termurah') {
+                $query->orderBy('b.harga', 'ASC');
+            } elseif ($request->sort == 'termahal') {
+                $query->orderBy('b.harga', 'DESC');
+            } else {
+                $query->orderBy('b.created_at', 'DESC');
+            }
+        } else {
+            $query->orderBy('b.created_at', 'DESC');
+        }
+
+        // 10. EKSEKUSI PAGINASI
         $products = $query->paginate(12)->appends($request->query());
 
-        return view('pages.search', compact('products', 'categories', 'keyword', 'kategoriId'));
+        // Lempar variabel pendukung ke view agar form ingat inputan terakhir
+        $filter_lokasi = $request->lokasi ?? 'semua';
+        $filter_harga_min = $request->harga_min ?? '';
+        $filter_harga_max = $request->harga_max ?? '';
+
+        return view('pages.search', compact(
+            'products', 'categories', 'keyword', 'kategoriId', 
+            'locations', 'filter_lokasi', 'filter_harga_min', 'filter_harga_max'
+        ));
     }
-
+// =================================================================
+    // HALAMAN DETAIL PRODUK (100% BEBAS TABEL CITIES)
     // =================================================================
-    // 3. HALAMAN DETAIL PRODUK
-    // =================================================================
-    public function detailProduk(Request $request)
+    public function detail($id)
     {
-        $id = $request->query('id');
-
-        $produk = DB::table('tb_barang as b')
-            ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->select('b.*', 't.nama_toko', 't.slug as toko_slug', 't.area_id as kota_toko', 't.logo_toko')
-            ->where('b.id', $id)
+        // 1. Ambil data produk, kategori, dan toko (Gunakan t.kota, BUKAN tabel cities)
+        $produk = DB::table('tb_barang as p')
+            ->leftJoin('tb_kategori as k', 'p.kategori_id', '=', 'k.id')
+            ->join('tb_toko as t', 'p.toko_id', '=', 't.id')
+            ->select(
+                'p.*', 
+                'k.nama_kategori', 
+                't.id as toko_id', 
+                't.nama_toko', 
+                't.slug as slug_toko', 
+                't.logo_toko', 
+                't.tier_toko', 
+                't.kota as nama_kota_toko', // KUNCI UTAMA ANTI-BUG
+                DB::raw("(SELECT COALESCE(SUM(jumlah), 0) FROM tb_detail_transaksi WHERE barang_id = p.id AND status_pesanan_item NOT IN ('dibatalkan', 'pengembalian_disetujui')) as stok_terjual")
+            )
+            ->where('p.id', $id)
+            ->where('p.is_active', 1)
+            ->where('p.status_moderasi', 'approved')
             ->first();
 
         if (!$produk) {
-            return redirect()->route('produk.index')->with('error', 'Produk tidak ditemukan.');
+            return redirect()->route('produk.index')->with('error', 'Produk tidak ditemukan atau tidak aktif.');
         }
 
+        // 2. Ambil Ulasan Produk
         $ulasan = DB::table('tb_review_produk as r')
             ->join('tb_user as u', 'r.user_id', '=', 'u.id')
-            ->select('r.*', 'u.nama as nama_user')
+            ->select('r.*', 'u.nama as nama_user', 'u.profile_picture_url as foto_user')
             ->where('r.barang_id', $id)
             ->orderByDesc('r.created_at')
             ->limit(5)
             ->get();
 
-        return view('pages.detail_produk', compact('produk', 'ulasan'));
-    }
+        // 3. Ambil Produk Terkait (Rekomendasi dari Toko yang Sama atau Kategori Sama)
+        $produkTerkait = DB::table('tb_barang as b')
+            ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
+            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.tier_toko', 't.kota as kota_toko')
+            ->where('b.kategori_id', $produk->kategori_id)
+            ->where('b.id', '!=', $id)
+            ->where('b.is_active', 1)
+            ->where('b.status_moderasi', 'approved')
+            ->limit(4)
+            ->get();
 
-    // =================================================================
-    // 4. HALAMAN SEMUA TOKO
+        return view('pages.detail_produk', compact('produk', 'ulasan', 'produkTerkait'));
+    }1
+// =================================================================
+    // 4. HALAMAN SEMUA TOKO (HYPERLOCAL + MAPS LEAFLET)
     // =================================================================
     public function semuaToko(Request $request)
     {
         $filter_lokasi = $request->query('lokasi', 'semua');
+        $lat = $request->query('lat');
+        $lng = $request->query('lng');
 
-        $locations = DB::table('tb_toko as t')
-            ->select('t.area_id as city_id', 't.area_id as city_name')
-            ->where('t.status', 'active')
-            ->whereNotNull('t.area_id')
+        // 1. Ambil List Kota dari Database
+        $dbCities = DB::table('tb_toko')
+            ->where('status', 'active')
+            ->whereNotNull('kota')
+            ->where('kota', '!=', '')
             ->distinct()
-            ->orderBy('t.area_id', 'ASC')
-            ->get();
+            ->pluck('kota')
+            ->toArray();
 
+        // Fallback kota populer (AGAR DROPDOWN TIDAK CUMA SUBANG DOANG)
+        $fallbackCities = [
+            'Jakarta', 'Bogor', 'Depok', 'Tangerang', 'Bekasi', 'Bandung',
+            'Surabaya', 'Semarang', 'Yogyakarta', 'Surakarta', 'Medan', 'Makassar',
+            'Denpasar', 'Balikpapan', 'Samarinda', 'Batam', 'Padang', 'Subang',
+            'Purwakarta', 'Karawang', 'Cirebon', 'Cimahi', 'Tasikmalaya', 'Garut', 'Sukabumi', 'Majalengka', 'Sumedang', 'Indramayu'
+        ];
+
+        // Gabungkan dan urutkan
+        $cityList = array_unique(array_merge($dbCities, $fallbackCities));
+        if ($filter_lokasi !== 'semua' && !empty($filter_lokasi) && !in_array($filter_lokasi, $cityList)) {
+            $cityList[] = $filter_lokasi;
+        }
+        sort($cityList);
+
+        $locations = collect($cityList)->map(function($city) {
+            return (object) ['city_id' => $city, 'city_name' => $city];
+        });
+
+        // 2. QUERY UTAMA TOKO
         $query = DB::table('tb_toko as t')
-            ->select(
-                't.id', 't.nama_toko', 't.slug', 't.deskripsi_toko',
-                't.logo_toko', 't.banner_toko', 't.tier_toko', 't.area_id as city_id', 't.area_id as city_name'
-            )
+            ->select('t.id', 't.nama_toko', 't.slug', 't.deskripsi_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota as city_name', 't.latitude', 't.longitude')
             ->selectSub(function ($q) {
-                $q->from('tb_barang')
-                  ->whereColumn('toko_id', 't.id')
-                  ->where('is_active', 1)
-                  ->where('status_moderasi', 'approved')
-                  ->selectRaw('COUNT(id)');
+                $q->from('tb_barang')->whereColumn('toko_id', 't.id')->where('is_active', 1)->where('status_moderasi', 'approved')->selectRaw('COUNT(id)');
             }, 'jumlah_produk')
             ->selectSub(function ($q) {
-                $q->from('tb_toko_review')
-                  ->whereColumn('toko_id', 't.id')
-                  ->selectRaw('COALESCE(AVG(rating), 0)');
+                $q->from('tb_toko_review')->whereColumn('toko_id', 't.id')->selectRaw('COALESCE(AVG(rating), 0)');
             }, 'rating')
             ->where('t.status', 'active');
 
-        if ($filter_lokasi !== 'semua' && !empty($filter_lokasi)) {
-            $query->where('t.area_id', $filter_lokasi);
+        // 3. LOGIKA HYPERLOCAL (JIKA ADA GPS)
+        if ($lat && $lng) {
+            $query->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$lat, $lng, $lat]);
+            $query->orderBy('jarak_km', 'ASC'); // Urutkan dari yang terdekat
+        } else {
+            $query->orderBy('t.nama_toko', 'ASC');
+            if ($filter_lokasi !== 'semua' && !empty($filter_lokasi)) {
+                $query->where('t.kota', $filter_lokasi);
+            }
         }
 
-        $query->orderBy('t.nama_toko', 'ASC');
+        // 4. AMBIL SEMUA TITIK TOKO UNTUK PETA
+        $mapQuery = clone $query;
+        $allMapStores = $mapQuery->whereNotNull('t.latitude')->whereNotNull('t.longitude')->get();
+
+        // 5. AMBIL DATA PAGINATION UNTUK CARD
         $stores = $query->paginate(12)->withQueryString();
 
-        return view('pages.semua_toko', compact('locations', 'stores', 'filter_lokasi'));
+        return view('pages.semua_toko', compact('locations', 'stores', 'filter_lokasi', 'allMapStores', 'lat', 'lng'));
     }
-
     // =================================================================
     // 5. HALAMAN PROFIL TOKO (Katalog Toko)
     // =================================================================
@@ -239,7 +371,8 @@ class PageController extends Controller
         $slug = $request->query('slug');
 
         $toko = DB::table('tb_toko as t')
-            ->select('t.*', 't.area_id as kota')
+            // Karena pakai t.*, maka t.kota otomatis terbawa dengan sempurna
+            ->select('t.*')
             ->where('t.slug', $slug)
             ->where('t.status', 'active')
             ->first();
@@ -362,7 +495,7 @@ class PageController extends Controller
         $userId = Auth::id();
         $userEmail = Auth::user()->email ?? 'customer@example.com';
 
-        // Hanya mengambil dari tb_user_alamat (tabel wilayah sudah dihapus)
+        // Hanya mengambil dari tb_user_alamat
         $alamatUser = DB::table('tb_user_alamat as ua')
             ->where('ua.user_id', $userId)
             ->where('ua.is_utama', 1)
@@ -379,7 +512,6 @@ class PageController extends Controller
                 'alamat'    => $alamatUser->alamat_lengkap ?? '',
                 'area_id'   => $alamatUser->area_id ?? '',
                 'kodepos'   => $alamatUser->kode_pos ?? '',
-                // Fallback kosong untuk menghindari error di view lama
                 'kecamatan' => '', 'kota' => '', 'provinsi' => ''
             ];
         }
@@ -395,7 +527,8 @@ class PageController extends Controller
 
             $item = DB::table('tb_barang as b')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-                ->select('b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.stok', 't.id as toko_id', 't.nama_toko', 't.area_id as kota_toko')
+                // FIX: Gunakan t.kota
+                ->select('b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.stok', 't.id as toko_id', 't.nama_toko', 't.kota as kota_toko')
                 ->where('b.id', $productId)
                 ->first();
 
@@ -426,7 +559,8 @@ class PageController extends Controller
             $items = DB::table('tb_keranjang as k')
                 ->join('tb_barang as b', 'k.barang_id', '=', 'b.id')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-                ->select('k.id as keranjang_id', 'b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'k.jumlah', 't.id as toko_id', 't.nama_toko', 't.area_id as kota_toko')
+                // FIX: Gunakan t.kota
+                ->select('k.id as keranjang_id', 'b.id as barang_id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'k.jumlah', 't.id as toko_id', 't.nama_toko', 't.kota as kota_toko')
                 ->where('k.user_id', $userId)
                 ->whereIn('k.id', $selectedItems)
                 ->get();
@@ -618,7 +752,6 @@ class PageController extends Controller
         if (!Auth::check()) return redirect()->route('login');
         $user = Auth::user();
         
-        // Hanya mengirim $alamatUtama. Variabel wilayah dibuang.
         $alamatUtama = DB::table('tb_user_alamat')->where('user_id', $user->id)->where('is_utama', 1)->first();
         
         return view('pages.edit_profil', compact('user', 'alamatUtama'));
@@ -630,37 +763,32 @@ class PageController extends Controller
 
         $user = Auth::user();
 
-        // 1. Validasi Input
         $request->validate([
             'nama' => 'required|string|max:255',
             'area_id' => 'required',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048' // Maksimal 2MB
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ], [
             'area_id.required' => 'Area / Kecamatan wajib dipilih dari dropdown Biteship yang muncul.',
             'foto.image' => 'File harus berupa gambar JPG/PNG.',
             'foto.max' => 'Ukuran foto maksimal 2MB.'
         ]);
 
-        // 2. Logika Upload Foto Profil
-        $fotoName = $user->profile_picture_url ?? null; // Ambil foto lama jika ada
+        $fotoName = $user->profile_picture_url ?? null;
         if ($request->hasFile('foto')) {
             $file = $request->file('foto');
             $fotoName = time() . '_avatar_' . $user->id . '.' . $file->getClientOriginalExtension();
-            // Pindahkan file ke folder assets/uploads/avatars/
             $file->move(public_path('assets/uploads/avatars'), $fotoName);
         }
 
-        // 3. Update Data Pribadi ke tb_user
         DB::table('tb_user')->where('id', $user->id)->update([
             'nama' => $request->nama,
             'no_telepon' => $request->no_telepon,
             'tanggal_lahir' => $request->tanggal_lahir,
             'jenis_kelamin' => $request->jenis_kelamin,
-            'profile_picture_url' => $fotoName, // Simpan nama foto
+            'profile_picture_url' => $fotoName,
             'updated_at' => now()
         ]);
 
-        // 4. Update Titik Lokasi ke tb_user_alamat
         $alamatUtama = DB::table('tb_user_alamat')
             ->where('user_id', $user->id)
             ->where('is_utama', 1)
@@ -673,17 +801,15 @@ class PageController extends Controller
             'label_alamat'     => $request->label_alamat ?? 'Rumah',
             'alamat_lengkap'   => $request->alamat_lengkap,
             'kode_pos'         => $request->kode_pos,
-            'area_id'          => $request->area_id, // Area ID dari Biteship
+            'area_id'          => $request->area_id, 
             'latitude'         => $request->latitude,
             'longitude'        => $request->longitude,
             'is_utama'         => 1,
-            // HAPUS 'updated_at' => now()
         ];
 
         if ($alamatUtama) {
             DB::table('tb_user_alamat')->where('id', $alamatUtama->id)->update($dataAlamat);
         } else {
-            // HAPUS $dataAlamat['created_at'] = now();
             DB::table('tb_user_alamat')->insert($dataAlamat);
         }
 
@@ -700,10 +826,6 @@ class PageController extends Controller
         return back()->with('success', 'Password berhasil diperbarui!');
     }
 
-    // =================================================================
-    // 14. API: BITESHIP AUTOCOMPLETE SEARCH PROXY
-    // Fungsi ini menggantikan API Lazy Load RajaOngkir lama
-    // =================================================================
     public function searchBiteshipAPI(Request $request)
     {
         $keyword = $request->query('q');
@@ -712,7 +834,6 @@ class PageController extends Controller
             return response()->json(['areas' => []]);
         }
 
-        // Mengambil rahasia API Key dari tb_pengaturan
         $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'biteship_api_key')->value('setting_nilai');
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([

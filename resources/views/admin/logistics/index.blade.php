@@ -76,6 +76,31 @@
 @endpush
 
 @section('content')
+
+{{-- SWEETALERT SETUP UNTUK NOTIFIKASI --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const Toast = Swal.mixin({
+            toast: true, position: 'top-end', showConfirmButton: false, timer: 3500,
+            timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-lg border border-slate-100' }
+        });
+
+        @if(session('success'))
+            Toast.fire({icon: 'success', title: '{{ session("success") }}'});
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error', title: 'Gagal Menyimpan!',
+                text: 'Periksa kembali data yang Anda masukkan.',
+                confirmButtonColor: '#3b82f6',
+                customClass: { popup: 'rounded-3xl shadow-xl border border-slate-100' }
+            });
+        @endif
+    });
+</script>
+
 <form action="{{ route('admin.logistics.update') }}" method="POST" class="pb-24">
     @csrf
 
@@ -146,6 +171,7 @@
                             <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Pembeli dapat checkout tanpa ongkos kirim dan mengambil material langsung di gudang seller.</span>
                         </div>
                         <div>
+                            <input type="hidden" name="enable_store_pickup" value="0">
                             <input type="checkbox" class="toggle-checkbox" id="pickupToggle" name="enable_store_pickup" value="1" {{ ($settings['enable_store_pickup'] ?? '1') == '1' ? 'checked' : '' }}>
                             <label for="pickupToggle" class="toggle-label"></label>
                         </div>
@@ -158,6 +184,7 @@
                             <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Izinkan seller mengatur tarif per-KM untuk pengiriman material berat via armada mereka.</span>
                         </div>
                         <div>
+                            <input type="hidden" name="enable_custom_fleet" value="0">
                             <input type="checkbox" class="toggle-checkbox" id="fleetToggle" name="enable_custom_fleet" value="1" {{ ($settings['enable_custom_fleet'] ?? '1') == '1' ? 'checked' : '' }}>
                             <label for="fleetToggle" class="toggle-label"></label>
                         </div>
@@ -170,6 +197,7 @@
                             <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Berikan akses bagi seller untuk melayani pengiriman mendesak hari itu juga dengan tarif ekstra.</span>
                         </div>
                         <div>
+                            <input type="hidden" name="enable_emergency_delivery" value="0">
                             <input type="checkbox" class="toggle-checkbox" id="emergencyToggle" name="enable_emergency_delivery" value="1" {{ ($settings['enable_emergency_delivery'] ?? '0') == '1' ? 'checked' : '' }}>
                             <label for="emergencyToggle" class="toggle-label"></label>
                         </div>
@@ -200,42 +228,69 @@
             </div>
         </div>
 
-        {{-- KOLOM KANAN (EKSPEDISI API & ATURAN UMUM) --}}
+        {{-- KOLOM KANAN (EKSPEDISI API BITESHIP & ATURAN UMUM) --}}
         <div class="lg:col-span-5 space-y-6">
 
             <div class="bg-white dark:bg-slate-900 border-t-4 border-t-blue-500 border-x border-b border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm transition-colors duration-300 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 dark:border-slate-800 bg-blue-50/30 dark:bg-transparent">
                     <h3 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 m-0">
-                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Ekspedisi Sistem (API Biteship)
+                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Ekspedisi Sistem (Biteship)
                     </h3>
                     <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mt-4">
                         <p class="text-[11px] font-bold text-amber-700 m-0 leading-relaxed">
-                            <i class="mdi mdi-alert"></i> <strong>Peringatan API:</strong> Centang HANYA kurir yang telah Anda aktifkan di <strong>Dashboard Biteship</strong> Anda. Mengaktifkan kurir di sini tanpa mengaktifkannya di Biteship akan menyebabkan error gagal hitung ongkir saat pembeli melakukan checkout.
+                            <i class="mdi mdi-alert"></i> <strong>Peringatan API:</strong> Centang HANYA kurir yang telah Anda aktifkan di <strong>Dashboard Biteship</strong> Anda. Mengaktifkan kurir di sini tanpa mengaktifkannya di akun Biteship akan menyebabkan error gagal hitung ongkir saat pembeli melakukan checkout.
                         </p>
                     </div>
                 </div>
 
                 @php
+                    // MASTER COURIERS ASLI DARI BITESHIP (BUKAN DUMMY)
+                    $master_couriers = [
+                        'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler, Kargo & Truking', 'icon' => 'mdi-truck-fast'],
+                        'jnt'      => ['name' => 'J&T Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
+                        'sicepat'  => ['name' => 'SiCepat', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-lightning-bolt'],
+                        'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-postbox'],
+                        'tiki'     => ['name' => 'TIKI', 'type' => 'Reguler & Sameday', 'icon' => 'mdi-truck-outline'],
+                        'ninja'    => ['name' => 'Ninja Xpress', 'type' => 'Reguler', 'icon' => 'mdi-ninja'],
+                        'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-airplane-takeoff'],
+                        'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-truck-check'],
+                        'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday & Frozen', 'icon' => 'mdi-package-variant'],
+                        'gosend'   => ['name' => 'GoSend', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
+                        'grab'     => ['name' => 'GrabExpress', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
+                        'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Armada Besar', 'icon' => 'mdi-truck-flatbed'],
+                        'borzo'    => ['name' => 'Borzo', 'type' => 'Instant Delivery', 'icon' => 'mdi-motorbike'],
+                        'indah'    => ['name' => 'Indah Logistik', 'type' => 'Kargo Berat', 'icon' => 'mdi-truck-flatbed'],
+                        'wahana'   => ['name' => 'Wahana Express', 'type' => 'Kargo & Ekonomi', 'icon' => 'mdi-weight-kilogram'],
+                        'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-map-marker-path'],
+                        'ide'      => ['name' => 'ID Express', 'type' => 'Reguler', 'icon' => 'mdi-truck-fast-outline'],
+                        'sentral'  => ['name' => 'Sentral Cargo', 'type' => 'Kargo Domestik', 'icon' => 'mdi-package-variant-closed'],
+                        'rex'      => ['name' => 'REX Express', 'type' => 'Kargo & Dokumen', 'icon' => 'mdi-truck-cargo-container'],
+                        'rpx'      => ['name' => 'RPX', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
+                    ];
+
                     $active_api_couriers = json_decode($settings['api_active_couriers'] ?? '[]', true);
                     if(!is_array($active_api_couriers)) $active_api_couriers = [];
                 @endphp
 
                 <div class="p-6">
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                        @foreach($api_couriers as $code => $kurir)
+                        {{-- HACK: Hidden input agar jika admin uncheck semua kurir, form tetap terkirim array kosong --}}
+                        <input type="hidden" name="api_active_couriers[]" value="NONE_SELECTED_HACK">
+                        
+                        @foreach($master_couriers as $code => $kurir)
                             <label class="courier-box w-full relative m-0" for="api_{{ $code }}">
-                                <input type="checkbox" name="couriers[]" value="{{ $code }}" id="api_{{ $code }}" class="courier-checkbox" {{ in_array($code, $active_api_couriers) ? 'checked' : '' }}>
+                                <input type="checkbox" name="api_active_couriers[]" value="{{ $code }}" id="api_{{ $code }}" class="courier-checkbox" {{ in_array($code, $active_api_couriers) ? 'checked' : '' }}>
 
                                 <div class="courier-content flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl h-full transition-colors duration-200">
                                     {{-- Icon Box --}}
                                     <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                        <i class="mdi {{ $kurir['icon'] ?? 'mdi-truck' }} text-blue-500 dark:text-blue-400 text-xl"></i>
+                                        <i class="mdi {{ $kurir['icon'] }} text-blue-500 dark:text-blue-400 text-xl"></i>
                                     </div>
 
                                     {{-- Info --}}
                                     <div class="flex-1 pr-2">
-                                        <strong class="block text-sm font-black text-slate-800 dark:text-white leading-tight mb-0.5">{{ $kurir['name'] ?? strtoupper($code) }}</strong>
-                                        <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ $kurir['type'] ?? 'Reguler' }}</span>
+                                        <strong class="block text-sm font-black text-slate-800 dark:text-white leading-tight mb-0.5">{{ $kurir['name'] }}</strong>
+                                        <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ $kurir['type'] }}</span>
                                     </div>
 
                                     {{-- Checkmark Overlay (Absolute) --}}
@@ -258,6 +313,7 @@
                                 <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight">Paksa sistem mengaktifkan biaya asuransi kurir untuk proteksi.</span>
                             </div>
                             <div>
+                                <input type="hidden" name="force_insurance" value="0">
                                 <input type="checkbox" class="toggle-checkbox" id="insuranceToggle" name="force_insurance" value="1" {{ ($settings['force_insurance'] ?? '0') == '1' ? 'checked' : '' }}>
                                 <label for="insuranceToggle" class="toggle-label"></label>
                             </div>

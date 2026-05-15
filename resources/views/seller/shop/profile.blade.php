@@ -287,7 +287,7 @@
                             <div>
                                 <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Kabupaten / Kota</label>
                                 <div class="relative">
-                                    <input type="text" name="kota" id="inputKota" class="w-full input-readonly text-sm font-bold rounded-xl px-4 py-3 outline-none" value="{{ old('kota', $toko->kota ?? '') }}" readonly placeholder="Diatur melalui Peta">
+                                    <input type="text" name="kota" id="inputKota" class="w-full input-readonly text-sm font-bold rounded-xl px-4 py-3 outline-none" value="{{ old('kota', $toko->kota ?? '') }}" readonly placeholder="Diatur melalui Peta">    
                                     <i class="fas fa-lock absolute right-4 top-3.5 text-zinc-400 text-sm"></i>
                                 </div>
                             </div>
@@ -301,12 +301,13 @@
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Detail Alamat Toko)</label>
+                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Manual)</label>
+                            {{-- INI SUDAH DIPERBAIKI MENJADI alamat_toko --}}
                             <textarea id="mainAlamatDetail" name="alamat_toko" class="input-readonly custom-scrollbar w-full text-sm font-medium rounded-xl px-4 py-4 outline-none min-h-[90px] resize-none leading-relaxed" readonly required placeholder="Diatur melalui Modal Peta...">{{ old('alamat_toko', $toko->alamat_toko ?? '') }}</textarea>
                         </div>
 
                         <div>
-                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Wilayah Ekspedisi</label>
+                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Wilayah Ekspedisi (Biteship)</label>
                             <div class="relative">
                                 <input type="text" id="mainBiteshipLabel" class="input-readonly w-full text-sm font-bold rounded-xl px-4 py-3.5 outline-none" readonly placeholder="Diatur melalui Modal Peta..." value="{{ old('area_id', $toko->area_id ?? '') != '' ? 'Wilayah Terpilih (ID: '.old('area_id', $toko->area_id ?? '').')' : '' }}">
                                 <i class="fas fa-lock absolute right-4 top-4 text-zinc-400 text-sm"></i>
@@ -428,14 +429,14 @@
 
             {{-- ALAMAT MANUAL (DALAM MODAL) --}}
             <div>
-                <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Detail Alamat Toko) <span class="text-red-500">*</span></label>
+                <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2">Alamat Detail (Manual) <span class="text-red-500">*</span></label>
                 <textarea id="modalAlamatDetail" class="input-premium custom-scrollbar w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm font-medium rounded-xl px-4 py-4 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none min-h-[90px] resize-none leading-relaxed" placeholder="Contoh: Jl. Raya Pantura No. 45. Gudang atap seng biru, gerbang besi hitam."></textarea>
             </div>
 
             {{-- BITESHIP AUTOCOMPLETE SEARCH (DALAM MODAL) --}}
             <div class="border-t border-zinc-100 pt-6">
                 <div class="flex items-center justify-between mb-2">
-                    <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest">Kecamatan Ekspedisi<span class="text-red-500">*</span></label>
+                    <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest">Kecamatan Ekspedisi (Biteship) <span class="text-red-500">*</span></label>
                 </div>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" id="search-icon">
@@ -567,7 +568,7 @@
             setTimeout(() => { mapModal.classList.add('hidden'); }, 300);
         };
 
-window.saveMapLocation = function() {
+        window.saveMapLocation = function() {
             // Validasi Input Modal
             if (!modalAlamatDetail.value.trim()) {
                 Swal.fire({icon: 'warning', title: 'Data Belum Lengkap', text: 'Alamat Detail Manual tidak boleh kosong.', customClass: { popup: 'rounded-2xl' }});
@@ -593,6 +594,7 @@ window.saveMapLocation = function() {
             closeMapModal();
             Toast.fire({icon: 'success', title: 'Konfigurasi Alamat Disimpan!'});
         };
+
         // ==========================================
         // 3. FUNGSI GEOCODING PETA (OPENSTREETMAP)
         // ==========================================
@@ -625,9 +627,6 @@ window.saveMapLocation = function() {
                     if(modalAlamatDetail.value.trim() === '') {
                         modalAlamatDetail.value = tempFullAddress;
                     }
-
-                    // KITA MATIKAN AUTO-WRITE BITESHIP!
-                    // Seller wajib cari secara manual.
                 }
             } catch (error) {
                 tempAddressText.innerHTML = "Gagal menghubungi satelit pencarian.";
@@ -830,8 +829,6 @@ window.saveMapLocation = function() {
             }, 10);
         });
 
-
-
         // ==========================================
         // 7. TRIK HACK: AUTO-LOAD KOTA DARI KOORDINAT
         // ==========================================
@@ -867,4 +864,4 @@ window.saveMapLocation = function() {
 
     });
 </script>
-@endpush        
+@endpush
