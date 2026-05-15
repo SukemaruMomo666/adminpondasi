@@ -294,7 +294,7 @@ class PageController extends Controller
             ->get();
 
         return view('pages.detail_produk', compact('produk', 'ulasan', 'produkTerkait'));
-    }1
+    }
 // =================================================================
     // 4. HALAMAN SEMUA TOKO (HYPERLOCAL + MAPS LEAFLET)
     // =================================================================
