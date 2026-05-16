@@ -907,12 +907,32 @@ class PageController extends Controller
         }
     }
 
+// =================================================================
+    // 10. RIWAYAT PESANAN SAYA (Dengan Auto-Catch Midtrans)
     // =================================================================
-    // 10. RIWAYAT PESANAN SAYA
-    // =================================================================
-    public function pesanan()
+    public function pesanan(Request $request)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // AUTO-CATCH DARI MIDTRANS REDIRECT (Native URL)
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $orderId = $request->order_id;
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $orderId)->first();
+            
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses',
+                    'updated_at' => now()
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+                
+                // Redirect bersih agar URL tidak kotor panjang-panjang
+                return redirect()->route('pesanan.index')->with('success', 'Pembayaran berhasil dikonfirmasi sistem!');
+            }
+        }
 
         $orders = DB::table('tb_transaksi')
             ->where('user_id', Auth::id())
@@ -925,9 +945,28 @@ class PageController extends Controller
     // =================================================================
     // 11. DETAIL, LACAK, & AKSI PESANAN (ENTERPRISE LIFECYCLE)
     // =================================================================
-    public function lacakPesanan($kode_invoice)
+    public function lacakPesanan(Request $request, $kode_invoice)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // AUTO-CATCH DARI JS POPUP MIDTRANS (onSuccess)
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $kode_invoice)->first();
+            
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses',
+                    'updated_at' => now()
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+
+                // Redirect bersih agar URL kembali rapi
+                return redirect()->route('pesanan.lacak', $kode_invoice)->with('success', 'Pembayaran Lunas Terverifikasi!');
+            }
+        }
 
         $order = DB::table('tb_transaksi')
             ->where('kode_invoice', $kode_invoice)
@@ -955,7 +994,7 @@ class PageController extends Controller
         }
 
         if (in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim', 'sampai_tujuan', 'selesai'])) {
-            $trackingLogs[] = ['status' => 'Diproses Penjual', 'desc' => 'Pesanan Anda sedang disiapkan oleh Penjual.', 'time' => $order->updated_at];
+            $trackingLogs[] = ['status' => 'Pesanan Dikemas', 'desc' => 'Pesanan Anda sedang dikemas dan disiapkan oleh Penjual.', 'time' => $order->updated_at];
         }
 
         if (in_array($order->status_pesanan_global, ['dikirim', 'sampai_tujuan', 'selesai'])) {
@@ -970,98 +1009,6 @@ class PageController extends Controller
         $trackingLogs = array_reverse($trackingLogs);
 
         return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs'));
-    }
-
-    // Aksi: Batalkan Pesanan (Hanya jika belum dibayar)
-    public function batalkanPesanan(Request $request)
-    {
-        try {
-            DB::beginTransaction();
-            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
-            
-            if(!$order || $order->status_pembayaran === 'paid') {
-                return back()->with('error', 'Pesanan tidak bisa dibatalkan karena sudah dibayar atau diproses.');
-            }
-
-            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'dibatalkan', 'status_pembayaran' => 'failed']);
-            
-            // Kembalikan Stok
-            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
-            foreach($items as $item) {
-                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'dibatalkan']);
-                DB::table('tb_barang')->where('id', $item->barang_id)->increment('stok', $item->jumlah);
-            }
-
-            DB::commit();
-            return back()->with('success', 'Pesanan berhasil dibatalkan.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan sistem.');
-        }
-    }
-
-    // Aksi: Selesaikan Pesanan (Customer konfirmasi barang diterima)
-    public function terimaPesanan(Request $request)
-    {
-        try {
-            DB::beginTransaction();
-            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
-            
-            if(!$order || !in_array($order->status_pesanan_global, ['dikirim', 'siap_kirim'])) {
-                return back()->with('error', 'Pesanan belum dikirim, tidak dapat diselesaikan.');
-            }
-
-            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'selesai']);
-            
-            // Update detail item dan tambah saldo seller (Simulasi pelepasan dana)
-            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
-            foreach($items as $item) {
-                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'sampai_tujuan']);
-                // Menambahkan saldo ke toko
-                DB::table('tb_toko')->where('id', $item->toko_id)->increment('saldo_aktif', $item->subtotal);
-            }
-
-            DB::commit();
-            return back()->with('success', 'Terima kasih! Pesanan telah selesai dan dana diteruskan ke Penjual.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan saat menyelesaikan pesanan.');
-        }
-    }
-
-    // Aksi: Ajukan Pengembalian/Komplain
-    public function ajukanPengembalian(Request $request)
-    {
-        $request->validate(['alasan' => 'required|string', 'bukti_foto' => 'required|image']);
-
-        try {
-            DB::beginTransaction();
-            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
-
-            $fotoName = time() . '_retur.' . $request->file('bukti_foto')->extension();
-            $request->file('bukti_foto')->move(public_path('assets/uploads/komplain'), $fotoName);
-
-            // Karena E-Commerce besar memisahkan per-toko, kita ambil toko pertama dari transaksi ini sebagai contoh
-            $firstItem = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->first();
-
-            DB::table('tb_komplain')->insert([
-                'transaksi_id' => $order->id,
-                'toko_id' => $firstItem->toko_id,
-                'user_id' => Auth::id(),
-                'alasan_komplain' => $request->alasan,
-                'bukti_foto_1' => $fotoName,
-                'status_komplain' => 'investigasi',
-                'created_at' => now()
-            ]);
-
-            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'komplain']);
-
-            DB::commit();
-            return back()->with('success', 'Pengajuan pengembalian berhasil dikirim ke Penjual & Admin.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal mengajukan pengembalian.');
-        }
     }
 
     // =================================================================
