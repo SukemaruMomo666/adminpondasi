@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http; // Wajib untuk hit API Biteship
+use Illuminate\Support\Facades\Log; // Untuk logging Webhook Midtrans
 
 class PageController extends Controller
 {
@@ -489,7 +490,6 @@ class PageController extends Controller
             $productId = $request->input('product_id');
             $jumlah = $request->input('jumlah', 1);
 
-            // PENYEMPURNAAN: Ambil area_id toko dan active_api_couriers toko
             $item = DB::table('tb_barang as b')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
                 ->select(
@@ -528,7 +528,6 @@ class PageController extends Controller
                 return redirect()->route('keranjang.index')->with('error', 'Tidak ada barang yang dipilih untuk checkout.');
             }
 
-            // PENYEMPURNAAN: Ambil area_id toko dan active_api_couriers toko
             $items = DB::table('tb_keranjang as k')
                 ->join('tb_barang as b', 'k.barang_id', '=', 'b.id')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
@@ -621,7 +620,7 @@ class PageController extends Controller
             $biayaPengirimanReal = 0;
             $rincianKurir = [];
 
-            if ($request->input('tipe_pengambilan') === 'pengiriman' && $request->has('shipping')) {
+            if (in_array($request->input('tipe_pengambilan'), ['kurir', 'armada']) && $request->has('shipping')) {
                 foreach ($request->shipping as $tokoId => $shippingVal) {
                     if (!empty($shippingVal)) {
                         $parts = explode('_', $shippingVal);
@@ -666,7 +665,7 @@ class PageController extends Controller
                 
                 'catatan'                   => $catatanFinal,
                 'biaya_pengiriman'          => $biayaPengirimanReal,
-                'tipe_pengambilan'          => $request->input('tipe_pengambilan') ?? 'pengiriman',
+                'tipe_pengambilan'          => $request->input('tipe_pengambilan') ?? 'kurir',
                 'tanggal_transaksi'         => now()
             ]);
 
@@ -678,7 +677,8 @@ class PageController extends Controller
                     'nama_barang_saat_transaksi' => $item['nama_barang'],
                     'harga_saat_transaksi'       => $item['harga'],
                     'jumlah'                     => $item['jumlah'],
-                    'subtotal'                   => $item['subtotal']
+                    'subtotal'                   => $item['subtotal'],
+                    'status_pesanan_item'        => 'menunggu_pembayaran'
                 ]);
             }
 
@@ -714,13 +714,74 @@ class PageController extends Controller
         }
     }
 
-// =================================================================
+    // =================================================================
+    // 9.5 MIDTRANS WEBHOOK / FRONTEND CALLBACK (Status Pembayaran)
+    // =================================================================
+    public function updatePaymentStatus(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $orderId = $request->order_id;
+            
+            DB::table('tb_transaksi')->where('kode_invoice', $orderId)->update([
+                'status_pembayaran' => 'paid',
+                'status_pesanan_global' => 'diproses',
+                'updated_at' => now()
+            ]);
+
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $orderId)->first();
+            if($transaksi) {
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false], 500);
+        }
+    }
+
+    // Webhook Murni dari Server Midtrans (Opsional untuk integrasi production)
+    public function midtransWebhook(Request $request)
+    {
+        $serverKey = DB::table('tb_pengaturan')->where('setting_nama', 'midtrans_server_key')->value('setting_nilai');
+        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+        
+        if ($hashed == $request->signature_key) {
+            if ($request->transaction_status == 'capture' || $request->transaction_status == 'settlement') {
+                $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->first();
+                if($transaksi && $transaksi->status_pembayaran != 'paid') {
+                    DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->update([
+                        'status_pembayaran' => 'paid',
+                        'status_pesanan_global' => 'diproses',
+                        'updated_at' => now()
+                    ]);
+                    DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                        'status_pesanan_item' => 'diproses'
+                    ]);
+                }
+            } elseif (in_array($request->transaction_status, ['cancel', 'deny', 'expire'])) {
+                DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->update([
+                    'status_pembayaran' => 'failed',
+                    'status_pesanan_global' => 'dibatalkan',
+                    'updated_at' => now()
+                ]);
+            }
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'invalid signature'], 403);
+    }
+
+    // =================================================================
     // API Cek Ongkir (3 Mode: Ekspedisi / Armada / Pickup)
     // =================================================================
     public function cekOngkir(Request $request)
     {
         try {
-            $tipe = $request->query('tipe', 'kurir'); // 'kurir' atau 'armada'
+            $tipe = $request->query('tipe', 'kurir');
             
             $originAreaId = $request->query('origin');
             $destinationAreaId = $request->query('destination');
@@ -730,7 +791,6 @@ class PageController extends Controller
             $destLng = $request->query('dest_lng');
 
             // FIX FATAL: Bersihkan string kurir dari format JSON sisaan masa lalu 
-            // (Hapus tanda [, ], ", ', dan spasi)
             $rawCouriers = $request->query('couriers', 'jne');
             $couriers = str_replace(['[', ']', '"', "'", ' '], '', $rawCouriers);
 
@@ -813,7 +873,7 @@ class PageController extends Controller
             ])->post('https://api.biteship.com/v1/rates/couriers', [
                 'origin_area_id' => $originAreaId,
                 'destination_area_id' => $destinationAreaId,
-                'couriers' => $couriers, // SUDAH BERSIH DARI TANDA KUTIP
+                'couriers' => $couriers, // SUDAH BERSIH
                 'items' => [
                     ['name' => 'Material Bangunan', 'value' => 50000, 'weight' => (int) $weight, 'quantity' => 1]
                 ]
@@ -824,14 +884,15 @@ class PageController extends Controller
             // BYPASS SALDO KOSONG
             if (!$response->successful() && isset($data['error']) && str_contains(strtolower($data['error']), 'balance')) {
                 $bypassPricing = [];
-                // Karena $couriers sudah bersih, pecahnya jadi gampang
-                foreach (explode(',', $couriers) as $cCode) {
+                $allCouriers = explode(',', $couriers);
+                foreach ($allCouriers as $index => $cCode) {
                     if (trim($cCode) !== '') {
+                        $randomPrice = 15000 + ($index * 1000) + rand(100, 900);
                         $bypassPricing[] = [
                             'company' => trim($cCode),
                             'courier_name' => strtoupper(trim($cCode)),
                             'courier_service_name' => 'REG (Bypass Testing)',
-                            'price' => 15000,
+                            'price' => $randomPrice,
                             'duration' => '1-3 days'
                         ];
                     }
@@ -845,6 +906,7 @@ class PageController extends Controller
             return response()->json(['success' => false, 'error' => 'Koneksi gagal: ' . $e->getMessage()], 500);
         }
     }
+
     // =================================================================
     // 10. RIWAYAT PESANAN SAYA
     // =================================================================
@@ -861,7 +923,7 @@ class PageController extends Controller
     }
 
     // =================================================================
-    // 11. DETAIL & LACAK PENGIRIMAN
+    // 11. DETAIL, LACAK, & AKSI PESANAN (ENTERPRISE LIFECYCLE)
     // =================================================================
     public function lacakPesanan($kode_invoice)
     {
@@ -884,11 +946,122 @@ class PageController extends Controller
             ->where('setting_nama', 'midtrans_client_key')
             ->value('setting_nilai');
 
-        $trackingLogs = [
-            ['status' => 'Menunggu Pembayaran', 'desc' => 'Pesanan berhasil dibuat, silakan selesaikan pembayaran.', 'time' => $order->tanggal_transaksi],
-        ];
+        // Dinamis Berdasarkan Status Global
+        $trackingLogs = [];
+        $trackingLogs[] = ['status' => 'Pesanan Dibuat', 'desc' => 'Pesanan berhasil dicatat oleh sistem.', 'time' => $order->tanggal_transaksi];
+        
+        if ($order->status_pembayaran == 'paid') {
+            $trackingLogs[] = ['status' => 'Pembayaran Terverifikasi', 'desc' => 'Dana telah diverifikasi oleh Midtrans.', 'time' => $order->updated_at];
+        }
+
+        if (in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Diproses Penjual', 'desc' => 'Pesanan Anda sedang disiapkan oleh Penjual.', 'time' => $order->updated_at];
+        }
+
+        if (in_array($order->status_pesanan_global, ['dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Dalam Pengiriman', 'desc' => 'Paket telah diserahkan ke pihak logistik.', 'time' => $order->updated_at];
+        }
+
+        if (in_array($order->status_pesanan_global, ['selesai', 'sampai_tujuan'])) {
+            $trackingLogs[] = ['status' => 'Pesanan Selesai', 'desc' => 'Pesanan telah diterima dengan baik.', 'time' => $order->updated_at];
+        }
+
+        // Urutkan dari yang terbaru (Desc) untuk UI Timeline
+        $trackingLogs = array_reverse($trackingLogs);
 
         return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs'));
+    }
+
+    // Aksi: Batalkan Pesanan (Hanya jika belum dibayar)
+    public function batalkanPesanan(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+            
+            if(!$order || $order->status_pembayaran === 'paid') {
+                return back()->with('error', 'Pesanan tidak bisa dibatalkan karena sudah dibayar atau diproses.');
+            }
+
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'dibatalkan', 'status_pembayaran' => 'failed']);
+            
+            // Kembalikan Stok
+            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
+            foreach($items as $item) {
+                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'dibatalkan']);
+                DB::table('tb_barang')->where('id', $item->barang_id)->increment('stok', $item->jumlah);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Pesanan berhasil dibatalkan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan sistem.');
+        }
+    }
+
+    // Aksi: Selesaikan Pesanan (Customer konfirmasi barang diterima)
+    public function terimaPesanan(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+            
+            if(!$order || !in_array($order->status_pesanan_global, ['dikirim', 'siap_kirim'])) {
+                return back()->with('error', 'Pesanan belum dikirim, tidak dapat diselesaikan.');
+            }
+
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'selesai']);
+            
+            // Update detail item dan tambah saldo seller (Simulasi pelepasan dana)
+            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
+            foreach($items as $item) {
+                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'sampai_tujuan']);
+                // Menambahkan saldo ke toko
+                DB::table('tb_toko')->where('id', $item->toko_id)->increment('saldo_aktif', $item->subtotal);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Terima kasih! Pesanan telah selesai dan dana diteruskan ke Penjual.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan saat menyelesaikan pesanan.');
+        }
+    }
+
+    // Aksi: Ajukan Pengembalian/Komplain
+    public function ajukanPengembalian(Request $request)
+    {
+        $request->validate(['alasan' => 'required|string', 'bukti_foto' => 'required|image']);
+
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+
+            $fotoName = time() . '_retur.' . $request->file('bukti_foto')->extension();
+            $request->file('bukti_foto')->move(public_path('assets/uploads/komplain'), $fotoName);
+
+            // Karena E-Commerce besar memisahkan per-toko, kita ambil toko pertama dari transaksi ini sebagai contoh
+            $firstItem = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->first();
+
+            DB::table('tb_komplain')->insert([
+                'transaksi_id' => $order->id,
+                'toko_id' => $firstItem->toko_id,
+                'user_id' => Auth::id(),
+                'alasan_komplain' => $request->alasan,
+                'bukti_foto_1' => $fotoName,
+                'status_komplain' => 'investigasi',
+                'created_at' => now()
+            ]);
+
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'komplain']);
+
+            DB::commit();
+            return back()->with('success', 'Pengajuan pengembalian berhasil dikirim ke Penjual & Admin.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal mengajukan pengembalian.');
+        }
     }
 
     // =================================================================

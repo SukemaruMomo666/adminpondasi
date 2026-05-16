@@ -82,13 +82,19 @@
             <div class="flex items-center gap-6 bg-white p-4 rounded-[2rem] shadow-premium border border-zinc-100">
                 <div class="text-right">
                     <span class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Financial Status</span>
-                    <span class="text-sm font-black {{ $order->status_pembayaran == 'paid' ? 'text-emerald-600' : 'text-amber-500' }} uppercase flex items-center gap-2 justify-end">
-                        <span class="w-2 h-2 rounded-full {{ $order->status_pembayaran == 'paid' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500' }}"></span>
-                        {{ $order->status_pembayaran == 'paid' ? 'Lunas Terverifikasi' : 'Menunggu Pembayaran' }}
+                    <span class="text-sm font-black {{ $order->status_pembayaran == 'paid' ? 'text-emerald-600' : ($order->status_pembayaran == 'failed' ? 'text-red-500' : 'text-amber-500') }} uppercase flex items-center gap-2 justify-end">
+                        <span class="w-2 h-2 rounded-full {{ $order->status_pembayaran == 'paid' ? 'bg-emerald-500 animate-pulse' : ($order->status_pembayaran == 'failed' ? 'bg-red-500' : 'bg-amber-500') }}"></span>
+                        @if($order->status_pembayaran == 'paid')
+                            Lunas Terverifikasi
+                        @elseif($order->status_pembayaran == 'failed')
+                            Transaksi Batal
+                        @else
+                            Menunggu Pembayaran
+                        @endif
                     </span>
                 </div>
-                <div class="w-14 h-14 rounded-2xl {{ $order->status_pembayaran == 'paid' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white' }} flex items-center justify-center shadow-lg transform rotate-3">
-                    <i class="fas {{ $order->status_pembayaran == 'paid' ? 'fa-check-double' : 'fa-hourglass-half' }} text-xl"></i>
+                <div class="w-14 h-14 rounded-2xl {{ $order->status_pembayaran == 'paid' ? 'bg-emerald-600 text-white' : ($order->status_pembayaran == 'failed' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white') }} flex items-center justify-center shadow-lg transform rotate-3">
+                    <i class="fas {{ $order->status_pembayaran == 'paid' ? 'fa-check-double' : ($order->status_pembayaran == 'failed' ? 'fa-times-circle' : 'fa-hourglass-half') }} text-xl"></i>
                 </div>
             </div>
         </div>
@@ -175,6 +181,37 @@
                         @endforeach
                     </div>
                 </div>
+
+                {{-- FITUR BARU: MODAL / KOTAK PENGAJUAN KOMPLAIN JIKA LUNAS --}}
+                @if($order->status_pembayaran == 'paid' && !in_array($order->status_pesanan_global, ['selesai', 'komplain']))
+                <div class="bg-white rounded-[3rem] shadow-premium border border-zinc-200/50 p-8 lg:p-12">
+                    <details class="group">
+                        <summary class="flex items-center justify-between font-black text-zinc-700 cursor-pointer list-none outline-none">
+                            <span class="flex items-center gap-3 text-base text-zinc-900"><i class="fas fa-shield-alert text-amber-500"></i> Ajukan Masalah / Retur Material</span>
+                            <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down text-zinc-400"></i></span>
+                        </summary>
+                        <div class="mt-6 pt-6 border-t border-zinc-100 animate-fade-in">
+                            <form action="{{ url('/pesanan/komplain') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
+                                <div>
+                                    <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Alasan Pengembalian / Kendala Lapangan</label>
+                                    <textarea name="alasan" rows="3" class="w-full bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-sm font-semibold outline-none focus:border-blue-600" placeholder="Jelaskan detail kendala (Cth: Semen membatu, Besi karat, jumlah kurang)..." required></textarea>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                                    <div>
+                                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Unggah Bukti Foto Fisik</label>
+                                        <input type="file" name="bukti_foto" class="w-full text-xs font-bold text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                                    </div>
+                                    <div class="text-right pt-4 sm:pt-0">
+                                        <button type="submit" class="w-full sm:w-auto px-6 py-3 bg-zinc-900 hover:bg-red-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors">Kirim Aduan Resmi</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </details>
+                </div>
+                @endif
             </div>
 
             {{-- ======================================================= --}}
@@ -211,7 +248,6 @@
                                 <span class="text-zinc-500 font-medium tracking-wide">Biaya Logistik</span>
                                 <span class="font-black text-zinc-300 tracking-tight text-right">Rp{{ number_format($order->biaya_pengiriman, 0, ',', '.') }}</span>
                             </div>
-                            
                             <div class="pt-6 border-t border-white/10 mt-6">
                                 <div class="flex justify-between items-end">
                                     <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Grand Total</span>
@@ -220,25 +256,60 @@
                             </div>
                         </div>
 
-                        @if($order->status_pembayaran == 'pending')
-                            <button id="pay-button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-glow flex items-center justify-center gap-3 group active:scale-95">
+                        {{-- AKSI DINAMIS SIKLUS TRANSAKSI ENTERPRISE --}}
+                        @if($order->status_pembayaran == 'pending' && $order->status_pesanan_global != 'dibatalkan')
+                            <button id="pay-button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-glow flex items-center justify-center gap-3 group active:scale-95 mb-4">
                                 <i class="fas fa-shield-check text-blue-200 group-hover:scale-110 transition-transform"></i>
                                 Selesaikan Pembayaran
                             </button>
+
+                            {{-- TOMBOL PEMBATALAN PESANAN --}}
+                            <form action="{{ url('/pesanan/batalkan') }}" method="POST" id="cancel-form">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
+                                <button type="button" onclick="confirmCancel()" class="w-full bg-white/5 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 text-xs font-black py-3.5 rounded-xl transition-all border border-white/10">
+                                    Batalkan Pesanan Ini
+                                </button>
+                            </form>
+                            
                             <p class="text-[10px] text-zinc-500 text-center mt-6 leading-relaxed font-medium">
                                 Enkripsi keamanan 256-bit terjamin oleh <span class="text-zinc-300">Midtrans Financial</span>.
                             </p>
+                        @elseif($order->status_pesanan_global == 'dibatalkan')
+                            <div class="bg-red-500/10 border border-red-500/20 p-5 rounded-[2rem] flex items-center gap-5">
+                                <div class="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center text-lg shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-black text-red-400 uppercase tracking-wider leading-none">Pesanan Batal</h4>
+                                    <p class="text-[10px] text-zinc-500 font-bold mt-2">Stok material telah dikembalikan.</p>
+                                </div>
+                            </div>
                         @else
                             <div class="bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-[2rem] flex items-center gap-5">
                                 <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)]">
                                     <i class="fas fa-receipt"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <h4 class="text-sm font-black text-emerald-400 uppercase tracking-wider leading-none">Order Lunas</h4>
+                                    <h4 class="text-sm font-black text-emerald-400 uppercase tracking-wider leading-none">
+                                        {{ $order->status_pesanan_global == 'selesai' ? 'Selesai & Lunas' : 'Pembayaran Lunas' }}
+                                    </h4>
                                     <p class="text-[10px] text-zinc-500 font-bold mt-2 truncate">Ref ID: TXN-{{ strtoupper(substr($order->kode_invoice, 0, 8)) }}</p>
                                 </div>
                             </div>
-                            <button class="w-full mt-6 bg-white text-black hover:bg-blue-600 hover:text-white text-xs font-black py-4 rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 group">
+
+                            {{-- TOMBOL KONFIRMASI BARANG DITERIMA (MENERUSKAN DANA KE SELLER) --}}
+                            @if(in_array($order->status_pesanan_global, ['dikirim', 'siap_kirim', 'diproses']))
+                            <form action="{{ url('/pesanan/terima') }}" method="POST" id="receipt-form" class="mt-4">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
+                                <button type="button" onclick="confirmReceipt()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-[1.5rem] transition-all duration-300 shadow-lg text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-box-check"></i> Konfirmasi Barang Diterima
+                                </button>
+                            </form>
+                            @endif
+
+                            <button class="w-full mt-4 bg-white/5 text-zinc-400 hover:bg-blue-600 hover:text-white text-xs font-black py-4 rounded-[1.5rem] transition-all border border-white/10 flex items-center justify-center gap-3 group">
                                 <i class="fas fa-file-pdf group-hover:scale-110 transition-transform"></i> Download E-Invoice
                             </button>
                         @endif
@@ -272,12 +343,12 @@
                                 "{{ $order->shipping_alamat_lengkap }}"
                             </p>
                             <div class="mt-4 pt-4 border-t border-zinc-200/60 flex items-center justify-between">
-                                <p class="text-xs font-black text-zinc-950 uppercase tracking-tighter">
+                                <p class="text-xs font-black text-zinc-950 tracking-tighter">
                                     {{ $order->shipping_kota_kabupaten }}, {{ $order->shipping_provinsi }}
                                 </p>
                             </div>
 
-                            {{-- FITUR BARU: METODE PENGIRIMAN & RESI --}}
+                            {{-- SINKRONISASI 3 METODE LOGISTIK TOKO FISIK DAN RESI --}}
                             <div class="mt-4 pt-4 border-t border-zinc-200/60">
                                 <div class="flex items-center justify-between mb-3">
                                     <div>
@@ -300,7 +371,6 @@
                                     @endif
                                 </div>
 
-                                {{-- FITUR BARU: CATATAN (TERMASUK DETAIL KURIR TOKO B2B) --}}
                                 @if(!empty($order->catatan))
                                 <div class="mt-3 bg-white p-3 rounded-xl border border-zinc-200 shadow-sm">
                                     <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
@@ -312,16 +382,13 @@
                                 </div>
                                 @endif
                             </div>
-                            
                         </div>
                     </div>
                 </div>
 
                 {{-- 5. POTA AI SUPPORT CENTER --}}
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-glow relative overflow-hidden group cursor-pointer active:scale-95 transition-all mt-8">
-                    {{-- Texture --}}
                     <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.1] pointer-events-none"></div>
-
                     <div class="relative z-10 flex flex-col gap-6">
                         <div class="flex items-center justify-between">
                             <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
@@ -345,26 +412,77 @@
     {{-- Chat dipanggil di bawah agar tidak merusak head --}}
     @include('partials.chat')
 
-    {{-- MIDTRANS SCRIPTS --}}
+    {{-- MIDTRANS + SWEETALERT INTERACTION SCRIPTS --}}
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ $clientKey }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Logika Batalkan Pesanan
+        function confirmCancel() {
+            Swal.fire({
+                title: 'Batalkan Pesanan?',
+                text: "Stok material bangunan Anda akan otomatis dikembalikan ke sistem gudang.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Batalkan',
+                cancelButtonText: 'Kembali',
+                reverseButtons: true,
+                customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'rounded-xl px-5 py-2.5', cancelButton: 'rounded-xl px-5 py-2.5' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('cancel-form').submit();
+                }
+            });
+        }
+
+        // Logika Terima Pesanan (Konfirmasi Selesai)
+        function confirmReceipt() {
+            Swal.fire({
+                title: 'Selesaikan Pesanan?',
+                text: "Pastikan seluruh volume material (Semen/Besi/Baja) sudah diturunkan dan dihitung sesuai invoice. Dana akan dicairkan langsung ke dompet penjual.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Sudah Sesuai',
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+                customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'rounded-xl px-5 py-2.5', cancelButton: 'rounded-xl px-5 py-2.5' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('receipt-form').submit();
+                }
+            });
+        }
+
+        // Jalur Eksekusi Midtrans Snap Popup
         const payButton = document.getElementById('pay-button');
         if(payButton) {
             payButton.onclick = function(){
                 snap.pay('{{ $order->snap_token }}', {
                     onSuccess: function(result){
-                        Swal.fire({
-                            icon: 'success', title: 'Payment Success!',
-                            text: 'Pembaruan status sistem sedang diproses.',
-                            confirmButtonColor: '#2563eb',
-                            customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
-                        }).then(() => { window.location.reload(); });
+                        // KIRIM SINYAL DATA KE BACKEND LARAVEL AGAR REALTIME LUNAS
+                        fetch('{{ url("/payment/update-status") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ order_id: '{{ $order->kode_invoice }}' })
+                        }).then(() => {
+                            Swal.fire({
+                                icon: 'success', title: 'Payment Success!',
+                                text: 'Pembayaran berhasil diverifikasi secara otomatis oleh sistem.',
+                                confirmButtonColor: '#2563eb',
+                                customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
+                            }).then(() => { window.location.reload(); });
+                        });
                     },
                     onPending: function(result){
                         Swal.fire({
                             icon: 'info', title: 'Pending Payment',
-                            text: 'Selesaikan transaksi di portal pembayaran.',
+                            text: 'Selesaikan transaksi sesuai instruksi portal pembayaran.',
                             confirmButtonColor: '#0f172a',
                             customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
                         });
@@ -372,7 +490,7 @@
                     onError: function(result){
                         Swal.fire({
                             icon: 'error', title: 'Transaction Failed',
-                            text: 'Hubungi dukungan bank atau coba metode lain.',
+                            text: 'Gagal memproses transaksi. Silakan coba kembali.',
                             customClass: { popup: 'rounded-[3rem]' }
                         });
                     }
