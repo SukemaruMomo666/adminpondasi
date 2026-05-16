@@ -68,6 +68,11 @@
         /* Map Styling */
         #checkout-map { height: 250px; width: 100%; border-radius: 0.75rem; z-index: 10; border: 1px solid #e2e8f0; }
         .leaflet-control-attribution { display: none !important; }
+
+        /* Custom Select Kurir yang lebih rapi */
+        .custom-dropdown-container button:focus {
+            outline: none;
+        }
     </style>
 </head>
 <body class="text-zinc-800 antialiased pt-[80px] pb-32 lg:pb-12">
@@ -135,7 +140,7 @@
                 <h1 class="text-3xl font-black text-black tracking-tight flex items-center gap-3">
                     Konfirmasi Pesanan
                 </h1>
-                <p class="text-sm font-medium text-zinc-500 mt-1">Sistem kami terhubung dengan Biteship & Armada Toko untuk kalkulasi ongkos kirim.</p>
+                <p class="text-sm font-medium text-zinc-500 mt-1">Sistem kami terhubung dengan Biteship & Armada Toko untuk kalkulasi ongkos kirim otomatis.</p>
             </div>
 
             <div class="flex flex-col lg:grid lg:grid-cols-12 gap-8 xl:gap-10 items-start">
@@ -249,7 +254,7 @@
                     </div>
 
                     {{-- 2. KARTU DAFTAR PRODUK --}}
-                    <div class="bg-white rounded-[2rem] shadow-soft border border-zinc-200 p-6 sm:p-8 overflow-hidden">
+                    <div class="bg-white rounded-[2rem] shadow-soft border border-zinc-200 p-6 sm:p-8">
                         <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
                             <h2 class="text-xl font-black text-black">2. Rincian Pesanan</h2>
                             <span class="bg-zinc-100 text-zinc-600 px-3 py-1 rounded-full text-xs font-bold">{{ count($itemsPerToko) }} Toko</span>
@@ -269,12 +274,12 @@
 
                         <div class="space-y-8">
                             @foreach($itemsPerToko as $tokoId => $toko)
-                                <div class="bg-zinc-50 border border-zinc-200 rounded-2xl overflow-hidden store-container" 
+                                <div class="bg-zinc-50 border border-zinc-200 rounded-2xl store-container" 
                                      data-toko-id="{{ $tokoId }}"
                                      data-origin="{{ $toko['origin_area_id'] }}" 
                                      data-couriers="{{ $toko['active_couriers'] }}">
                                     
-                                    <div class="bg-zinc-100 border-b border-zinc-200 px-5 py-3 flex items-center justify-between">
+                                    <div class="bg-zinc-100 border-b border-zinc-200 rounded-t-2xl px-5 py-3 flex items-center justify-between">
                                         <div class="flex items-center gap-2">
                                             <i class="fas fa-store text-emerald-600 bg-white p-1.5 rounded-md shadow-sm text-xs"></i>
                                             <h4 class="font-black text-sm text-zinc-900">{{ $toko['nama_toko'] }}</h4>
@@ -303,16 +308,29 @@
 
                                     <input type="hidden" id="weight-toko-{{ $tokoId }}" value="{{ $totalBeratToko }}">
 
-                                    {{-- KOTAK KURIR DINAMIS --}}
+                                    {{-- KOTAK KURIR CUSTOM MEWAH --}}
                                     <div class="px-5 pb-5 shipping-box-wrapper">
                                         <div class="bg-white border border-blue-100 rounded-xl p-4">
                                             <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Pilih Layanan Pengiriman</label>
-                                            <div class="relative">
-                                                <select name="shipping[{{ $tokoId }}]" id="shipping-select-{{ $tokoId }}" class="shipping-select w-full bg-transparent border-b-2 border-zinc-200 text-black text-sm font-bold pb-2 focus:border-blue-600 transition-all outline-none cursor-pointer appearance-none disabled:opacity-50">
-                                                    <option value="">Menunggu alamat tujuan...</option>
-                                                </select>
-                                                <div class="absolute inset-y-0 right-0 pb-2 flex items-center pointer-events-none"><i class="fas fa-chevron-down text-zinc-400 text-xs"></i></div>
+                                            
+                                            <div class="relative custom-dropdown-container">
+                                                {{-- Hidden input ini yang akan dikirim ke Backend --}}
+                                                <input type="hidden" name="shipping[{{ $tokoId }}]" id="shipping-input-{{ $tokoId }}" class="shipping-input" value="">
+                                                
+                                                {{-- Tombol yang diklik untuk membuka dropdown --}}
+                                                <button type="button" onclick="toggleDropdown('{{ $tokoId }}')" id="dropdown-button-{{ $tokoId }}" class="w-full bg-transparent border-b-2 border-zinc-300 text-zinc-900 text-sm font-medium pb-2 pt-1 flex justify-between items-center outline-none focus:border-blue-600 transition-all text-left disabled:opacity-50">
+                                                    <span id="dropdown-text-{{ $tokoId }}">Menunggu alamat tujuan...</span>
+                                                    <i class="fas fa-chevron-down text-zinc-400 text-sm transition-transform duration-200" id="dropdown-icon-{{ $tokoId }}"></i>
+                                                </button>
+                                                
+                                                {{-- List CSS Mewah yang muncul ke bawah --}}
+                                                <div id="dropdown-menu-{{ $tokoId }}" class="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] hidden overflow-hidden">
+                                                    <ul id="shipping-list-{{ $tokoId }}" class="max-h-60 overflow-y-auto custom-scrollbar py-2">
+                                                        <li class="px-4 py-3 text-sm text-zinc-500 text-center">Menunggu alamat...</li>
+                                                    </ul>
+                                                </div>
                                             </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -444,7 +462,6 @@
             provinsi: document.getElementById('final_provinsi'), kodepos: document.getElementById('final_kodepos')
         };
 
-        const shippingSelects = document.querySelectorAll('.shipping-select');
         const tipePengambilan = document.getElementById('tipe_pengambilan');
 
         // ==========================================
@@ -465,11 +482,60 @@
 
             checkoutMarker = L.marker([defaultLat, defaultLng], {draggable: true}).addTo(checkoutMap);
 
-            checkoutMarker.on('dragend', function(e) {
+checkoutMarker.on('dragend', async function(e) {
                 const position = e.target.getLatLng();
-                document.getElementById('manual_lat').value = position.lat;
-                document.getElementById('manual_lng').value = position.lng;
+                const lat = position.lat;
+                const lng = position.lng;
+                
+                // 1. Simpan kordinat baru
+                document.getElementById('manual_lat').value = lat;
+                document.getElementById('manual_lng').value = lng;
                 syncManualToHidden();
+
+                // 2. Beri efek loading di kotak pencarian
+                const searchInput = document.getElementById('biteship-search');
+                const searchIcon = searchInput.previousElementSibling.querySelector('i');
+                searchIcon.className = 'fas fa-spinner fa-spin text-blue-500';
+                searchInput.value = "Menerjemahkan titik peta...";
+
+                try {
+                    // 3. REVERSE GEOCODING (Minta nama daerah ke OpenStreetMap)
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const geoData = await geoRes.json();
+                    
+                    if (geoData && geoData.address) {
+                        // Tampilkan alamat lengkap dari peta ke kolom input
+                        searchInput.value = geoData.display_name;
+
+                        // Ambil variabel kecamatan & kota untuk dicari ID Biteship-nya
+                        const kecamatan = geoData.address.suburb || geoData.address.village || geoData.address.town || '';
+                        const kota = geoData.address.city || geoData.address.county || geoData.address.state || '';
+                        const query = `${kecamatan} ${kota}`.trim();
+
+                        // 4. AUTO-SEARCH BITESHIP AREA ID (Agar ongkir JNE/Sicepat ikut berubah)
+                        if (query) {
+                            const biteRes = await fetch(`/api/biteship/search?q=${encodeURIComponent(query)}`);
+                            const biteData = await biteRes.json();
+
+                            if (biteData.areas && biteData.areas.length > 0) {
+                                const area = biteData.areas[0]; // Ambil hasil paling cocok
+                                document.getElementById('manual_area_id').value = area.id;
+                                document.getElementById('manual_kecamatan').value = area.name;
+                                document.getElementById('manual_kota').value = area.administrative_division_level_2_name;
+                                document.getElementById('manual_provinsi').value = area.administrative_division_level_1_name;
+                                document.getElementById('manual_kodepos').value = area.postal_code;
+                                syncManualToHidden();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Gagal reverse geocode:", error);
+                    searchInput.value = "Gagal membaca area peta. Ketik manual saja.";
+                } finally {
+                    searchIcon.className = 'fas fa-search text-zinc-400';
+                    // 5. KALKULASI ULANG SEMUA ONGKIR!
+                    triggerShippingFetch(); 
+                }
             });
         }
 
@@ -524,7 +590,7 @@
                                             const newLat = parseFloat(geoData[0].lat);
                                             const newLng = parseFloat(geoData[0].lon);
                                             
-                                            // Efek terbang (Fly To) ala aplikasi premium
+                                            // Efek terbang (Fly To)
                                             if(checkoutMap && checkoutMarker) {
                                                 checkoutMap.flyTo([newLat, newLng], 15, { duration: 1.5 });
                                                 checkoutMarker.setLatLng([newLat, newLng]);
@@ -535,7 +601,7 @@
                                             syncManualToHidden();
                                             triggerShippingFetch(); 
                                         } else {
-                                            // Fallback jika geocoding gagal, tetap hitung ongkir
+                                            // Fallback jika geocoding gagal
                                             syncManualToHidden();
                                             triggerShippingFetch();
                                         }
@@ -598,7 +664,19 @@
                 final.label.value = "Alamat Manual";
                 syncManualToHidden();
                 
-                triggerShippingFetch();
+                if(final.area_id.value) {
+                    triggerShippingFetch();
+                } else {
+                    setCheckoutButtonsState(false, "Pilih Area Tujuan");
+                    
+                    // Reset dropdown kalau manual belum diisi
+                    document.querySelectorAll('.shipping-input').forEach(input => {
+                        const tokoId = input.id.replace('shipping-input-', '');
+                        const btnTextEl = document.getElementById(`dropdown-text-${tokoId}`);
+                        input.value = '';
+                        if(btnTextEl) btnTextEl.innerHTML = "Pilih area tujuan di form";
+                    });
+                }
             }
         }
 
@@ -624,7 +702,7 @@
             
             if (tipe === 'ambil_di_toko') {
                 document.querySelectorAll('.shipping-box-wrapper').forEach(el => el.style.display = 'none');
-                shippingSelects.forEach(sel => sel.innerHTML = '<option value="">Ambil di Toko Fisik</option>');
+                document.querySelectorAll('.shipping-input').forEach(el => el.value = '');
                 calculateTotal(); 
                 setCheckoutButtonsState(true);
                 return;
@@ -651,18 +729,26 @@
 
             stores.forEach(store => {
                 const tokoId = store.getAttribute('data-toko-id');
-                const selectEl = document.getElementById(`shipping-select-${tokoId}`);
                 const weight = document.getElementById(`weight-toko-${tokoId}`).value || 1000;
                 
                 const originAreaId = store.getAttribute('data-origin');
                 const sellerCouriers = store.getAttribute('data-couriers') || 'jne'; 
 
+                // Ambil elemen custom dropdown kita
+                const listEl = document.getElementById(`shipping-list-${tokoId}`);
+                const btnTextEl = document.getElementById(`dropdown-text-${tokoId}`);
+                const inputEl = document.getElementById(`shipping-input-${tokoId}`);
+                const btnEl = document.getElementById(`dropdown-button-${tokoId}`);
+
                 let loadingText = tipe === 'kurir' ? 'Mencari Kurir Nasional...' : 'Kalkulasi Jarak Armada...';
-                selectEl.innerHTML = `<option value="">${loadingText}</option>`;
-                selectEl.disabled = true;
+                
+                btnTextEl.innerHTML = `<i class="fas fa-spinner fa-spin text-blue-500 mr-2"></i> ${loadingText}`;
+                btnEl.disabled = true;
 
                 if(!originAreaId && tipe === 'kurir') {
-                    selectEl.innerHTML = '<option value="">Toko belum mengatur lokasi pengiriman (Area ID)</option>';
+                    btnTextEl.innerHTML = 'Toko belum mengatur Area ID';
+                    inputEl.value = '';
+                    listEl.innerHTML = '<li class="px-4 py-3 text-sm text-red-500 text-center">Toko belum mengatur lokasi pengiriman</li>';
                     return; 
                 }
 
@@ -674,22 +760,38 @@
                     .then(data => {
                         let html = '';
                         if (data.success !== false && data.pricing && data.pricing.length > 0) {
-                            data.pricing.forEach(rate => {
-                                html += `<option value="${rate.company}_${rate.price}">
-                                            ${rate.courier_name} ${rate.courier_service_name} — Rp ${rate.price.toLocaleString('id-ID')}
-                                         </option>`;
+                            data.pricing.forEach((rate, index) => {
+                                // Desain List Pilihan (Bisa di-hover & diklik)
+                                let isSelectedClass = index === 0 ? 'bg-blue-50 border-blue-500' : 'border-transparent hover:bg-zinc-50';
+                                
+                                // Pilih opsi teratas secara otomatis
+                                if(index === 0) {
+                                    inputEl.value = `${rate.company}_${rate.price}`;
+                                    btnTextEl.innerHTML = `${rate.courier_name} ${rate.courier_service_name} &mdash; <b>Rp ${rate.price.toLocaleString('id-ID')}</b>`;
+                                }
+
+                                html += `<li class="px-4 py-3 text-sm text-zinc-700 border-l-4 cursor-pointer transition-colors ${isSelectedClass}" 
+                                             data-value="${rate.company}_${rate.price}" 
+                                             data-label="${rate.courier_name} ${rate.courier_service_name} &mdash; <b>Rp ${rate.price.toLocaleString('id-ID')}</b>"
+                                             onclick="selectShippingOption('${tokoId}', this)">
+                                            <div class="font-black text-zinc-900">${rate.courier_name} <span class="font-semibold text-zinc-500">${rate.courier_service_name}</span></div>
+                                            <div class="text-blue-600 font-black mt-1">Rp ${rate.price.toLocaleString('id-ID')}</div>
+                                         </li>`;
                             });
+                            btnEl.disabled = false;
                         } else {
-                            console.error("Shipping Error Response:", data);
                             let errMsg = data.message || data.error || "Layanan tidak tersedia untuk area ini";
-                            html = `<option value="">Error: ${errMsg}</option>`;
+                            html = `<li class="px-4 py-3 text-sm text-red-500 font-bold text-center"><i class="fas fa-exclamation-triangle"></i> ${errMsg}</li>`;
+                            inputEl.value = "";
+                            btnTextEl.innerHTML = "Gagal memuat layanan";
+                            btnEl.disabled = true;
                         }
-                        selectEl.innerHTML = html;
-                        selectEl.disabled = false;
+                        listEl.innerHTML = html;
                     })
                     .catch(err => {
-                        console.error('Fetch Error:', err);
-                        selectEl.innerHTML = '<option value="">Gagal memuat layanan</option>';
+                        inputEl.value = "";
+                        btnTextEl.innerHTML = "Gagal memuat layanan";
+                        listEl.innerHTML = '<li class="px-4 py-3 text-center text-red-500">Koneksi terputus.</li>';
                     });
                     
                 fetchPromises.push(p);
@@ -701,6 +803,64 @@
         }
 
         // ==========================================
+        // LOGIKA CUSTOM DROPDOWN CSS MEWAH
+        // ==========================================
+        window.toggleDropdown = function(tokoId) {
+            const menu = document.getElementById(`dropdown-menu-${tokoId}`);
+            const icon = document.getElementById(`dropdown-icon-${tokoId}`);
+            
+            // Tutup menu dropdown lain jika ada
+            document.querySelectorAll('[id^="dropdown-menu-"]').forEach(el => {
+                if(el.id !== `dropdown-menu-${tokoId}`) el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="dropdown-icon-"]').forEach(el => {
+                if(el.id !== `dropdown-icon-${tokoId}`) el.style.transform = 'rotate(0deg)';
+            });
+
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        };
+
+        window.selectShippingOption = function(tokoId, element) {
+            const inputEl = document.getElementById(`shipping-input-${tokoId}`);
+            const btnTextEl = document.getElementById(`dropdown-text-${tokoId}`);
+            const menuEl = document.getElementById(`dropdown-menu-${tokoId}`);
+            const iconEl = document.getElementById(`dropdown-icon-${tokoId}`);
+            
+            // Pindahkan warna biru (Highlight) ke opsi yang diklik
+            element.parentElement.querySelectorAll('li').forEach(el => {
+                el.classList.remove('bg-blue-50', 'border-blue-500');
+                el.classList.add('border-transparent');
+            });
+            element.classList.add('bg-blue-50', 'border-blue-500');
+            element.classList.remove('border-transparent');
+            
+            // Update nilai hidden input dan tulisan di tombol
+            inputEl.value = element.getAttribute('data-value');
+            btnTextEl.innerHTML = element.getAttribute('data-label');
+            
+            // Tutup menu dan putar balik ikon panah
+            menuEl.classList.add('hidden');
+            iconEl.style.transform = 'rotate(0deg)';
+            
+            // Panggil ulang kalkulator harga
+            calculateTotal();
+        };
+
+        // Tutup dropdown kalau ngeklik sembarang tempat di layar
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-dropdown-container')) {
+                document.querySelectorAll('[id^="dropdown-menu-"]').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('[id^="dropdown-icon-"]').forEach(el => el.style.transform = 'rotate(0deg)');
+            }
+        });
+
+        // ==========================================
         // KALKULASI TOTAL
         // ==========================================
         function calculateTotal() {
@@ -709,9 +869,11 @@
             
             if (tipe === 'kurir' || tipe === 'armada') {
                 document.querySelectorAll('.shipping-box-wrapper').forEach(el => el.style.display = 'block');
-                shippingSelects.forEach(sel => {
-                    if (sel.value) {
-                        let valParts = sel.value.split('_');
+                
+                // BACA DARI HIDDEN INPUT (shipping-input) BUKAN SELECT LAGI
+                document.querySelectorAll('.shipping-input').forEach(input => {
+                    if (input.value) {
+                        let valParts = input.value.split('_');
                         if (valParts.length > 1) shippingCost += parseInt(valParts[valParts.length - 1]);
                     }
                 });
@@ -743,7 +905,7 @@
                         el.innerText = formatRp(grandTotal);
                         el.style.opacity = '1'; el.style.transform = 'scale(1)';
                     }, 150);
-            }
+                }
             });
 
             document.getElementById('input_grand_total').value = grandTotal;
@@ -772,11 +934,9 @@
         radioAddress.forEach(radio => radio.addEventListener('change', updateAddressUI));
         document.querySelectorAll('.manual-input').forEach(input => input.addEventListener('input', syncManualToHidden));
         tipePengambilan.addEventListener('change', triggerShippingFetch); 
-        shippingSelects.forEach(sel => sel.addEventListener('change', calculateTotal));
         
         // Init UI pertama kali
         updateAddressUI();
-
 
         // ==========================================
         // VOUCHER GLOBAL

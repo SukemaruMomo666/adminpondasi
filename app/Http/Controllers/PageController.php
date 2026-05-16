@@ -725,13 +725,17 @@ class PageController extends Controller
             $originAreaId = $request->query('origin');
             $destinationAreaId = $request->query('destination');
             $weight = $request->query('weight', 1000);
-            $couriers = $request->query('couriers', 'jne');
             $tokoId = $request->query('toko_id');
             $destLat = $request->query('dest_lat');
             $destLng = $request->query('dest_lng');
 
+            // FIX FATAL: Bersihkan string kurir dari format JSON sisaan masa lalu 
+            // (Hapus tanda [, ], ", ', dan spasi)
+            $rawCouriers = $request->query('couriers', 'jne');
+            $couriers = str_replace(['[', ']', '"', "'", ' '], '', $rawCouriers);
+
             // =================================================================
-            // LOGIKA 1: PENGIRIMAN VIA ARMADA TOKO (GPS ONLY - NO API BITESHIP)
+            // LOGIKA 1: PENGIRIMAN VIA ARMADA TOKO (GPS ONLY)
             // =================================================================
             if ($tipe === 'armada') {
                 if (!$tokoId || !$destLat || !$destLng) {
@@ -809,7 +813,7 @@ class PageController extends Controller
             ])->post('https://api.biteship.com/v1/rates/couriers', [
                 'origin_area_id' => $originAreaId,
                 'destination_area_id' => $destinationAreaId,
-                'couriers' => $couriers,
+                'couriers' => $couriers, // SUDAH BERSIH DARI TANDA KUTIP
                 'items' => [
                     ['name' => 'Material Bangunan', 'value' => 50000, 'weight' => (int) $weight, 'quantity' => 1]
                 ]
@@ -820,6 +824,7 @@ class PageController extends Controller
             // BYPASS SALDO KOSONG
             if (!$response->successful() && isset($data['error']) && str_contains(strtolower($data['error']), 'balance')) {
                 $bypassPricing = [];
+                // Karena $couriers sudah bersih, pecahnya jadi gampang
                 foreach (explode(',', $couriers) as $cCode) {
                     if (trim($cCode) !== '') {
                         $bypassPricing[] = [

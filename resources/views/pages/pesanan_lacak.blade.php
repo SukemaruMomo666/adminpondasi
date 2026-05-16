@@ -25,8 +25,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-            {{-- Tambahkan baris ini --}}
-    @include('partials.chat')
+    
     <style>
         body { background-color: #f8fafc; scroll-behavior: smooth; }
 
@@ -151,7 +150,7 @@
                         @foreach($items as $item)
                         <div class="flex items-center gap-6 p-5 rounded-[2rem] hover:bg-zinc-50 border border-transparent hover:border-zinc-200 transition-all duration-300 group">
 
-                            {{-- FOTO PRODUK DINAMIS (FIXED) --}}
+                            {{-- FOTO PRODUK DINAMIS --}}
                             <div class="w-24 h-24 rounded-3xl bg-zinc-100 overflow-hidden border border-zinc-200 flex-shrink-0 relative">
                                 @php
                                     $fotoProduk = !empty($item->gambar_utama) ? $item->gambar_utama : ($item->gambar_saat_transaksi ?? 'default.jpg');
@@ -200,13 +199,22 @@
                                 <span class="text-zinc-500 font-medium tracking-wide">Produk Subtotal</span>
                                 <span class="font-black text-zinc-300 tracking-tight text-right">Rp{{ number_format($order->total_harga_produk, 0, ',', '.') }}</span>
                             </div>
+                            
+                            @if($order->total_diskon > 0)
+                            <div class="flex justify-between items-center text-sm text-emerald-400">
+                                <span class="font-medium tracking-wide">Diskon Promo</span>
+                                <span class="font-black tracking-tight text-right">- Rp{{ number_format($order->total_diskon, 0, ',', '.') }}</span>
+                            </div>
+                            @endif
+
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-zinc-500 font-medium tracking-wide">Biaya Logistik</span>
                                 <span class="font-black text-zinc-300 tracking-tight text-right">Rp{{ number_format($order->biaya_pengiriman, 0, ',', '.') }}</span>
                             </div>
+                            
                             <div class="pt-6 border-t border-white/10 mt-6">
                                 <div class="flex justify-between items-end">
-                                    <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Grant Total</span>
+                                    <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Grand Total</span>
                                     <span class="text-3xl font-black text-white tracking-tighter leading-none">Rp{{ number_format($order->total_final, 0, ',', '.') }}</span>
                                 </div>
                             </div>
@@ -263,17 +271,54 @@
                             <p class="text-xs font-semibold text-zinc-700 leading-relaxed italic">
                                 "{{ $order->shipping_alamat_lengkap }}"
                             </p>
-                            <div class="mt-4 pt-4 border-t border-zinc-200/60">
+                            <div class="mt-4 pt-4 border-t border-zinc-200/60 flex items-center justify-between">
                                 <p class="text-xs font-black text-zinc-950 uppercase tracking-tighter">
                                     {{ $order->shipping_kota_kabupaten }}, {{ $order->shipping_provinsi }}
                                 </p>
                             </div>
+
+                            {{-- FITUR BARU: METODE PENGIRIMAN & RESI --}}
+                            <div class="mt-4 pt-4 border-t border-zinc-200/60">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Metode Logistik</p>
+                                        <p class="text-xs font-bold text-zinc-800">
+                                            @if($order->tipe_pengambilan == 'ambil_di_toko')
+                                                <span class="text-emerald-600"><i class="fas fa-store mr-1"></i> Ambil di Toko</span>
+                                            @elseif($order->tipe_pengambilan == 'armada')
+                                                <span class="text-blue-600"><i class="fas fa-truck-pickup mr-1"></i> Armada Internal Toko</span>
+                                            @else
+                                                <span class="text-indigo-600"><i class="fas fa-box-fast mr-1"></i> Kurir Ekspedisi Nasional</span>
+                                            @endif
+                                        </p>
+                                    </div>
+                                    @if(!empty($order->nomor_resi))
+                                    <div class="text-right">
+                                        <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">No. Resi / AWB</p>
+                                        <p class="text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md">{{ $order->nomor_resi }}</p>
+                                    </div>
+                                    @endif
+                                </div>
+
+                                {{-- FITUR BARU: CATATAN (TERMASUK DETAIL KURIR TOKO B2B) --}}
+                                @if(!empty($order->catatan))
+                                <div class="mt-3 bg-white p-3 rounded-xl border border-zinc-200 shadow-sm">
+                                    <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                                        <i class="fas fa-comment-dots text-zinc-300"></i> Catatan Khusus & Kurir
+                                    </p>
+                                    <p class="text-[11px] font-semibold text-zinc-700 leading-relaxed">
+                                        {{ $order->catatan }}
+                                    </p>
+                                </div>
+                                @endif
+                            </div>
+                            
                         </div>
                     </div>
                 </div>
 
                 {{-- 5. POTA AI SUPPORT CENTER --}}
-                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-glow relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-glow relative overflow-hidden group cursor-pointer active:scale-95 transition-all mt-8">
                     {{-- Texture --}}
                     <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.1] pointer-events-none"></div>
 
@@ -286,7 +331,7 @@
                         </div>
                         <div>
                             <h4 class="text-lg font-black tracking-tight mb-1">Customer Success POTA</h4>
-                            <p class="text-[11px] font-medium text-blue-100 leading-relaxed">Punya masalah dengan kualitas material atau kendala kurir? Tim POTA siap membantu Anda 24/7.</p>
+                            <p class="text-[11px] font-medium text-blue-100 leading-relaxed">Punya masalah dengan kualitas material atau kendala pengiriman? Tim POTA siap membantu Anda 24/7.</p>
                         </div>
                     </div>
                 </div>
@@ -297,6 +342,7 @@
 
     @include('partials.footer')
 
+    {{-- Chat dipanggil di bawah agar tidak merusak head --}}
     @include('partials.chat')
 
     {{-- MIDTRANS SCRIPTS --}}
