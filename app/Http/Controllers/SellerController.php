@@ -107,7 +107,6 @@ class SellerController extends Controller
     {
         $toko = $this->getToko();
 
-        // 1. Validasi Disesuaikan dengan Form HTML (Perbaikan: alamat_toko & kota)
         $request->validate([
             'nama_toko'       => 'required|string|max:100',
             'slogan'          => 'nullable|string|max:255',
@@ -115,9 +114,9 @@ class SellerController extends Controller
             'catatan_toko'    => 'nullable|string',
             'kebijakan_retur' => 'nullable|string',
             'no_telepon'      => 'required|string|max:20',
-            'alamat_toko'     => 'required|string', // <-- FIX: Harus alamat_toko (bukan alamat_lengkap)
-            'area_id'         => 'required|string|max:255', // WAJIB untuk Biteship
-            'kota'            => 'nullable|string|max:100', // <-- FIX: Tangkap nama kota
+            'alamat_toko'     => 'required|string', 
+            'area_id'         => 'required|string|max:255', 
+            'kota'            => 'nullable|string|max:100', 
             'kode_pos'        => 'nullable|string|max:20',
             'latitude'        => 'required|string|max:50',
             'longitude'       => 'required|string|max:50',
@@ -127,7 +126,6 @@ class SellerController extends Controller
             'dokumen_npwp'    => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp|max:5120',
         ]);
 
-        // 2. Mapping Data ke Kolom Database (DIJAMIN MASUK)
         $dataUpdate = [
             'nama_toko'       => $request->nama_toko,
             'slogan'          => $request->slogan,
@@ -135,23 +133,21 @@ class SellerController extends Controller
             'catatan_toko'    => $request->catatan_toko,
             'kebijakan_retur' => $request->kebijakan_retur,
             'telepon_toko'    => $request->no_telepon,
-            'alamat_toko'     => $request->alamat_toko, // <-- FIX: Gunakan $request->alamat_toko
+            'alamat_toko'     => $request->alamat_toko,
             'area_id'         => $request->area_id, 
-            'kota'            => $request->kota,        // <-- FIX: Simpan nama kota
+            'kota'            => $request->kota,        
             'kode_pos'        => $request->kode_pos,
             'latitude'        => $request->latitude,
             'longitude'       => $request->longitude,
             'updated_at'      => now()
         ];
 
-        // 3. Kosongkan ID wilayah lama (RajaOngkir) agar tidak bentrok
         if (\Illuminate\Support\Facades\Schema::hasColumn('tb_toko', 'province_id')) {
             $dataUpdate['province_id'] = null;
             $dataUpdate['city_id'] = null;
             $dataUpdate['district_id'] = null;
         }
 
-        // 4. Handle Logo Baru
         if ($request->hasFile('logo_toko')) {
             $logo = $request->file('logo_toko');
             $logoName = 'logo_' . \Illuminate\Support\Str::random(10) . '.' . $logo->getClientOriginalExtension();
@@ -166,7 +162,6 @@ class SellerController extends Controller
             $dataUpdate['logo_toko'] = $logoName;
         }
 
-        // 5. Handle Banner Baru
         if ($request->hasFile('banner_toko')) {
             $banner = $request->file('banner_toko');
             $bannerName = 'banner_' . \Illuminate\Support\Str::random(10) . '.' . $banner->getClientOriginalExtension();
@@ -181,7 +176,6 @@ class SellerController extends Controller
             $dataUpdate['banner_toko'] = $bannerName;
         }
 
-        // 6. Handle Dokumen Legalitas
         $legalPath = public_path('assets/uploads/legalitas');
         if(!\Illuminate\Support\Facades\File::exists($legalPath)) { \Illuminate\Support\Facades\File::makeDirectory($legalPath, 0777, true); }
 
@@ -201,7 +195,6 @@ class SellerController extends Controller
             $dataUpdate['dokumen_npwp'] = $npwpName;
         }
 
-        // 7. Eksekusi Update ke Database
         \Illuminate\Support\Facades\DB::table('tb_toko')->where('id', $toko->id)->update($dataUpdate);
 
         return redirect()->route('seller.shop.profile')->with('success', 'Profil Toko, Lokasi Peta, & Wilayah Ekspedisi berhasil diperbarui!');
@@ -371,8 +364,8 @@ class SellerController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
-    // =========================================================================
-    // 4. PENGATURAN PENGIRIMAN (LOGISTIK B2B) - SINKRONISASI ADMIN & SELLER
+// =========================================================================
+    // 4. PENGATURAN PENGIRIMAN (LOGISTIK B2B) - SINKRONISASI SELLER & BITESHIP
     // =========================================================================
     public function pengaturanPengiriman()
     {
@@ -383,7 +376,6 @@ class SellerController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Data toko tidak ditemukan.');
         }
 
-        // 1. Daftar Kurir Kustom Toko
         $kurirList = DB::table('tb_kurir_toko')
             ->where('toko_id', $toko->id)
             ->orderBy('tipe_kurir', 'asc')
@@ -400,46 +392,66 @@ class SellerController extends Controller
             $groupedKurir[$kurir->tipe_kurir][] = $kurir;
         }
 
-        // 2. Ambil Kebijakan Global Admin
         $settingsData = DB::table('tb_pengaturan')->get();
         $adminSettings = [];
         foreach ($settingsData as $row) {
             $adminSettings[$row->setting_nama] = $row->setting_nilai;
         }
 
-        // 3. Ambil Daftar Ekspedisi yang DIAKTIFKAN Admin
-        $admin_active_couriers = json_decode($adminSettings['api_active_couriers'] ?? '[]', true);
-        if(!is_array($admin_active_couriers)) $admin_active_couriers = [];
+        $admin_active_couriers_string = $adminSettings['api_active_couriers'] ?? '';
+        $admin_active_couriers = empty($admin_active_couriers_string) ? [] : explode(',', $admin_active_couriers_string);
 
-        // 4. Kamus Master Kurir untuk Data View (Nama, Icon, dll)
-        $master_couriers = [
-            'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-fast'],
-            'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler', 'icon' => 'mdi-postbox'],
-            'tiki'     => ['name' => 'TIKI', 'type' => 'Reguler', 'icon' => 'mdi-truck-outline'],
-            'jnt'      => ['name' => 'J&T Express', 'type' => 'Reguler & Cargo', 'icon' => 'mdi-truck-delivery'],
-            'sicepat'  => ['name' => 'SiCepat', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-lightning-bolt'],
+        $courier_dictionary = [
+            'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler, Kargo & Truking', 'icon' => 'mdi-truck-fast'],
+            'jnt'      => ['name' => 'J&T Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
+            'sicepat'  => ['name' => 'SiCepat', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-lightning-bolt'],
+            'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-postbox'],
+            'tiki'     => ['name' => 'TIKI', 'type' => 'Reguler & Sameday', 'icon' => 'mdi-truck-outline'],
             'ninja'    => ['name' => 'Ninja Xpress', 'type' => 'Reguler', 'icon' => 'mdi-ninja'],
-            'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler', 'icon' => 'mdi-airplane-takeoff'],
-            'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-check'],
-            'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday Delivery', 'icon' => 'mdi-package-variant'],
+            'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-airplane-takeoff'],
+            'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-truck-check'],
+            'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday & Frozen', 'icon' => 'mdi-package-variant'],
             'gosend'   => ['name' => 'GoSend', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
             'grab'     => ['name' => 'GrabExpress', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
-            'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Kargo', 'icon' => 'mdi-truck-flatbed'],
+            'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Armada Besar', 'icon' => 'mdi-truck-flatbed'],
+            'borzo'    => ['name' => 'Borzo', 'type' => 'Instant Delivery', 'icon' => 'mdi-motorbike'],
             'indah'    => ['name' => 'Indah Logistik', 'type' => 'Kargo Berat', 'icon' => 'mdi-truck-flatbed'],
             'wahana'   => ['name' => 'Wahana Express', 'type' => 'Kargo & Ekonomi', 'icon' => 'mdi-weight-kilogram'],
-            'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler', 'icon' => 'mdi-map-marker-path'],
+            'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-map-marker-path'],
             'ide'      => ['name' => 'ID Express', 'type' => 'Reguler', 'icon' => 'mdi-truck-fast-outline'],
-            'sentral'  => ['name' => 'Sentral Cargo', 'type' => 'Kargo', 'icon' => 'mdi-package-variant-closed'],
-            'rex'      => ['name' => 'REX Express', 'type' => 'Kargo', 'icon' => 'mdi-truck-cargo-container'],
+            'sentral'  => ['name' => 'Sentral Cargo', 'type' => 'Kargo Domestik', 'icon' => 'mdi-package-variant-closed'],
+            'rex'      => ['name' => 'REX Express', 'type' => 'Kargo & Dokumen', 'icon' => 'mdi-truck-cargo-container'],
+            'rpx'      => ['name' => 'RPX', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
         ];
 
+        $master_couriers = [];
+        foreach ($admin_active_couriers as $code) {
+            if (isset($courier_dictionary[$code])) {
+                $master_couriers[$code] = $courier_dictionary[$code];
+            }
+        }
+
+        // ====================================================================
+        // FIX: GUNAKAN NAMA KOLOM `active_api_couriers` SESUAI DATABASE ABANG
+        // Sekaligus handle format JSON sisaan kode lama jika ada
+        // ====================================================================
+        $seller_active_couriers_raw = $toko->active_api_couriers ?? '';
+        
+        if (is_string($seller_active_couriers_raw) && str_starts_with($seller_active_couriers_raw, '[')) {
+            // Jika format lama masih berupa JSON ["jne", "jnt"]
+            $seller_active_couriers = json_decode($seller_active_couriers_raw, true) ?? [];
+        } else {
+            // Jika format baru string koma "jne,jnt"
+            $seller_active_couriers = empty($seller_active_couriers_raw) ? [] : explode(',', $seller_active_couriers_raw);
+        }
+
         return view('seller.pengaturan_pengiriman', compact(
-            'groupedKurir', 'tipeOrder', 'toko', 'adminSettings', 'admin_active_couriers', 'master_couriers'
+            'groupedKurir', 'tipeOrder', 'toko', 'adminSettings', 'admin_active_couriers', 'master_couriers', 'seller_active_couriers'
         ));
     }
 
     /**
-     * MENGELOLA PENYIMPANAN PENGATURAN LOGISTIK & LAYANAN KUSTOM
+     * MENGELOLA PENYIMPANAN PENGATURAN LOGISTIK & LAYANAN KUSTOM SELLER
      */
     public function storePengiriman(Request $request)
     {
@@ -452,30 +464,33 @@ class SellerController extends Controller
         // =========================================================================
         // A. LOGIKA SIMPAN PENGATURAN UTAMA (Form Kiri & Kanan API)
         // =========================================================================
-        if ($request->action === 'save_preferences') {
+        if ($request->action === 'save_preferences' || empty($request->action)) {
+            
+            // 1. Simpan Ekspedisi API (Biteship) yang dichecklist Seller
+            $couriers = $request->input('seller_active_couriers', []);
+            $couriers = array_filter($couriers, function($value) {
+                return $value !== 'NONE_SELECTED_HACK';
+            });
+            $couriersString = implode(',', array_values($couriers));
 
-            // Tangkap data preferences (Ambil di toko, Armada Toko, Jarak, Tarif)
+            // 2. Simpan Preferences Armada Sendiri (Pickup, Truk Mandiri, dll)
             $preferences = $request->input('preferences', []);
-
-            // Fix HTML Checkbox: Kalau tidak dicentang, HTML tidak mengirimkan data.
             if (!isset($preferences['bopis'])) $preferences['bopis'] = '0';
             if (!isset($preferences['custom_fleet'])) $preferences['custom_fleet'] = '0';
 
-            // Tangkap data ekspedisi API yang dicentang seller
-            $apiCouriers = $request->input('api_couriers', []);
-
-            // Simpan sebagai JSON ke tabel tb_toko
+            // 3. Update Database Toko
+            // FIX FATAL: Nama kolom disesuaikan menjadi `active_api_couriers`
             DB::table('tb_toko')->where('id', $toko->id)->update([
+                'active_api_couriers'   => $couriersString, // <--- INI BIANG KEROKNYA TADI BANG
                 'logistics_preferences' => json_encode($preferences),
-                'active_api_couriers'   => json_encode($apiCouriers),
                 'updated_at'            => now()
             ]);
 
-            return redirect()->back()->with('success', 'Konfigurasi logistik berhasil disimpan!');
+            return redirect()->back()->with('success', 'Konfigurasi logistik dan kurir toko berhasil disinkronkan!');
         }
 
         // =========================================================================
-        // B. LOGIKA TAMBAH LAYANAN KUSTOM (Modal Form)
+        // B. LOGIKA TAMBAH LAYANAN KUSTOM ARMADA SENDIRI (Modal Form)
         // =========================================================================
         if ($request->action === 'tambah') {
             $request->validate([
@@ -499,7 +514,7 @@ class SellerController extends Controller
         }
 
         // =========================================================================
-        // C. LOGIKA EDIT LAYANAN KUSTOM (Modal Form)
+        // C. LOGIKA EDIT LAYANAN KUSTOM ARMADA SENDIRI (Modal Form)
         // =========================================================================
         if ($request->action === 'update') {
             $request->validate([
@@ -523,33 +538,6 @@ class SellerController extends Controller
         }
 
         return redirect()->back()->with('error', 'Aksi tidak dikenali.');
-    }
-
-    public function togglePengiriman(Request $request)
-    {
-        $toko = DB::table('tb_toko')->where('user_id', Auth::id())->first();
-
-        $updated = DB::table('tb_kurir_toko')
-            ->where('id', $request->kurir_id)
-            ->where('toko_id', $toko->id)
-            ->update(['is_active' => $request->is_active]);
-
-        if($updated) {
-            return response()->json(['status' => 'success']);
-        }
-        return response()->json(['status' => 'error'], 400);
-    }
-
-    public function destroyPengiriman($id)
-    {
-        $toko = DB::table('tb_toko')->where('user_id', Auth::id())->first();
-
-        DB::table('tb_kurir_toko')
-            ->where('id', $id)
-            ->where('toko_id', $toko->id)
-            ->delete();
-
-        return redirect()->route('seller.pengaturan.pengiriman')->with('success', 'Layanan pengiriman berhasil dihapus.');
     }
 
     // =========================================================================

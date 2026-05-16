@@ -164,7 +164,7 @@
                             </div>
                             @endif
 
-                            {{-- PERUBAHAN: Pengiriman Darurat (CITO/Sameday) --}}
+                            {{-- Pengiriman Darurat (CITO/Sameday) --}}
                             @if(($adminSettings['enable_emergency_delivery'] ?? '0') == '1')
                             <label class="service-tile w-full mt-4">
                                 <input type="checkbox" name="preferences[emergency_delivery]" value="1" class="service-input" {{ isset($tokoPrefs['emergency_delivery']) && $tokoPrefs['emergency_delivery'] == '1' ? 'checked' : '' }}>
@@ -182,7 +182,7 @@
                         </div>
                     </div>
 
-                    {{-- PERUBAHAN: Card Layanan Custom Diganti Jadi COMING SOON --}}
+                    {{-- Card Layanan Custom COMING SOON --}}
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative">
                         <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div class="flex items-center gap-3 opacity-50">
@@ -227,48 +227,19 @@
                             </div>
                         </div>
 
-                        @php
-                            // 1. Ambil Kurir yang DIAKTIFKAN Admin dari Database
-                            $admin_api_couriers = json_decode($adminSettings['api_active_couriers'] ?? '[]', true);
-                            if(!is_array($admin_api_couriers)) $admin_api_couriers = [];
-
-                            // 2. Ambil Kurir yang DICENTANG Seller dari Database
-                            $seller_active_couriers = json_decode($toko->active_api_couriers ?? '[]', true);
-                            if(!is_array($seller_active_couriers)) $seller_active_couriers = [];
-
-                            // 3. Master Kamus Kurir Biteship (Referensi Tampilan & Ikon)
-                            $master_couriers = [
-                                'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-fast'],
-                                'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler', 'icon' => 'mdi-postbox'],
-                                'tiki'     => ['name' => 'TIKI', 'type' => 'Reguler', 'icon' => 'mdi-truck-outline'],
-                                'jnt'      => ['name' => 'J&T Express', 'type' => 'Reguler & Cargo', 'icon' => 'mdi-truck-delivery'],
-                                'sicepat'  => ['name' => 'SiCepat', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-lightning-bolt'],
-                                'ninja'    => ['name' => 'Ninja Xpress', 'type' => 'Reguler', 'icon' => 'mdi-ninja'],
-                                'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler', 'icon' => 'mdi-airplane-takeoff'],
-                                'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-check'],
-                                'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday Delivery', 'icon' => 'mdi-package-variant'],
-                                'gosend'   => ['name' => 'GoSend', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
-                                'grab'     => ['name' => 'GrabExpress', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
-                                'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Kargo', 'icon' => 'mdi-truck-flatbed'],
-                                'indah'    => ['name' => 'Indah Logistik', 'type' => 'Kargo Berat', 'icon' => 'mdi-truck-flatbed'],
-                                'wahana'   => ['name' => 'Wahana Express', 'type' => 'Kargo & Ekonomi', 'icon' => 'mdi-weight-kilogram'],
-                                'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler', 'icon' => 'mdi-map-marker-path'],
-                                'ide'      => ['name' => 'ID Express', 'type' => 'Reguler', 'icon' => 'mdi-truck-fast-outline'],
-                                'sentral'  => ['name' => 'Sentral Cargo', 'type' => 'Kargo', 'icon' => 'mdi-package-variant-closed'],
-                                'rex'      => ['name' => 'REX Express', 'type' => 'Kargo', 'icon' => 'mdi-truck-cargo-container'],
-                            ];
-                        @endphp
-
                         <div class="p-6">
                             <p class="text-xs font-medium text-slate-500 mb-4">Pilih layanan ekspedisi untuk pengiriman reguler, kargo, atau instan. Opsi yang muncul di bawah ini adalah ekspedisi yang telah diizinkan dan diaktifkan oleh Admin Pusat.</p>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                @forelse($admin_api_couriers as $code)
+                                {{-- PERBAIKAN FATAL: Hack hidden agar form tidak error jika semua kurir di-uncheck --}}
+                                <input type="hidden" name="seller_active_couriers[]" value="NONE_SELECTED_HACK">
+
+                                @forelse($admin_active_couriers as $code)
                                     @if(isset($master_couriers[$code]))
-                                        <label class="service-tile w-full" for="api_{{ $code }}">
-                                            <input type="checkbox" name="api_couriers[]" value="{{ $code }}" id="api_{{ $code }}" class="service-input" {{ in_array($code, $seller_active_couriers) ? 'checked' : '' }}>
+                                        <label class="service-tile w-full" for="seller_{{ $code }}">
+                                            {{-- PERBAIKAN FATAL: name="seller_active_couriers[]" agar sesuai dengan SellerController --}}
+                                            <input type="checkbox" name="seller_active_couriers[]" value="{{ $code }}" id="seller_{{ $code }}" class="service-input" {{ in_array($code, $seller_active_couriers) ? 'checked' : '' }}>
                                             <div class="service-content">
-                                                {{-- Menggunakan class icon-box-biteship --}}
                                                 <div class="icon-box icon-box-biteship">
                                                     <i class="mdi {{ $master_couriers[$code]['icon'] }}"></i>
                                                 </div>

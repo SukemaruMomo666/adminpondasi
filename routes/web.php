@@ -256,6 +256,7 @@ Route::prefix('portal-rahasia-pks')->name('admin.')->middleware(['admin'])->grou
 // 6. API, AJAX, & WEBHOOKS
 Route::get('/api/biteship/search', [PageController::class, 'searchBiteshipAPI']); // <-- UPDATE API BITESHIP
 
+Route::get('/api/cek-ongkir', [PageController::class, 'cekOngkir'])->name('api.cek.ongkir');
 // Chat AI (POTA)
 Route::post('/api/chat', [ChatAiController::class, 'handleChat'])->name('api.chat');
 

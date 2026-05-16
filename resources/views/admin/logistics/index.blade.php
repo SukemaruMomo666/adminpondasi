@@ -117,20 +117,26 @@
                     <i class="mdi mdi-chevron-right text-sm"></i>
                     <span class="text-blue-400">Konfigurasi Sistem</span>
                 </div>
-                <h2 class="text-3xl font-black text-white tracking-tight mb-2">Logistik & Distribusi Platform</h2>
+                <h2 class="text-3xl font-black text-white tracking-tight mb-2">Logistik & Distribusi Global</h2>
                 <p class="text-slate-400 text-sm font-bold m-0 max-w-2xl leading-relaxed">
-                    Atur ketersediaan ekspedisi API pihak ketiga (Biteship) dan regulasikan sistem pengiriman armada mandiri toko.
+                    Atur ketersediaan ekspedisi API pihak ketiga (Biteship) yang diizinkan beroperasi di platform Pondasikita. Kurir yang dipilih di sini akan tersedia untuk diaktifkan oleh masing-masing Penjual.
                 </p>
             </div>
 
             {{-- Quick Stats Snippet --}}
             <div class="bg-white/10 backdrop-blur-md border border-white/20 px-5 py-3 rounded-2xl flex items-center gap-4 hidden sm:flex">
-                <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-xl">
+                <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xl">
                     <i class="mdi mdi-api"></i>
                 </div>
                 <div>
-                    <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Biteship API</div>
-                    <div class="text-sm font-black text-white"><span class="text-emerald-400">Tersinkronisasi</span></div>
+                    <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Status Biteship</div>
+                    <div class="text-sm font-black text-white">
+                        @if(!empty($api_couriers) && count($api_couriers) > 1)
+                            <span class="text-emerald-400">Terkoneksi & Live</span>
+                        @else
+                            <span class="text-red-400">Gagal / Offline</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -144,31 +150,20 @@
             <div class="bg-white dark:bg-slate-900 border-t-4 border-t-amber-500 border-x border-b border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm transition-colors duration-300 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 dark:border-slate-800 bg-amber-50/30 dark:bg-transparent">
                     <h3 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 m-0">
-                        <i class="mdi mdi-truck-flatbed text-amber-500 text-2xl"></i> Ekosistem Pengiriman Lokal (Toko)
+                        <i class="mdi mdi-truck-flatbed text-amber-500 text-2xl"></i> Regulasi Armada Internal Toko
                     </h3>
                     <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2 mb-0 leading-relaxed">
-                        Fitur logistik B2B krusial. Atur opsi agar pembeli bisa datang langsung ke toko, atau toko mengirimkan pesanan berat (semen, besi) menggunakan armada internal mereka.
+                        Pengaturan izin bagi penjual (seller) untuk mengatur opsi logistik secara mandiri tanpa pihak ketiga.
                     </p>
                 </div>
 
                 <div class="p-6 space-y-6">
 
-                    {{-- Banner Penjelasan --}}
-                    <div class="flex items-start gap-4 p-5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl transition-colors duration-300">
-                        <i class="mdi mdi-set-all text-3xl text-blue-600 dark:text-blue-400 mt-1"></i>
-                        <div>
-                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-1">Multi-Option Logistics (Berdampingan)</strong>
-                            <p class="text-[11px] font-bold text-slate-600 dark:text-slate-400 m-0 leading-relaxed">
-                                Di sisi depan (Checkout), opsi <span class="text-blue-600 dark:text-blue-400">Armada Toko</span> dan <span class="text-emerald-600 dark:text-emerald-400">Ambil Sendiri</span> akan tampil berdampingan dengan <span class="text-slate-800 dark:text-slate-200">Kurir API Sistem (Biteship)</span>. Pembeli bebas memilih yang paling efisien!
-                            </p>
-                        </div>
-                    </div>
-
                     {{-- Switch 1: Ambil di Toko (BOPIS) --}}
                     <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl transition-colors duration-300">
                         <div class="pr-4">
-                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5 flex items-center gap-1.5"><i class="mdi mdi-store-marker text-emerald-500"></i> Izinkan "Ambil di Toko" (Pickup)</strong>
-                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Pembeli dapat checkout tanpa ongkos kirim dan mengambil material langsung di gudang seller.</span>
+                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5 flex items-center gap-1.5"><i class="mdi mdi-store-marker text-emerald-500"></i> Izinkan "Ambil di Toko" (BOPIS)</strong>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Izinkan seller menawarkan opsi pembeli mengambil pesanan langsung di gudang mereka secara gratis.</span>
                         </div>
                         <div>
                             <input type="hidden" name="enable_store_pickup" value="0">
@@ -180,8 +175,8 @@
                     {{-- Switch 2: Aktifkan Armada Toko --}}
                     <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl transition-colors duration-300">
                         <div class="pr-4">
-                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5">Aktifkan Armada Toko (Truk/Pickup Internal)</strong>
-                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Izinkan seller mengatur tarif per-KM untuk pengiriman material berat via armada mereka.</span>
+                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5">Izin Armada Internal Penjual</strong>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Izinkan seller menggunakan truk/mobil pikap sendiri dan men-setting tarif per-KM di dashboard mereka.</span>
                         </div>
                         <div>
                             <input type="hidden" name="enable_custom_fleet" value="0">
@@ -193,8 +188,8 @@
                     {{-- Switch 3: Pengiriman Darurat (Sameday) --}}
                     <div class="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl transition-colors duration-300">
                         <div class="pr-4">
-                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5">Pengiriman Darurat (CITO/Sameday)</strong>
-                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Berikan akses bagi seller untuk melayani pengiriman mendesak hari itu juga dengan tarif ekstra.</span>
+                            <strong class="block text-sm font-black text-slate-800 dark:text-white mb-0.5">Izin Pengiriman Darurat (Sameday Toko)</strong>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Berikan akses seller untuk membuka layanan antar kilat di hari yang sama dengan tarif premium.</span>
                         </div>
                         <div>
                             <input type="hidden" name="enable_emergency_delivery" value="0">
@@ -203,24 +198,27 @@
                         </div>
                     </div>
 
-                    {{-- Input Jarak & Berat --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Batas Maksimal Jarak</label>
-                            <div class="input-group">
-                                <input type="number" name="max_custom_fleet_distance" value="{{ $settings['max_custom_fleet_distance'] ?? '50' }}" placeholder="Contoh: 50" class="form-control-input bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 font-bold text-sm shadow-inner dark:shadow-none">
-                                <span class="input-group-text bg-slate-100 border-slate-200 border-l-0">KM</span>
+                    {{-- Input Batasan Global Armada Internal --}}
+                    <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4">Pembatasan Armada Internal</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Batas Maksimal Jarak</label>
+                                <div class="input-group">
+                                    <input type="number" name="max_custom_fleet_distance" value="{{ $settings['max_custom_fleet_distance'] ?? '50' }}" placeholder="Cth: 50" class="form-control-input bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-bold text-sm shadow-inner dark:shadow-none">
+                                    <span class="input-group-text bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 border-l-0 text-slate-600 dark:text-slate-300">KM</span>
+                                </div>
+                                <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight">Maksimal jarak yang boleh di-setting seller.</p>
                             </div>
-                            <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight">Radius jangkauan sistem armada toko.</p>
-                        </div>
 
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Batas Berat Minimum Armada</label>
-                            <div class="input-group">
-                                <input type="number" name="min_heavy_cargo_weight" value="{{ $settings['min_heavy_cargo_weight'] ?? '0' }}" class="form-control-input bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 font-bold text-sm shadow-inner dark:shadow-none">
-                                <span class="input-group-text bg-slate-100 border-slate-200 border-l-0">KG</span>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Minimal Berat Kargo</label>
+                                <div class="input-group">
+                                    <input type="number" name="min_heavy_cargo_weight" value="{{ $settings['min_heavy_cargo_weight'] ?? '0' }}" placeholder="Cth: 50" class="form-control-input bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-bold text-sm shadow-inner dark:shadow-none">
+                                    <span class="input-group-text bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 border-l-0 text-slate-600 dark:text-slate-300">KG</span>
+                                </div>
+                                <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight">Isi 0 jika bebas. (Agar armada truk eksklusif barang berat).</p>
                             </div>
-                            <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight">0 = Bebas. (Cth: 50kg agar armada toko eksklusif barang berat).</p>
                         </div>
                     </div>
 
@@ -228,74 +226,62 @@
             </div>
         </div>
 
-        {{-- KOLOM KANAN (EKSPEDISI API BITESHIP & ATURAN UMUM) --}}
+        {{-- KOLOM KANAN (EKSPEDISI API BITESHIP) --}}
         <div class="lg:col-span-5 space-y-6">
 
             <div class="bg-white dark:bg-slate-900 border-t-4 border-t-blue-500 border-x border-b border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm transition-colors duration-300 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 dark:border-slate-800 bg-blue-50/30 dark:bg-transparent">
                     <h3 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 m-0">
-                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Ekspedisi Sistem (Biteship)
+                        <i class="mdi mdi-api text-blue-500 text-2xl"></i> Master Kurir (Biteship API)
                     </h3>
-                    <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl mt-4">
-                        <p class="text-[11px] font-bold text-amber-700 m-0 leading-relaxed">
-                            <i class="mdi mdi-alert"></i> <strong>Peringatan API:</strong> Centang HANYA kurir yang telah Anda aktifkan di <strong>Dashboard Biteship</strong> Anda. Mengaktifkan kurir di sini tanpa mengaktifkannya di akun Biteship akan menyebabkan error gagal hitung ongkir saat pembeli melakukan checkout.
+                    <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 p-4 rounded-xl mt-4">
+                        <p class="text-[11px] font-bold text-amber-700 dark:text-amber-400 m-0 leading-relaxed text-justify">
+                            <i class="mdi mdi-information text-lg mr-1 mb-1 block"></i>
+                            <strong>HIERARKI SISTEM:</strong> Anda sebagai Super Admin bertugas menentukan "Daftar Kurir Global" yang boleh beroperasi di platform Pondasikita. Kurir yang Anda beri centang di bawah ini, nantinya akan muncul di <strong>Dashboard Seller</strong> agar mereka bisa memilih kurir mana saja yang cocok dengan lokasi gudang mereka.
                         </p>
                     </div>
                 </div>
 
                 @php
-                    // MASTER COURIERS ASLI DARI BITESHIP (BUKAN DUMMY)
-                    $master_couriers = [
-                        'jne'      => ['name' => 'JNE Express', 'type' => 'Reguler, Kargo & Truking', 'icon' => 'mdi-truck-fast'],
-                        'jnt'      => ['name' => 'J&T Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
-                        'sicepat'  => ['name' => 'SiCepat', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-lightning-bolt'],
-                        'pos'      => ['name' => 'POS Indonesia', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-postbox'],
-                        'tiki'     => ['name' => 'TIKI', 'type' => 'Reguler & Sameday', 'icon' => 'mdi-truck-outline'],
-                        'ninja'    => ['name' => 'Ninja Xpress', 'type' => 'Reguler', 'icon' => 'mdi-ninja'],
-                        'lion'     => ['name' => 'Lion Parcel', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-airplane-takeoff'],
-                        'anteraja' => ['name' => 'AnterAja', 'type' => 'Reguler, Kargo & Sameday', 'icon' => 'mdi-truck-check'],
-                        'paxel'    => ['name' => 'Paxel', 'type' => 'Sameday & Frozen', 'icon' => 'mdi-package-variant'],
-                        'gosend'   => ['name' => 'GoSend', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
-                        'grab'     => ['name' => 'GrabExpress', 'type' => 'Instant & Sameday', 'icon' => 'mdi-motorbike'],
-                        'lalamove' => ['name' => 'Lalamove', 'type' => 'Instant & Armada Besar', 'icon' => 'mdi-truck-flatbed'],
-                        'borzo'    => ['name' => 'Borzo', 'type' => 'Instant Delivery', 'icon' => 'mdi-motorbike'],
-                        'indah'    => ['name' => 'Indah Logistik', 'type' => 'Kargo Berat', 'icon' => 'mdi-truck-flatbed'],
-                        'wahana'   => ['name' => 'Wahana Express', 'type' => 'Kargo & Ekonomi', 'icon' => 'mdi-weight-kilogram'],
-                        'sap'      => ['name' => 'SAP Express', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-map-marker-path'],
-                        'ide'      => ['name' => 'ID Express', 'type' => 'Reguler', 'icon' => 'mdi-truck-fast-outline'],
-                        'sentral'  => ['name' => 'Sentral Cargo', 'type' => 'Kargo Domestik', 'icon' => 'mdi-package-variant-closed'],
-                        'rex'      => ['name' => 'REX Express', 'type' => 'Kargo & Dokumen', 'icon' => 'mdi-truck-cargo-container'],
-                        'rpx'      => ['name' => 'RPX', 'type' => 'Reguler & Kargo', 'icon' => 'mdi-truck-delivery'],
-                    ];
-
-                    $active_api_couriers = json_decode($settings['api_active_couriers'] ?? '[]', true);
-                    if(!is_array($active_api_couriers)) $active_api_couriers = [];
+                    // Ambil data aktif dari DB (string jadi array)
+                    $active_api_couriers_string = $settings['api_active_couriers'] ?? '';
+                    $active_api_couriers = empty($active_api_couriers_string) ? [] : explode(',', $active_api_couriers_string);
                 @endphp
 
                 <div class="p-6">
+                    
+                    {{-- ALERT BILA API GAGAL --}}
+                    @if(empty($api_couriers) || count($api_couriers) <= 1)
+                        <div class="bg-red-50 border border-red-200 p-4 rounded-xl mb-6">
+                            <p class="text-xs font-bold text-red-600 m-0"><i class="mdi mdi-wifi-off text-lg mr-1"></i> Tidak dapat terhubung dengan API Biteship. Pastikan API Key di menu Pengaturan Situs sudah benar.</p>
+                        </div>
+                    @endif
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                        {{-- HACK: Hidden input agar jika admin uncheck semua kurir, form tetap terkirim array kosong --}}
+                        {{-- HACK: Hidden input untuk bypass error array kosong --}}
                         <input type="hidden" name="api_active_couriers[]" value="NONE_SELECTED_HACK">
                         
-                        @foreach($master_couriers as $code => $kurir)
-                            <label class="courier-box w-full relative m-0" for="api_{{ $code }}">
+                        @foreach($api_couriers as $code => $kurir)
+                            <label class="courier-box w-full relative m-0 hover-lift" for="api_{{ $code }}">
                                 <input type="checkbox" name="api_active_couriers[]" value="{{ $code }}" id="api_{{ $code }}" class="courier-checkbox" {{ in_array($code, $active_api_couriers) ? 'checked' : '' }}>
 
-                                <div class="courier-content flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl h-full transition-colors duration-200">
-                                    {{-- Icon Box --}}
-                                    <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                        <i class="mdi {{ $kurir['icon'] }} text-blue-500 dark:text-blue-400 text-xl"></i>
+                                <div class="courier-content flex flex-col justify-center p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl h-full transition-colors duration-200 relative">
+                                    <div class="flex items-center gap-3">
+                                        {{-- Icon Box --}}
+                                        <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 flex items-center justify-center flex-shrink-0 shadow-sm z-10">
+                                            <i class="mdi {{ $kurir['icon'] ?? 'mdi-truck-delivery' }} text-blue-500 dark:text-blue-400 text-xl"></i>
+                                        </div>
+
+                                        {{-- Info --}}
+                                        <div class="flex-1 pr-4 z-10">
+                                            <strong class="block text-sm font-black text-slate-800 dark:text-white leading-tight mb-1">{{ $kurir['name'] }}</strong>
+                                            <span class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-tight uppercase tracking-wider line-clamp-2" title="{{ $kurir['type'] }}">{{ $kurir['type'] }}</span>
+                                        </div>
                                     </div>
 
-                                    {{-- Info --}}
-                                    <div class="flex-1 pr-2">
-                                        <strong class="block text-sm font-black text-slate-800 dark:text-white leading-tight mb-0.5">{{ $kurir['name'] }}</strong>
-                                        <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ $kurir['type'] }}</span>
-                                    </div>
-
-                                    {{-- Checkmark Overlay (Absolute) --}}
-                                    <div class="check-icon absolute top-3 right-3 text-blue-600 dark:text-blue-400 opacity-0 scale-50 transition-all duration-300">
-                                        <i class="mdi mdi-check-circle text-lg"></i>
+                                    {{-- Checkmark Overlay --}}
+                                    <div class="check-icon absolute top-3 right-3 text-blue-600 dark:text-blue-400 opacity-0 scale-50 transition-all duration-300 z-20">
+                                        <i class="mdi mdi-check-circle text-xl bg-white dark:bg-slate-900 rounded-full"></i>
                                     </div>
                                 </div>
                             </label>
@@ -304,13 +290,13 @@
 
                     {{-- Aturan Umum Global Tambahan --}}
                     <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-                        <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4">Kebijakan Pengiriman Global</h4>
+                        <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4">Kebijakan Global Platform</h4>
 
                         {{-- Fitur Asuransi Wajib --}}
                         <div class="flex justify-between items-center mb-5">
                             <div class="pr-3">
-                                <strong class="block text-xs font-black text-slate-800 dark:text-white mb-0.5">Wajib Asuransi (Barang Mahal)</strong>
-                                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight">Paksa sistem mengaktifkan biaya asuransi kurir untuk proteksi.</span>
+                                <strong class="block text-xs font-black text-slate-800 dark:text-white mb-0.5">Wajibkan Asuransi Ekspedisi</strong>
+                                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-tight">Sistem akan memaksa asuransi otomatis (default) saat pembeli checkout untuk semua transaksi kurir.</span>
                             </div>
                             <div>
                                 <input type="hidden" name="force_insurance" value="0">
@@ -321,12 +307,12 @@
 
                         {{-- Fitur Gratis Ongkir Bersyarat --}}
                         <div>
-                            <label class="block text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-2"><i class="mdi mdi-tag-heart"></i> Syarat Subsidi/Gratis Ongkir</label>
+                            <label class="block text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-2"><i class="mdi mdi-tag-heart"></i> Syarat Subsidi Ongkir (Sistem)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 border-r-0 text-emerald-600 dark:text-emerald-400">Rp</span>
                                 <input type="number" name="free_shipping_threshold" value="{{ $settings['free_shipping_threshold'] ?? '0' }}" class="form-control-input bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 text-slate-800 dark:text-white focus:border-emerald-500 font-bold text-sm shadow-inner dark:shadow-none" placeholder="Isi 0 untuk nonaktifkan">
                             </div>
-                            <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight">Jika total belanja pembeli mencapai nominal ini, ongkos kirim akan digratiskan (Sistem menanggung biaya).</p>
+                            <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 m-0 leading-tight text-justify">Isi nominal minimum belanja (Cth: 5000000). Jika total belanja pembeli mencapai angka ini, ongkos kirim akan disubsidi penuh oleh sistem platform (bukan seller).</p>
                         </div>
                     </div>
                 </div>

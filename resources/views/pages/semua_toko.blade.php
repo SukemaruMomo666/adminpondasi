@@ -369,7 +369,7 @@
                 
                 L.marker([activeLat, activeLng], {icon: userIcon})
                  .addTo(map)
-                 .bindPopup('<div class="font-black text-blue-600 text-center text-[10px] uppercase tracking-widest px-2 py-1">Titik Proyek Anda</div>')
+                 .bindPopup('<div class="font-black text-blue-600 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-blue-100 text-center text-[10px] uppercase tracking-widest px-3 py-1.5 mt-1">Titik Proyek Anda</div>', { closeButton: false })
                  .openPopup();
             }
 

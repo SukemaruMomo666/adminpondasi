@@ -714,132 +714,54 @@ class PageController extends Controller
         }
     }
 
-// =================================================================
-    // API Cek Ongkir (3 Mode: Ekspedisi / Armada / Pickup)
+    // =================================================================
+    // API Cek Ongkir (Biteship) - 100% REAL DINAMIS
     // =================================================================
     public function cekOngkir(Request $request)
     {
         try {
-            $tipe = $request->query('tipe', 'kurir'); // 'kurir' atau 'armada'
+            $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'biteship_api_key')->value('setting_nilai');
             
+            if (empty($apiKey)) {
+                return response()->json(['success' => false, 'error' => 'API Key Biteship belum disetting di Admin.']);
+            }
+
             $originAreaId = $request->query('origin');
             $destinationAreaId = $request->query('destination');
             $weight = $request->query('weight', 1000);
-            $couriers = $request->query('couriers', 'jne');
-            $tokoId = $request->query('toko_id');
-            $destLat = $request->query('dest_lat');
-            $destLng = $request->query('dest_lng');
-
-            // =================================================================
-            // LOGIKA 1: PENGIRIMAN VIA ARMADA TOKO (GPS ONLY - NO API BITESHIP)
-            // =================================================================
-            if ($tipe === 'armada') {
-                if (!$tokoId || !$destLat || !$destLng) {
-                    return response()->json(['success' => false, 'error' => 'Gagal menghitung jarak. Pastikan pin peta alamat Anda sudah ditentukan dengan benar.']);
-                }
-
-                $toko = DB::table('tb_toko')->where('id', $tokoId)->first();
-                if (!$toko || empty($toko->latitude) || empty($toko->longitude)) {
-                    return response()->json(['success' => false, 'error' => 'Toko belum mengatur lokasi Gudang (GPS) mereka.']);
-                }
-
-                $prefs = json_decode($toko->logistics_preferences, true) ?? [];
-                
-                if (empty($prefs['custom_fleet']) || $prefs['custom_fleet'] != '1') {
-                    return response()->json(['success' => false, 'error' => 'Toko ini tidak menyediakan layanan pengiriman Armada Internal. Silakan pilih pengiriman ekspedisi.']);
-                }
-
-                // Rumus Haversine (Jarak Garis Lurus GPS)
-                $earthRadius = 6371; 
-                $latFrom = deg2rad((float)$toko->latitude);
-                $lonFrom = deg2rad((float)$toko->longitude);
-                $latTo = deg2rad((float)$destLat);
-                $lonTo = deg2rad((float)$destLng);
-
-                $latDelta = $latTo - $latFrom;
-                $lonDelta = $lonTo - $lonFrom;
-
-                $a = sin($latDelta / 2) * sin($latDelta / 2) + cos($latFrom) * cos($latTo) * sin($lonDelta / 2) * sin($lonDelta / 2);
-                $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-                $distance = $earthRadius * $c;
-                $calcDist = $distance < 1 ? 1 : ceil($distance); 
-                
-                $maxDistance = (float)($prefs['fleet_max_distance'] ?? 50);
-
-                if ($calcDist > $maxDistance) {
-                    return response()->json(['success' => false, 'error' => "Jarak lokasi Anda ({$calcDist} KM) melebihi batas layanan armada toko ini ({$maxDistance} KM)."]);
-                }
-
-                $pricing = [];
-                $pricePerKm = (float)($prefs['fleet_price_per_km'] ?? 5000);
-                
-                $pricing[] = [
-                    'company' => 'armada_toko',
-                    'courier_name' => 'Armada Internal Toko',
-                    'courier_service_name' => 'Truk/Pickup (' . $calcDist . ' KM)',
-                    'price' => $calcDist * $pricePerKm,
-                    'duration' => 'Dikirim oleh tim gudang'
-                ];
-
-                if (isset($prefs['emergency_delivery']) && $prefs['emergency_delivery'] == '1') {
-                    $pricing[] = [
-                        'company' => 'cito_sameday',
-                        'courier_name' => 'Pengiriman Darurat',
-                        'courier_service_name' => 'CITO/Sameday (' . $calcDist . ' KM)',
-                        'price' => 25000 + ($calcDist * 3000),
-                        'duration' => 'Hari ini (Segera)'
-                    ];
-                }
-
-                return response()->json(['success' => true, 'pricing' => $pricing]);
-            }
-
-            // =================================================================
-            // LOGIKA 2: PENGIRIMAN VIA KURIR EKSPEDISI (BITESHIP API)
-            // =================================================================
-            if (empty($originAreaId) || empty($destinationAreaId)) {
-                return response()->json(['success' => false, 'error' => 'Origin atau Destination belum lengkap.']);
-            }
-
-            $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'biteship_api_key')->value('setting_nilai');
             
+            // PENYEMPURNAAN: Tangkap parameter 'couriers' dari URL (Pilihan Seller). Fallback ke 'jne' jika kosong.
+            $couriers = $request->query('couriers', 'jne'); 
+
+            if (empty($originAreaId) || empty($destinationAreaId)) {
+                return response()->json(['success' => false, 'error' => 'Origin atau Destination belum lengkap. Pastikan alamat Toko dan Pelanggan sudah disetting dengan Area ID Biteship.']);
+            }
+
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => $apiKey,
                 'Content-Type'  => 'application/json'
             ])->post('https://api.biteship.com/v1/rates/couriers', [
                 'origin_area_id' => $originAreaId,
                 'destination_area_id' => $destinationAreaId,
-                'couriers' => $couriers,
+                'couriers' => $couriers, // DINAMIS MENGGUNAKAN PILIHAN SELLER
                 'items' => [
-                    ['name' => 'Material Bangunan', 'value' => 50000, 'weight' => (int) $weight, 'quantity' => 1]
+                    [
+                        'name' => 'Material Bangunan',
+                        'description' => 'Paket Material',
+                        'value' => 50000,
+                        'weight' => (int) $weight,
+                        'quantity' => 1
+                    ]
                 ]
             ]);
 
-            $data = $response->json();
-
-            // BYPASS SALDO KOSONG
-            if (!$response->successful() && isset($data['error']) && str_contains(strtolower($data['error']), 'balance')) {
-                $bypassPricing = [];
-                foreach (explode(',', $couriers) as $cCode) {
-                    if (trim($cCode) !== '') {
-                        $bypassPricing[] = [
-                            'company' => trim($cCode),
-                            'courier_name' => strtoupper(trim($cCode)),
-                            'courier_service_name' => 'REG (Bypass Testing)',
-                            'price' => 15000,
-                            'duration' => '1-3 days'
-                        ];
-                    }
-                }
-                return response()->json(['success' => true, 'pricing' => $bypassPricing]);
-            }
-
-            return response()->json($data);
+            return $response->json();
 
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'error' => 'Koneksi gagal: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'error' => 'Koneksi ke server kurir gagal: ' . $e->getMessage()], 500);
         }
     }
+
     // =================================================================
     // 10. RIWAYAT PESANAN SAYA
     // =================================================================

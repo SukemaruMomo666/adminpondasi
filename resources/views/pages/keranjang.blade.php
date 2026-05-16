@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Keranjang Belanja - Pondasikita B2B</title>
+    
     {{-- Tailwind CSS CDN + Config Sesuai Tema --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -44,6 +45,8 @@
         /* Shimmer Effect for Buttons */
         @keyframes shimmer { 100% { transform: translateX(100%); } }
         .animate-shimmer { animation: shimmer 2.5s infinite; }
+        
+        .price-transition { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="flex flex-col min-h-screen text-zinc-900 antialiased pt-[80px] pb-24 lg:pb-12">
@@ -135,7 +138,6 @@
 
                     {{-- Loop Per Toko --}}
                     @foreach($groupedCart as $namaToko => $items)
-                        {{-- CLASS store-group DITAMBAHKAN DISINI UNTUK FIX JS --}}
                         <div class="store-group bg-white rounded-[2.5rem] shadow-sm border border-zinc-100 overflow-hidden group/store transition-all hover:border-blue-100">
 
                             {{-- Header Toko --}}
@@ -210,40 +212,77 @@
                     <form action="{{ route('checkout') }}" method="POST" id="checkout-form">
                         @csrf
                         <input type="hidden" name="selected_items" id="selected-items-input">
+                        {{-- Hidden input buat data voucher jika ada ke backend --}}
+                        <input type="hidden" name="voucher_code" id="input-voucher-code">
 
                         <div class="bg-white rounded-[2.5rem] shadow-premium border border-zinc-100 p-8 relative overflow-hidden">
                             {{-- Ornamen Halus --}}
                             <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full blur-2xl pointer-events-none"></div>
 
-                            <h3 class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-8 border-b border-zinc-50 pb-4">
+                            <h3 class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-8 border-b border-zinc-50 pb-4 relative z-10">
                                 Ringkasan Tagihan
                             </h3>
 
-                            <div class="space-y-4 mb-8 text-sm">
+                            {{-- Subtotal & Diskon --}}
+                            <div class="space-y-4 mb-6 text-sm relative z-10">
                                 <div class="flex justify-between items-center text-zinc-500 font-medium">
                                     <span>Total Material (<span id="summary-count" class="font-bold text-zinc-900">0</span>)</span>
                                     <span id="summary-price" class="font-bold text-zinc-900">Rp0</span>
                                 </div>
                                 <div class="flex justify-between items-center text-zinc-500 font-medium">
                                     <span>Diskon Platform</span>
-                                    <span class="font-black text-emerald-500">- Rp0</span>
+                                    <span id="summary-discount" class="font-black text-emerald-500">- Rp0</span>
                                 </div>
                             </div>
 
-                            <div class="pt-6 border-t border-zinc-100 border-dashed mb-8">
+                            {{-- ======================================================= --}}
+                            {{-- FITUR VOUCHER GLOBAL TINGKAT DEWA --}}
+                            {{-- ======================================================= --}}
+                            <div class="mb-8 border-t border-zinc-100 pt-6 relative z-10">
+                                <span class="text-[10px] font-black text-zinc-900 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                    <i class="fas fa-ticket-alt text-blue-500"></i> Makin Hemat Pakai Promo
+                                </span>
+                                
+                                {{-- Box Input Promo --}}
+                                <div id="voucher-input-box" class="flex items-center gap-2">
+                                    <div class="relative flex-1">
+                                        <input type="text" id="voucher-input" placeholder="Masukkan kode" class="w-full bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-xl focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 block px-4 py-3.5 transition-all outline-none uppercase placeholder:normal-case placeholder:font-medium placeholder:text-zinc-400">
+                                    </div>
+                                    <button type="button" onclick="applyVoucher()" id="btn-apply-voucher" class="bg-zinc-900 hover:bg-blue-600 text-white px-5 py-3.5 rounded-xl font-black transition-colors shadow-md text-[10px] uppercase tracking-widest shrink-0 w-[100px] flex justify-center items-center">
+                                        Terapkan
+                                    </button>
+                                </div>
+
+                                {{-- Pesan Notifikasi Promo --}}
+                                <div id="voucher-message" class="mt-2 hidden"></div>
+
+                                {{-- Tag Promo Terpasang --}}
+                                <div id="applied-voucher-tag" class="hidden mt-3 items-center justify-between bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px]">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                        <span class="text-xs font-black text-blue-700 uppercase tracking-wider" id="applied-voucher-code">PROMO10</span>
+                                    </div>
+                                    <button type="button" onclick="removeVoucher()" class="text-red-500 hover:text-red-700 p-1 transition-colors" title="Hapus Voucher"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+
+                            {{-- Total Harga Akhir --}}
+                            <div class="pt-6 border-t border-zinc-100 border-dashed mb-8 relative z-10">
                                 <div class="flex justify-between items-end">
                                     <span class="text-[11px] font-black text-zinc-900 uppercase tracking-widest">Total Bayar</span>
-                                    <span id="summary-total-price" class="text-3xl lg:text-4xl font-black text-zinc-900 tracking-tighter leading-none">Rp0</span>
+                                    <span id="summary-total-price" class="text-3xl lg:text-4xl font-black text-blue-600 tracking-tighter leading-none price-transition">Rp0</span>
                                 </div>
                             </div>
 
                             {{-- Tombol Checkout Desktop --}}
-                            <button type="submit" id="btn-checkout-desktop" class="hidden lg:flex group relative w-full bg-zinc-950 hover:bg-blue-600 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-xl hover:shadow-blue-500/25 hover:-translate-y-1 items-center justify-center gap-2 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-zinc-950 disabled:hover:translate-y-0 disabled:hover:shadow-none">
+                            <button type="submit" id="btn-checkout-desktop" class="hidden lg:flex group relative w-full bg-zinc-950 hover:bg-blue-600 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-xl hover:shadow-blue-500/25 hover:-translate-y-1 items-center justify-center gap-2 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-zinc-950 disabled:hover:translate-y-0 disabled:hover:shadow-none relative z-10">
                                 <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
                                 <span class="relative text-xs uppercase tracking-widest">Lanjut Pembayaran <i class="fas fa-chevron-right ml-1 text-[10px]"></i></span>
                             </button>
 
-                            <p class="text-[10px] font-bold text-zinc-400 text-center mt-6 uppercase tracking-widest">
+                            <p class="text-[10px] font-bold text-zinc-400 text-center mt-6 uppercase tracking-widest relative z-10">
                                 <i class="fas fa-shield-alt mr-1"></i> Transaksi Aman 100%
                             </p>
                         </div>
@@ -262,20 +301,24 @@
         <div class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-200 p-5 pb-safe shadow-bottom-nav z-50 lg:hidden flex items-center justify-between gap-4">
             <div class="flex flex-col flex-1 min-w-0">
                 <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Total Tagihan</span>
-                <span id="mobile-summary-total" class="text-2xl font-black text-zinc-900 tracking-tighter truncate">Rp0</span>
+                <span id="mobile-summary-total" class="text-2xl font-black text-blue-600 tracking-tighter truncate price-transition">Rp0</span>
             </div>
             <button type="button" onclick="submitCheckoutForm()" id="btn-checkout-mobile" class="w-auto px-8 bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30">
                 Checkout
             </button>
         </div>
     @endif
-    {{-- Tambahkan baris ini --}}
+    
     @include('partials.chat')
     @include('partials.footer')
 
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Variabel untuk menyimpan state Diskon Voucher
+        let currentDiscountPercent = 0; // Cth: 0.1 = 10%
+        let currentVoucherCode = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             calculateTotal();
 
@@ -286,15 +329,102 @@
                     updateMasterCheckboxState();
                 });
             });
+
+            // Enter key trigger for voucher
+            const voucherInput = document.getElementById('voucher-input');
+            if(voucherInput) {
+                voucherInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyVoucher();
+                    }
+                });
+            }
         });
 
-        // 1. Logika Checkbox Master
+        // ==========================================
+        // LOGIKA VOUCHER GLOBAL
+        // ==========================================
+        function applyVoucher() {
+            const inputEl = document.getElementById('voucher-input');
+            const code = inputEl.value.trim().toUpperCase();
+            const btn = document.getElementById('btn-apply-voucher');
+            const msg = document.getElementById('voucher-message');
+            const tag = document.getElementById('applied-voucher-tag');
+            const tagCode = document.getElementById('applied-voucher-code');
+            const inputBox = document.getElementById('voucher-input-box');
+
+            if(!code) return;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            // Simulasi Request API (Bisa diganti logika ajax sesungguhnya nanti)
+            setTimeout(() => {
+                if(code === 'PROMO10') {
+                    // Berhasil: Diskon 10%
+                    currentVoucherCode = code;
+                    currentDiscountPercent = 0.10; 
+                    
+                    msg.className = 'mt-2 text-[10px] font-bold text-emerald-600 flex items-center gap-1.5';
+                    msg.innerHTML = '<i class="fas fa-check-circle"></i> Voucher berhasil diterapkan!';
+                    msg.style.display = 'flex';
+
+                    // Update UI Input Box -> Tag Badge
+                    inputEl.value = '';
+                    inputBox.classList.add('hidden');
+                    
+                    tagCode.innerText = code;
+                    tag.classList.remove('hidden');
+                    tag.classList.add('flex');
+                    
+                    document.getElementById('input-voucher-code').value = code;
+
+                    // Kalkulasi ulang total harga
+                    calculateTotal();
+
+                } else {
+                    // Gagal
+                    msg.className = 'mt-2 text-[10px] font-bold text-red-500 flex items-center gap-1.5';
+                    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Kode voucher tidak valid atau kedaluwarsa.';
+                    msg.style.display = 'flex';
+                    inputEl.classList.add('border-red-300', 'focus:border-red-500', 'bg-red-50');
+                }
+                
+                btn.innerHTML = 'Terapkan';
+                btn.disabled = false;
+                
+                // Hilangkan pesan error setelah 3 detik
+                setTimeout(() => { 
+                    msg.style.display = 'none'; 
+                    inputEl.classList.remove('border-red-300', 'focus:border-red-500', 'bg-red-50'); 
+                }, 3000);
+
+            }, 800); // Simulasi delay API
+        }
+
+        function removeVoucher() {
+            currentVoucherCode = null;
+            currentDiscountPercent = 0;
+            document.getElementById('input-voucher-code').value = '';
+            
+            document.getElementById('applied-voucher-tag').classList.add('hidden');
+            document.getElementById('applied-voucher-tag').classList.remove('flex');
+            
+            document.getElementById('voucher-input-box').classList.remove('hidden');
+            document.getElementById('voucher-message').style.display = 'none';
+            
+            // Kalkulasi ulang tanpa diskon
+            calculateTotal();
+        }
+
+        // ==========================================
+        // LOGIKA CHECKBOX MASTER
+        // ==========================================
         function toggleAllCheckboxes(masterCb) {
             const isChecked = masterCb.checked;
             const checkboxes = document.querySelectorAll('.js-item-checkbox');
-            checkboxes.forEach(cb => {
-                cb.checked = isChecked;
-            });
+            checkboxes.forEach(cb => { cb.checked = isChecked; });
             calculateTotal();
         }
 
@@ -306,10 +436,12 @@
             masterCb.checked = (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length);
         }
 
-        // 2. Kalkulator Total Real-time
+        // ==========================================
+        // KALKULATOR TOTAL + DISKON
+        // ==========================================
         function calculateTotal() {
             let totalBarang = 0;
-            let totalHarga = 0;
+            let totalHargaAsli = 0;
             let selectedIds = [];
 
             const checkboxes = document.querySelectorAll('.js-item-checkbox:checked');
@@ -318,48 +450,61 @@
                 let price = parseInt(cb.getAttribute('data-price'));
 
                 totalBarang += qty;
-                totalHarga += (qty * price);
+                totalHargaAsli += (qty * price);
                 selectedIds.push(cb.getAttribute('data-id'));
             });
 
-            const formattedTotal = 'Rp' + totalHarga.toLocaleString('id-ID');
+            // Hitung Diskon
+            let totalDiskon = totalHargaAsli * currentDiscountPercent;
+            let totalAkhir = totalHargaAsli - totalDiskon;
 
-            // DOM Update
-            const elements = {
-                count: document.getElementById('summary-count'),
-                price: document.getElementById('summary-price'),
-                total: document.getElementById('summary-total-price'),
-                input: document.getElementById('selected-items-input'),
-                btnDesktop: document.getElementById('btn-checkout-desktop'),
-                totalMobile: document.getElementById('mobile-summary-total'),
-                btnMobile: document.getElementById('btn-checkout-mobile')
+            // Format Rupiah
+            const formatRupiah = (num) => 'Rp' + Math.round(num).toLocaleString('id-ID');
+
+            // DOM Elements
+            const elCount = document.getElementById('summary-count');
+            const elPrice = document.getElementById('summary-price');
+            const elDiscount = document.getElementById('summary-discount');
+            const elTotal = document.getElementById('summary-total-price');
+            const elInput = document.getElementById('selected-items-input');
+            const elBtnDesktop = document.getElementById('btn-checkout-desktop');
+            const elTotalMobile = document.getElementById('mobile-summary-total');
+            const elBtnMobile = document.getElementById('btn-checkout-mobile');
+
+            if(elCount) elCount.innerText = totalBarang;
+            if(elPrice) elPrice.innerText = formatRupiah(totalHargaAsli);
+            if(elDiscount) elDiscount.innerText = '- ' + formatRupiah(totalDiskon);
+
+            // Animasi transisi harga akhir
+            const animatePriceChange = (element, newText) => {
+                if(!element) return;
+                element.style.transform = 'scale(0.95)';
+                element.style.opacity = '0.5';
+                setTimeout(() => {
+                    element.innerText = newText;
+                    element.style.transform = 'scale(1)';
+                    element.style.opacity = '1';
+                }, 150);
             };
 
-            if(elements.count) elements.count.innerText = totalBarang;
-            if(elements.price) elements.price.innerText = formattedTotal;
+            animatePriceChange(elTotal, formatRupiah(totalAkhir));
+            animatePriceChange(elTotalMobile, formatRupiah(totalAkhir));
 
-            // Animasi scale untuk total harga desktop
-            if(elements.total) {
-                elements.total.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    elements.total.innerText = formattedTotal;
-                    elements.total.style.transform = 'scale(1)';
-                }, 50);
-            }
+            if(elInput) elInput.value = selectedIds.join(',');
 
-            if(elements.input) elements.input.value = selectedIds.join(',');
-            if(elements.totalMobile) elements.totalMobile.innerText = formattedTotal;
-
+            // Atur tombol Checkout aktif/nonaktif
             const isDisabled = (totalBarang === 0);
-            if(elements.btnDesktop) elements.btnDesktop.disabled = isDisabled;
-            if(elements.btnMobile) elements.btnMobile.disabled = isDisabled;
+            if(elBtnDesktop) elBtnDesktop.disabled = isDisabled;
+            if(elBtnMobile) elBtnMobile.disabled = isDisabled;
         }
 
         function submitCheckoutForm() {
             document.getElementById('checkout-form').submit();
         }
 
-        // 3. Update Kuantitas AJAX
+        // ==========================================
+        // UPDATE QUANTITY AJAX
+        // ==========================================
         async function updateQty(cartId, change) {
             const input = document.getElementById(`qty-input-${cartId}`);
             const checkbox = document.querySelector(`.js-item-checkbox[data-id="${cartId}"]`);
@@ -382,7 +527,6 @@
                 if (res.ok) {
                     input.value = newQty;
                     checkbox.setAttribute('data-qty', newQty);
-
                     input.style.transform = 'scale(1.2)';
                     setTimeout(() => input.style.transform = 'scale(1)', 150);
                     calculateTotal();
@@ -395,7 +539,9 @@
             }
         }
 
-        // 4. Hapus AJAX
+        // ==========================================
+        // HAPUS ITEM AJAX
+        // ==========================================
         function hapusItem(cartId) {
             Swal.fire({
                 title: 'Hapus Material?',
@@ -432,7 +578,6 @@
                                 if(document.querySelectorAll('.js-item-checkbox').length === 0) {
                                     window.location.reload();
                                 } else {
-                                    // LOGIKA FIX MENGHAPUS TOKO KOSONG
                                     document.querySelectorAll('.store-group').forEach(store => {
                                         const itemsInStore = store.querySelectorAll('.js-item-checkbox');
                                         if(itemsInStore.length === 0) {
