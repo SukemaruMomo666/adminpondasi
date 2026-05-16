@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http; // KUNCI: Wajib di-import untuk hit API Biteship
+use Illuminate\Support\Facades\Http; 
 
 class WebhookController extends Controller
 {
@@ -17,15 +17,13 @@ class WebhookController extends Controller
         // 1. Ambil Server Key dari tabel pengaturan
         $serverKey = DB::table('tb_pengaturan')->where('setting_nama', 'midtrans_server_key')->value('setting_nilai');
 
-        // 2. Tangkap seluruh data Payload (Notifikasi) yang dikirim Midtrans
-        $payload = $request->all();
-        
-        $orderId = $payload['order_id'] ?? '';
-        $statusCode = $payload['status_code'] ?? '';
-        $grossAmount = $payload['gross_amount'] ?? '';
-        $signatureKey = $payload['signature_key'] ?? '';
-        $transactionStatus = $payload['transaction_status'] ?? '';
-        $fraudStatus = $payload['fraud_status'] ?? 'accept';
+        // 2. Tangkap data dari Midtrans
+        $orderId = $request->order_id;
+        $statusCode = $request->status_code;
+        $grossAmount = $request->gross_amount; // Format string dari Midtrans, misal "35000.00"
+        $signatureKey = $request->signature_key;
+        $transactionStatus = $request->transaction_status;
+        $fraudStatus = $request->fraud_status ?? 'accept';
 
         // 3. RUMUS KEAMANAN (Validasi Keaslian Signature Key)
         $mySignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
@@ -43,7 +41,7 @@ class WebhookController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Pesanan tidak ditemukan'], 404);
         }
 
-        // Mencegah stok berkurang/bertambah 2x lipat jika Midtrans mengirim notif berulang
+        // Mencegah stok berkurang 2x lipat jika Midtrans mengirim notif berulang (Anti-Deadlock)
         if (in_array($transaksi->status_pembayaran, ['paid', 'failed'])) {
             return response()->json(['status' => 'success', 'message' => 'Notifikasi sudah diproses sebelumnya'], 200);
         }
@@ -63,8 +61,12 @@ class WebhookController extends Controller
                         'status_pesanan_global' => 'diproses',
                         'updated_at' => now()
                     ]);
+                    
+                    DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                        'status_pesanan_item' => 'diproses'
+                    ]);
 
-                    // --- FITUR NGURANGIN STOK BARANG ---
+                    // --- FITUR NGURANGIN STOK BARANG SECARA REALTIME ---
                     $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->get();
                     
                     foreach ($items as $item) {
@@ -73,8 +75,8 @@ class WebhookController extends Controller
                             ->decrement('stok', $item->jumlah);
                     }
 
-                    // --- FITUR AUTO-ORDER KE BITESHIP TINGKAT DEWA ---
-                    if ($transaksi->tipe_pengambilan === 'pengiriman') {
+                    // --- PANGGIL KURIR BITESHIP (Jika diperlukan) ---
+                    if ($transaksi->tipe_pengambilan === 'kurir') {
                         $this->panggilKurirBiteshipOtomatis($transaksi, $items);
                     }
                 }
@@ -91,17 +93,10 @@ class WebhookController extends Controller
                 ]);
 
                 DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
-                    'status_pesanan_item' => 'dibatalkan',
-                    'updated_at' => now()
+                    'status_pesanan_item' => 'dibatalkan'
                 ]);
 
-                // FITUR RETURN BARANG (KEMBALIKAN STOK)
-                /*
-                $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->get();
-                foreach ($items as $item) {
-                    DB::table('tb_barang')->where('id', $item->barang_id)->increment('stok', $item->jumlah);
-                }
-                */
+                // Fitur Return Barang tidak dipanggil karena stok belum dikurangi (dikurangi saat 'paid')
             }
 
             DB::commit();
@@ -160,16 +155,16 @@ class WebhookController extends Controller
                     'Content-Type'  => 'application/json'
                 ])->post('https://api.biteship.com/v1/orders', [
                     'shipper_contact_name'      => $toko->nama_toko,
-                    'shipper_contact_phone'     => $toko->no_telepon ?? '081234567890',
+                    'shipper_contact_phone'     => $toko->telepon_toko ?? '081234567890',
                     'shipper_contact_email'     => 'seller@pondasikita.com',
                     'shipper_organization'      => 'Pondasikita Seller',
-                    'origin_area_id'            => 'IDNP3171011001', // TODO: Ambil dari DB Toko
+                    'origin_area_id'            => $toko->area_id ?? 'IDNP3171011001', 
                     
                     'destination_contact_name'  => $transaksi->shipping_nama_penerima,
                     'destination_contact_phone' => $transaksi->shipping_telepon_penerima,
                     'destination_contact_email' => $user->email ?? 'buyer@pondasikita.com',
                     'destination_address'       => $transaksi->shipping_alamat_lengkap,
-                    'destination_area_id'       => 'IDNP3171011001', // TODO: Ambil dari DB Transaksi
+                    'destination_area_id'       => 'IDNP3171011001', // Bypass sementara agar auto-order tidak error
                     'destination_postal_code'   => (int) $transaksi->shipping_kode_pos,
                     
                     'courier_company'           => $courierCompany,
@@ -181,8 +176,9 @@ class WebhookController extends Controller
                 // 5. Tangkap Nomor Resi (Waybill)
                 if ($response->successful()) {
                     $resData = $response->json();
-                    if (!empty($resData['courier']['waybill_id'])) {
-                        $resiList[] = strtoupper($courierCompany) . '-' . $resData['courier']['waybill_id'];
+                    if (!empty($resData['id'])) {
+                        // Karena environment testing biteship sering tidak mengeluarkan waybill_id langsung
+                        $resiList[] = strtoupper($courierCompany) . '-' . strtoupper(substr($resData['id'], -8));
                     }
                 } else {
                     Log::error("BITESHIP CREATE ORDER ERROR (TOKO {$tokoId}): " . $response->body());
