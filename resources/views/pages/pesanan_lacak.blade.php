@@ -412,10 +412,47 @@
     {{-- Chat dipanggil di bawah agar tidak merusak head --}}
     @include('partials.chat')
 
-    {{-- MIDTRANS + SWEETALERT INTERACTION SCRIPTS --}}
+{{-- MIDTRANS SCRIPTS --}}
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ $clientKey }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        const payButton = document.getElementById('pay-button');
+        if(payButton) {
+            payButton.onclick = function(){
+                // Ubah tombol jadi loading biar keren
+                payButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membuka Midtrans...';
+                payButton.disabled = true;
+
+                snap.pay('{{ $order->snap_token }}', {
+                    onSuccess: function(result){
+                        // TRIK ENTERPRISE: Langsung hajar refresh halaman + bawa kode lunas!
+                        // PageController kita akan otomatis menangkap ini dan ngubah DB jadi 'Diproses/Dikemas'
+                        window.location.href = window.location.pathname + "?transaction_status=settlement";
+                    },
+                    onPending: function(result){
+                        Swal.fire({
+                            icon: 'info', title: 'Menunggu Pembayaran',
+                            text: 'Selesaikan transaksi di portal pembayaran (Transfer/Indomaret).',
+                            confirmButtonColor: '#0f172a',
+                            customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
+                        }).then(() => { window.location.reload(); });
+                    },
+                    onError: function(result){
+                        Swal.fire({
+                            icon: 'error', title: 'Transaksi Gagal',
+                            text: 'Pembayaran dibatalkan atau terjadi kesalahan.',
+                            customClass: { popup: 'rounded-[3rem]' }
+                        }).then(() => { window.location.reload(); });
+                    },
+                    onClose: function(){
+                        // Kembalikan tombol jika user nutup popup tanpa bayar
+                        payButton.innerHTML = '<i class="fas fa-shield-check text-blue-200"></i> Selesaikan Pembayaran';
+                        payButton.disabled = false;
+                    }
+                });
+            };
+        }
+
         // Logika Batalkan Pesanan
         function confirmCancel() {
             Swal.fire({
@@ -440,7 +477,7 @@
         function confirmReceipt() {
             Swal.fire({
                 title: 'Selesaikan Pesanan?',
-                text: "Pastikan seluruh volume material (Semen/Besi/Baja) sudah diturunkan dan dihitung sesuai invoice. Dana akan dicairkan langsung ke dompet penjual.",
+                text: "Pastikan seluruh volume material sudah diturunkan dan dihitung sesuai invoice. Dana akan dicairkan langsung ke dompet penjual.",
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#10b981',
@@ -454,48 +491,6 @@
                     document.getElementById('receipt-form').submit();
                 }
             });
-        }
-
-        // Jalur Eksekusi Midtrans Snap Popup
-        const payButton = document.getElementById('pay-button');
-        if(payButton) {
-            payButton.onclick = function(){
-                snap.pay('{{ $order->snap_token }}', {
-                    onSuccess: function(result){
-                        // KIRIM SINYAL DATA KE BACKEND LARAVEL AGAR REALTIME LUNAS
-                        fetch('{{ url("/payment/update-status") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({ order_id: '{{ $order->kode_invoice }}' })
-                        }).then(() => {
-                            Swal.fire({
-                                icon: 'success', title: 'Payment Success!',
-                                text: 'Pembayaran berhasil diverifikasi secara otomatis oleh sistem.',
-                                confirmButtonColor: '#2563eb',
-                                customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
-                            }).then(() => { window.location.reload(); });
-                        });
-                    },
-                    onPending: function(result){
-                        Swal.fire({
-                            icon: 'info', title: 'Pending Payment',
-                            text: 'Selesaikan transaksi sesuai instruksi portal pembayaran.',
-                            confirmButtonColor: '#0f172a',
-                            customClass: { popup: 'rounded-[3rem]', confirmButton: 'rounded-xl px-8 py-3' }
-                        });
-                    },
-                    onError: function(result){
-                        Swal.fire({
-                            icon: 'error', title: 'Transaction Failed',
-                            text: 'Gagal memproses transaksi. Silakan coba kembali.',
-                            customClass: { popup: 'rounded-[3rem]' }
-                        });
-                    }
-                });
-            };
         }
     </script>
 </body>
