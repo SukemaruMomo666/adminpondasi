@@ -922,8 +922,8 @@ class PageController extends Controller
             if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
                 DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
                     'status_pembayaran' => 'paid',
-                    'status_pesanan_global' => 'diproses',
-                    'updated_at' => now()
+                    'status_pesanan_global' => 'diproses'
+                    // Kolom updated_at dihapus dari sini
                 ]);
                 DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
                     'status_pesanan_item' => 'diproses'
@@ -956,8 +956,8 @@ class PageController extends Controller
             if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
                 DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
                     'status_pembayaran' => 'paid',
-                    'status_pesanan_global' => 'diproses',
-                    'updated_at' => now()
+                    'status_pesanan_global' => 'diproses'
+                    // Kolom updated_at dihapus dari sini
                 ]);
                 DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
                     'status_pesanan_item' => 'diproses'
@@ -990,19 +990,20 @@ class PageController extends Controller
         $trackingLogs[] = ['status' => 'Pesanan Dibuat', 'desc' => 'Pesanan berhasil dicatat oleh sistem.', 'time' => $order->tanggal_transaksi];
         
         if ($order->status_pembayaran == 'paid') {
-            $trackingLogs[] = ['status' => 'Pembayaran Terverifikasi', 'desc' => 'Dana telah diverifikasi oleh Midtrans.', 'time' => $order->updated_at];
+            // Karena tidak ada updated_at, kita pakai tanggal_transaksi untuk log bayar
+            $trackingLogs[] = ['status' => 'Pembayaran Terverifikasi', 'desc' => 'Dana telah diverifikasi oleh Midtrans.', 'time' => $order->tanggal_transaksi];
         }
 
         if (in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim', 'sampai_tujuan', 'selesai'])) {
-            $trackingLogs[] = ['status' => 'Pesanan Dikemas', 'desc' => 'Pesanan Anda sedang dikemas dan disiapkan oleh Penjual.', 'time' => $order->updated_at];
+            $trackingLogs[] = ['status' => 'Pesanan Dikemas', 'desc' => 'Pesanan Anda sedang dikemas dan disiapkan oleh Penjual.', 'time' => $order->tanggal_transaksi];
         }
 
         if (in_array($order->status_pesanan_global, ['dikirim', 'sampai_tujuan', 'selesai'])) {
-            $trackingLogs[] = ['status' => 'Dalam Pengiriman', 'desc' => 'Paket telah diserahkan ke pihak logistik.', 'time' => $order->updated_at];
+            $trackingLogs[] = ['status' => 'Dalam Pengiriman', 'desc' => 'Paket telah diserahkan ke pihak logistik.', 'time' => $order->tanggal_transaksi];
         }
 
         if (in_array($order->status_pesanan_global, ['selesai', 'sampai_tujuan'])) {
-            $trackingLogs[] = ['status' => 'Pesanan Selesai', 'desc' => 'Pesanan telah diterima dengan baik.', 'time' => $order->updated_at];
+            $trackingLogs[] = ['status' => 'Pesanan Selesai', 'desc' => 'Pesanan telah diterima dengan baik.', 'time' => $order->tanggal_transaksi];
         }
 
         // Urutkan dari yang terbaru (Desc) untuk UI Timeline
