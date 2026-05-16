@@ -762,12 +762,29 @@ class PageController extends Controller
         }
     }
 
+// =================================================================
+    // 10. RIWAYAT PESANAN SAYA (Dengan Auto-Catch Midtrans Redirect)
     // =================================================================
-    // 10. RIWAYAT PESANAN SAYA
-    // =================================================================
-    public function pesanan()
+    public function pesanan(Request $request)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // TANGKAP REDIRECT DARI MIDTRANS JIKA ADA (Bypass Webhook)
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $orderId = $request->order_id;
+            
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $orderId)->first();
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses', // Mengubah status menjadi "Dikemas"
+                    'updated_at' => now()
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+            }
+        }
 
         $orders = DB::table('tb_transaksi')
             ->where('user_id', Auth::id())
@@ -778,11 +795,26 @@ class PageController extends Controller
     }
 
     // =================================================================
-    // 11. DETAIL & LACAK PENGIRIMAN
+    // 11. DETAIL & LACAK PENGIRIMAN (ENTERPRISE LIFECYCLE)
     // =================================================================
-    public function lacakPesanan($kode_invoice)
+    public function lacakPesanan(Request $request, $kode_invoice)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // TANGKAP REDIRECT DARI MIDTRANS DI HALAMAN DETAIL JUGA
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $kode_invoice)->first();
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses', // Mengubah status menjadi "Dikemas"
+                    'updated_at' => now()
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+            }
+        }
 
         $order = DB::table('tb_transaksi')
             ->where('kode_invoice', $kode_invoice)
@@ -801,9 +833,29 @@ class PageController extends Controller
             ->where('setting_nama', 'midtrans_client_key')
             ->value('setting_nilai');
 
-        $trackingLogs = [
-            ['status' => 'Menunggu Pembayaran', 'desc' => 'Pesanan berhasil dibuat, silakan selesaikan pembayaran.', 'time' => $order->tanggal_transaksi],
-        ];
+        // Dinamis Berdasarkan Status Global
+        $trackingLogs = [];
+        $trackingLogs[] = ['status' => 'Pesanan Dibuat', 'desc' => 'Pesanan berhasil dicatat oleh sistem.', 'time' => $order->tanggal_transaksi];
+        
+        if ($order->status_pembayaran == 'paid') {
+            $trackingLogs[] = ['status' => 'Pembayaran Terverifikasi', 'desc' => 'Dana telah diverifikasi oleh Midtrans.', 'time' => $order->updated_at];
+        }
+
+        // PERUBAHAN TEKS: Menjadi "Pesanan Dikemas"
+        if (in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Pesanan Dikemas', 'desc' => 'Pesanan Anda sedang dikemas dan disiapkan oleh Penjual.', 'time' => $order->updated_at];
+        }
+
+        if (in_array($order->status_pesanan_global, ['dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Dalam Pengiriman', 'desc' => 'Paket telah diserahkan ke pihak logistik.', 'time' => $order->updated_at];
+        }
+
+        if (in_array($order->status_pesanan_global, ['selesai', 'sampai_tujuan'])) {
+            $trackingLogs[] = ['status' => 'Pesanan Selesai', 'desc' => 'Pesanan telah diterima dengan baik.', 'time' => $order->updated_at];
+        }
+
+        // Urutkan dari yang terbaru (Desc) untuk UI Timeline
+        $trackingLogs = array_reverse($trackingLogs);
 
         return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs'));
     }
