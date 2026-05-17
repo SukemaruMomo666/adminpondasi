@@ -1010,4 +1010,107 @@ class PageController extends Controller
 
         return response()->json(['areas' => []], 500);
     }
+
+    // =================================================================
+    // AKSI TRANSAKSI: Batalkan, Terima, & Komplain (Siklus Enterprise)
+    // =================================================================
+
+    // Aksi 1: Batalkan Pesanan (Hanya jika belum dibayar)
+    public function batalkanPesanan(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+            
+            if(!$order || $order->status_pembayaran === 'paid') {
+                return back()->with('error', 'Pesanan tidak bisa dibatalkan karena sudah dibayar atau diproses.');
+            }
+
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'dibatalkan', 'status_pembayaran' => 'failed']);
+            
+            // Kembalikan Stok Barang ke Sistem
+            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
+            foreach($items as $item) {
+                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'dibatalkan']);
+                DB::table('tb_barang')->where('id', $item->barang_id)->increment('stok', $item->jumlah);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Pesanan berhasil dibatalkan. Stok telah dikembalikan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan sistem saat membatalkan pesanan.');
+        }
+    }
+
+    // Aksi 2: Selesaikan Pesanan (Customer konfirmasi barang diterima)
+    public function terimaPesanan(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+            
+            if(!$order || !in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim'])) {
+                return back()->with('error', 'Pesanan belum bisa diselesaikan saat ini.');
+            }
+
+            // Ubah Status Jadi Selesai
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'selesai']);
+            
+            // Update detail item dan TAMBAH SALDO SELLER (Pelepasan Dana Otomatis)
+            $items = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->get();
+            foreach($items as $item) {
+                DB::table('tb_detail_transaksi')->where('id', $item->id)->update(['status_pesanan_item' => 'sampai_tujuan']);
+                
+                // Tambahkan uang subtotal belanjaan ke Dompet Toko / Penjual!
+                DB::table('tb_toko')->where('id', $item->toko_id)->increment('saldo_aktif', $item->subtotal);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Terima kasih! Pesanan telah selesai dan dana diteruskan ke pihak Penjual.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan saat menyelesaikan pesanan.');
+        }
+    }
+
+    // Aksi 3: Ajukan Pengembalian / Komplain
+    public function ajukanPengembalian(Request $request)
+    {
+        $request->validate([
+            'alasan' => 'required|string', 
+            'bukti_foto' => 'required|image'
+        ]);
+
+        try {
+            DB::beginTransaction();
+            $order = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->where('user_id', Auth::id())->first();
+
+            // Upload Foto Bukti Kerusakan
+            $fotoName = time() . '_retur.' . $request->file('bukti_foto')->extension();
+            $request->file('bukti_foto')->move(public_path('assets/uploads/komplain'), $fotoName);
+
+            $firstItem = DB::table('tb_detail_transaksi')->where('transaksi_id', $order->id)->first();
+
+            // Catat Laporan Komplain
+            DB::table('tb_komplain')->insert([
+                'transaksi_id' => $order->id,
+                'toko_id' => $firstItem->toko_id,
+                'user_id' => Auth::id(),
+                'alasan_komplain' => $request->alasan,
+                'bukti_foto_1' => $fotoName,
+                'status_komplain' => 'investigasi',
+                'created_at' => now()
+            ]);
+
+            // Bekukan status pesanan jadi "Komplain"
+            DB::table('tb_transaksi')->where('id', $order->id)->update(['status_pesanan_global' => 'komplain']);
+
+            DB::commit();
+            return back()->with('success', 'Pengajuan komplain/pengembalian berhasil dikirim ke Penjual & Admin POTA.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal mengajukan komplain.');
+        }
+    }
 }
