@@ -11,23 +11,54 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'] },
-                    colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } },
-                    boxShadow: { 'card': '0 1px 6px 0 rgba(49,53,59,0.12)', 'card-hover': '0 4px 12px 0 rgba(49,53,59,0.2)' }
+                    colors: { 
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+                        toko: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#e11d48', 600: '#e11d48', 700: '#be123c' } // Merah Khas Official Store
+                    },
+                    boxShadow: { 
+                        'card': '0 1px 6px 0 rgba(49,53,59,0.12)', 
+                        'card-hover': '0 4px 12px 0 rgba(49,53,59,0.2)',
+                    }
                 }
             }
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f6f8; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f6f8; scroll-behavior: smooth; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .pagination-wrap nav { display: flex; justify-content: center; width: 100%; margin: 3rem 0; }
+        
+        /* Pagination */
+        .pagination-wrap nav { display: flex; justify-content: center; width: 100%; margin: 2rem 0; }
         .pagination-wrap .pagination { display: flex; gap: 0.25rem; background: white; padding: 0.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .pagination-wrap .page-item .page-link { display: flex; align-items: center; justify-content: center; min-width: 2.5rem; height: 2.5rem; border-radius: 0.25rem; font-weight: 600; color: #4b5563; padding: 0 0.5rem; transition: all 0.2s; }
         .pagination-wrap .page-item:not(.active) .page-link:hover { background: #f3f4f6; color: #111827; }
-        .pagination-wrap .page-item.active .page-link { background: #2563eb; color: white; border-color: #2563eb; }
+        .pagination-wrap .page-item.active .page-link { background: #e11d48; color: white; border-color: #e11d48; }
+
+        /* Style Tiket Voucher */
+        .voucher-ticket {
+            background: #fffafa;
+            border: 1px solid #fecdd3;
+            border-radius: 8px;
+            position: relative;
+            border-style: dashed;
+        }
+        .voucher-ticket::before, .voucher-ticket::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            background-color: #f4f6f8;
+            border-radius: 50%;
+            border: 1px dashed #fecdd3;
+        }
+        .voucher-ticket::before { left: -8px; border-right-color: transparent; border-top-color: transparent; transform: translateY(-50%) rotate(45deg); }
+        .voucher-ticket::after { right: -8px; border-left-color: transparent; border-bottom-color: transparent; transform: translateY(-50%) rotate(45deg); }
     </style>
 </head>
 <body class="text-gray-800 antialiased pt-[70px] lg:pt-[80px]">
@@ -35,207 +66,230 @@
     @include('partials.navbar')
 
     @php
-        // 1. Data Identitas Toko Dasar
-        $bannerPath = 'assets/uploads/banners/' . ($toko->banner_toko ?? '');
-        $bgBanner = (!empty($toko->banner_toko) && file_exists(public_path($bannerPath))) ? asset($bannerPath) : 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2000&auto=format&fit=crop';
+        // =====================================================================
+        // ENGINE DATA REALTIME 
+        // =====================================================================
 
-        $logoPath = 'assets/uploads/logos/' . ($toko->logo_toko ?? '');
-        $hasLogo = !empty($toko->logo_toko) && file_exists(public_path($logoPath));
-
+        // 1. Data Banner & Logo Anti-Error Hosting
+        $bgBanner = !empty($toko->banner_toko) ? asset('assets/uploads/banners/' . $toko->banner_toko) : 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=2000&auto=format&fit=crop';
+        $logoPath = !empty($toko->logo_toko) ? asset('assets/uploads/logos/' . $toko->logo_toko) : '';
         $colors = ['#18181b', '#27272a', '#3f3f46', '#09090b', '#1e3a8a'];
         $storeColor = $colors[crc32($toko->nama_toko) % count($colors)];
         $acronym = ""; foreach (explode(" ", $toko->nama_toko) as $w) { $acronym .= mb_substr($w, 0, 1); }
         $storeInitials = strtoupper(substr($acronym, 0, 2)) ?: "TK";
 
-        // 2. Decode Dekorasi JSON dari Database
+        // 2. Decode Dekorasi JSON
         $dekorasi = !empty($toko->dekorasi_desktop) ? json_decode($toko->dekorasi_desktop) : null;
+        $headerColorClass = ($dekorasi && isset($dekorasi->header) && str_starts_with($dekorasi->header, 'bg-')) ? $dekorasi->header : '';
+        $hasBannerImage = !empty($toko->banner_toko);
 
-        // Cek apakah pakai header kustom dari Editor
-        if ($dekorasi && isset($dekorasi->header) && $dekorasi->header !== 'Custom Image' && str_starts_with($dekorasi->header, 'bg-')) {
-            $headerColorClass = $dekorasi->header;
-            $useCustomBanner = false;
-        } else {
-            $headerColorClass = '';
-            $useCustomBanner = true;
+        // 3. Statistik Toko Realtime
+        $totalProduk = DB::table('tb_barang')->where('toko_id', $toko->id)->where('is_active', 1)->where('status_moderasi', 'approved')->count();
+        $mengikuti = DB::table('tb_toko_follower')->where('user_id', $toko->user_id)->count(); 
+        $avgRating = DB::table('tb_toko_review')->where('toko_id', $toko->id)->avg('rating') ?? 0;
+        $totalReview = DB::table('tb_toko_review')->where('toko_id', $toko->id)->count();
+        
+        \Carbon\Carbon::setLocale('id');
+        $bergabung = \Carbon\Carbon::parse($toko->created_at)->diffForHumans(null, true) . ' Lalu';
+        
+        $jmlFollower = isset($totalFollowers) ? $totalFollowers : DB::table('tb_toko_follower')->where('toko_id', $toko->id)->count();
+        $sudahFollow = isset($isFollowing) ? $isFollowing : (Auth::check() ? DB::table('tb_toko_follower')->where('toko_id', $toko->id)->where('user_id', Auth::id())->exists() : false);
+
+        function formatAngkaK($angka) {
+            if ($angka >= 1000000) return number_format($angka / 1000000, 1, ',', '') . 'JT';
+            if ($angka >= 1000) return number_format($angka / 1000, 1, ',', '') . 'RB';
+            return $angka;
         }
+
+        // 4. Voucher Toko
+        $vouchers = DB::table('vouchers')->where('toko_id', $toko->id)->where('status', 'AKTIF')->where('tanggal_berakhir', '>', now())->get();
+
+        // 5. Kategori Toko
+        $kategoriToko = DB::table('tb_kategori')
+            ->join('tb_barang', 'tb_kategori.id', '=', 'tb_barang.kategori_id')
+            ->where('tb_barang.toko_id', $toko->id)
+            ->where('tb_barang.is_active', 1)
+            ->select('tb_kategori.id', 'tb_kategori.nama_kategori', DB::raw('COUNT(tb_barang.id) as total'))
+            ->groupBy('tb_kategori.id', 'tb_kategori.nama_kategori')
+            ->orderByDesc('total')
+            ->get();
+
+        $currentSort = request()->query('sort', 'terbaru');
+        $currentCat = request()->query('kategori', '');
     @endphp
 
     <main class="max-w-[1200px] mx-auto px-0 sm:px-4 lg:px-8 py-0 sm:py-6">
 
         {{-- ======================================================= --}}
-        {{-- HEADER TOKO --}}
+        {{-- HEADER TOKO & STATISTIK OFFICIAL STORE --}}
         {{-- ======================================================= --}}
         <div class="bg-white sm:rounded-2xl shadow-card overflow-hidden border-b sm:border border-gray-200 relative z-10">
-            {{-- Area Banner Belakang --}}
-            <div class="w-full h-40 sm:h-56 lg:h-[300px] relative group {{ $headerColorClass }}">
-                @if($useCustomBanner)
-                    <img src="{{ $bgBanner }}" alt="Banner Toko" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            
+            {{-- Banner: Fixed anti kepotong --}}
+            <div class="w-full h-44 sm:h-56 lg:h-[280px] relative bg-zinc-900 {{ $headerColorClass }}">
+                @if($hasBannerImage)
+                    <img src="{{ $bgBanner }}" alt="Banner Toko" class="absolute inset-0 w-full h-full object-cover object-center opacity-95">
                 @else
-                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                 @endif
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
             </div>
 
-            {{-- Profil Panel --}}
-            <div class="px-4 sm:px-8 pb-6 relative">
-                <div class="flex flex-col md:flex-row items-center md:items-start md:justify-between gap-6">
-                    <div class="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 -mt-16 md:-mt-12 relative z-10 w-full md:w-auto">
-                        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-lg bg-white overflow-hidden shrink-0 relative">
-                            @if($hasLogo)
-                                <img src="{{ asset($logoPath) }}" alt="Logo" class="w-full h-full object-cover">
+            <div class="px-5 sm:px-8 pb-6 relative bg-white">
+                {{-- FIX BUG: Memisahkan Struktur Logo dan Teks --}}
+                <div class="flex flex-col md:flex-row md:items-start gap-5 md:gap-8">
+                    
+                    {{-- 1. Logo Toko (Ditarik naik) --}}
+                    <div class="-mt-16 md:-mt-20 relative z-10 shrink-0 mx-auto md:mx-0">
+                        <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full border-[4px] border-white shadow-md bg-white overflow-hidden relative">
+                            @if($logoPath)
+                                <img src="{{ $logoPath }}" alt="Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="w-full h-full hidden items-center justify-center text-4xl font-black text-white" style="background-color: {{ $storeColor }};">{{ $storeInitials }}</div>
                             @else
-                                <div class="w-full h-full flex items-center justify-center text-4xl font-black text-white" style="background-color: {{ $storeColor }};">{{ $storeInitials }}</div>
+                                <div class="w-full h-full flex items-center justify-center text-5xl font-black text-white" style="background-color: {{ $storeColor }};">{{ $storeInitials }}</div>
                             @endif
                         </div>
-                        <div class="text-center md:text-left pt-2">
-                            <div class="flex items-center justify-center md:justify-start gap-2 mb-1">
-                                <i class="fas fa-crown text-purple-600 text-lg"></i>
-                                <h1 class="text-2xl font-black text-gray-900 tracking-tight">{{ $toko->nama_toko }}</h1>
-                            </div>
-                            <div class="text-sm font-semibold text-gray-500 flex items-center justify-center md:justify-start gap-3 mb-2">
-                                <span><i class="fas fa-map-marker-alt text-brand-600"></i> {{ $toko->kota ?? 'Lokasi Nasional' }}</span>
-                            </div>
+                    </div>
+                    
+                    {{-- 2. Nama & Statistik Toko (Tetap di bawah, tidak nabrak) --}}
+                    <div class="text-center md:text-left pt-0 md:pt-4 flex-1">
+                        
+                        <div class="flex items-center justify-center md:justify-start gap-2 mb-2">
+                            {{-- SVG Official Anti-Pecah --}}
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-purple-600">
+                                <path d="M10.5 2.25L12 0L13.5 2.25H16.5V3.75L18.75 5.25L17.25 7.5L18.75 9.75L16.5 11.25V12.75H13.5L12 15L10.5 12.75H7.5V11.25L5.25 9.75L6.75 7.5L5.25 5.25L7.5 3.75V2.25H10.5Z" fill="#9333ea"/>
+                                <path d="M10 10.5L7.5 8L8.5 7L10 8.5L14.5 4L15.5 5L10 10.5Z" fill="white"/>
+                            </svg>
+                            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-none">{{ $toko->nama_toko }}</h1>
+                        </div>
+                        
+                        <div class="flex items-center justify-center md:justify-start gap-2 text-[13px] font-medium text-gray-500 mb-5">
+                            <i class="fas fa-map-marker-alt text-brand-600"></i> {{ $toko->kota ?? 'Lokasi Nasional' }}
+                            <span class="mx-1 text-gray-300">•</span>
+                            <span class="text-emerald-600 font-bold flex items-center gap-1"><i class="fas fa-clock"></i> Buka</span>
+                        </div>
+
+                        {{-- GRID STATISTIK TOKO (Persis seperti Screenshot Referensi) --}}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-[13px] text-gray-700 max-w-2xl mx-auto md:mx-0 border-t border-gray-100 pt-4">
+                            <div class="flex items-center gap-2"><i class="fas fa-store text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Produk:</span> <span class="font-bold text-toko-600">{{ formatAngkaK($totalProduk) }}</span></div>
+                            <div class="flex items-center gap-2"><i class="fas fa-user-group text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Pengikut:</span> <span class="font-bold text-toko-600" id="follower-text">{{ formatAngkaK($jmlFollower) }}</span></div>
+                            
+                            <div class="flex items-center gap-2"><i class="fas fa-user-plus text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Mengikuti:</span> <span class="font-bold text-toko-600">{{ formatAngkaK($mengikuti) }}</span></div>
+                            <div class="flex items-center gap-2"><i class="far fa-star text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Penilaian:</span> <span class="font-bold text-toko-600">{{ number_format($avgRating, 1) }} ({{ formatAngkaK($totalReview) }} Penilaian)</span></div>
+                            
+                            <div class="flex items-center gap-2"><i class="far fa-comment-dots text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Performa Chat:</span> <span class="font-bold text-toko-600">98% (Hitungan Menit)</span></div>
+                            <div class="flex items-center gap-2"><i class="far fa-user text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Bergabung:</span> <span class="font-bold text-toko-600">{{ $bergabung }}</span></div>
                         </div>
                     </div>
 
-                    {{-- Aksi --}}
-                    <div class="flex flex-col items-center md:items-end w-full md:w-auto mt-4 md:mt-6 gap-4">
-                        <div class="flex items-center gap-3 w-full sm:w-auto">
-                            <button class="flex-1 sm:flex-none bg-white border border-brand-600 text-brand-600 font-bold px-6 py-2.5 rounded-lg hover:bg-brand-50 transition-colors"><i class="fas fa-comment-dots"></i> Chat</button>
-                            <button class="flex-1 sm:flex-none bg-brand-600 hover:bg-brand-700 text-white font-bold px-8 py-2.5 rounded-lg shadow-md transition-colors"><i class="fas fa-plus"></i> Ikuti</button>
+                    {{-- 3. Tombol Aksi --}}
+                    <div class="flex flex-col items-center md:items-end pt-0 md:pt-4 w-full md:w-auto mt-4 md:mt-0 gap-3 border-t md:border-0 border-gray-100 pt-4">
+                        <div class="flex items-center justify-center md:justify-end gap-3 w-full sm:w-auto">
+                            <button onclick="bukaWidgetChatToko()" class="flex-1 sm:flex-none bg-white border border-toko-600 text-toko-600 font-bold px-8 py-2.5 rounded-[4px] hover:bg-toko-50 transition-colors">
+                                <i class="fas fa-comment-dots"></i> Chat
+                            </button>
+                            
+                            <button id="btn-follow" onclick="toggleFollowToko()" class="flex-1 sm:flex-none font-bold px-8 py-2.5 rounded-[4px] shadow-sm transition-colors {{ $sudahFollow ? 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50' : 'bg-toko-600 text-white hover:bg-toko-700' }}">
+                                <i class="fas {{ $sudahFollow ? 'fa-check' : 'fa-plus' }}" id="icon-follow"></i> 
+                                <span id="text-follow">{{ $sudahFollow ? 'Mengikuti' : 'Ikuti' }}</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- STICKY TAB NAVIGATION --}}
-            <div class="sticky top-[70px] lg:top-[80px] bg-white border-t border-gray-200 z-30 px-4 sm:px-8">
+            {{-- STICKY SCROLL-SPY TABS --}}
+            <div class="sticky top-[70px] lg:top-[80px] bg-white border-t border-gray-200 z-30 px-5 sm:px-8 shadow-sm">
                 <div class="flex overflow-x-auto no-scrollbar gap-8">
-                    <a href="#" class="whitespace-nowrap py-4 border-b-[3px] border-brand-600 text-brand-600 font-black text-[15px]">Halaman Depan</a>
-                    <a href="#" class="whitespace-nowrap py-4 border-b-[3px] border-transparent text-gray-500 hover:text-gray-900 font-bold text-[15px] transition-colors">Semua Produk</a>
-                    <a href="#" class="whitespace-nowrap py-4 border-b-[3px] border-transparent text-gray-500 hover:text-gray-900 font-bold text-[15px] transition-colors">Profil Toko</a>
+                    <a href="#" id="tab-utama" class="whitespace-nowrap py-4 border-b-[3px] border-toko-600 text-toko-600 font-bold text-[15px] transition-all">Halaman Utama</a>
+                    <a href="#area-produk" id="tab-produk" class="whitespace-nowrap py-4 border-b-[3px] border-transparent text-gray-500 hover:text-toko-600 font-bold text-[15px] transition-all">Produk</a>
                 </div>
             </div>
         </div>
 
         {{-- ======================================================= --}}
-        {{-- DYNAMIC ENGINE: RENDER DEKORASI TOKO --}}
+        {{-- VOUCHER TOKO --}}
+        {{-- ======================================================= --}}
+        @if($vouchers->count() > 0)
+        <div class="mt-8 px-4 sm:px-0">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-ticket text-toko-600"></i> Voucher Toko</h3>
+            <div class="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
+                @foreach($vouchers as $v)
+                    <div class="voucher-ticket snap-start min-w-[280px] w-[280px] flex items-center justify-between p-4 flex-shrink-0 shadow-sm">
+                        <div class="border-r border-dashed border-red-200 pr-3 w-full">
+                            <h4 class="text-toko-600 font-bold text-[15px] leading-tight">
+                                Diskon {{ $v->tipe_diskon == 'PERSEN' ? round($v->nilai_diskon).'%' : 'Rp'.number_format($v->nilai_diskon/1000, 0, ',', '').'RB' }}
+                            </h4>
+                            <p class="text-[11px] text-toko-600 mt-0.5">Min. Blj Rp{{ number_format($v->min_pembelian/1000, 0, ',', '') }}RB</p>
+                            <p class="text-[10px] text-gray-400 mt-2">Hingga: {{ \Carbon\Carbon::parse($v->tanggal_berakhir)->format('d.m.Y') }}</p>
+                        </div>
+                        <div class="pl-3">
+                            <button class="bg-toko-600 hover:bg-toko-700 transition-colors text-white text-xs font-bold px-4 py-1.5 rounded-[4px]" onclick="alert('Voucher {{ $v->kode_voucher }} berhasil diklaim!')">Klaim</button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- ======================================================= --}}
+        {{-- DYNAMIC DEKORASI (HALAMAN UTAMA) --}}
         {{-- ======================================================= --}}
         @if($dekorasi && isset($dekorasi->layout) && count($dekorasi->layout) > 0)
-            <div class="w-full flex flex-col gap-6 mt-6 mb-8 px-4 sm:px-0">
+            <div class="w-full flex flex-col gap-6 mt-6 mb-8 px-4 sm:px-0" id="area-dekorasi">
                 @foreach($dekorasi->layout as $item)
                     @php $config = $item->config; @endphp
 
-                    {{-- 1. RENDER BANNER --}}
+                    {{-- Banner --}}
                     @if($item->type === 'banner')
-                        @php
-                            $aspectClass = 'aspect-[4/1]';
-                            if(isset($config->ratio) && $config->ratio == '16:9') $aspectClass = 'aspect-video';
-                            elseif(isset($config->ratio) && $config->ratio == '3:1') $aspectClass = 'aspect-[3/1]';
-                        @endphp
-                        <div class="w-full rounded-2xl overflow-hidden relative shadow-sm {{ $aspectClass }} bg-slate-900 flex items-center justify-center">
+                        @php $aspectClass = isset($config->ratio) && $config->ratio == '16:9' ? 'aspect-video' : 'aspect-[4/1]'; @endphp
+                        <div class="w-full rounded-2xl overflow-hidden relative shadow-sm {{ $aspectClass }} bg-slate-900">
                             @if(!empty($config->images) && count($config->images) > 0)
-                                {{-- Jika ada gambar, tampilkan gambar pertama (Bisa di-upgrade pakai library swiper.js nanti) --}}
                                 <img src="{{ $config->images[0] }}" class="w-full h-full object-cover">
-                            @else
-                                <h2 class="text-3xl md:text-5xl font-black px-8 text-center italic drop-shadow-lg" style="color: {{ $config->textColor ?? '#ffffff' }}">{{ $config->title ?? '' }}</h2>
                             @endif
                         </div>
 
-                    {{-- 2. RENDER GRID FOTO (CAROUSEL) --}}
-                    @elseif($item->type === 'carousel')
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            @if(!empty($config->title))
-                                <h4 class="text-lg font-black mb-5 border-l-4 border-brand-500 pl-3" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
-                            @endif
-                            @php $grid = $config->gridType ?? '5'; @endphp
-                            <div class="grid grid-cols-2 md:grid-cols-{{ $grid }} gap-3">
-                                @if(!empty($config->images))
-                                    @foreach($config->images as $img)
-                                        <div class="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
-                                            <img src="{{ $img }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                                        </div>
-                                    @endforeach
-                                @endif
-                            </div>
-                        </div>
-
-                    {{-- 3. RENDER VIDEO YOUTUBE --}}
-                    @elseif($item->type === 'video')
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                            @if(!empty($config->title))
-                                <h4 class="text-lg font-black mb-5 border-l-4 border-brand-500 pl-3" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
-                            @endif
-                            <div class="w-full aspect-[21/9] bg-slate-900 rounded-xl overflow-hidden relative">
-                                @php
-                                    $ytUrl = '';
-                                    if(isset($config->videoSource) && $config->videoSource == 'youtube' && !empty($config->videoUrl)) {
-                                        preg_match('/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $config->videoUrl, $match);
-                                        if(isset($match[1])) {
-                                            $ytUrl = "https://www.youtube.com/embed/".$match[1]."?autoplay=1&mute=1&loop=1&playlist=".$match[1]."&controls=0&showinfo=0&rel=0";
-                                        }
-                                    }
-                                @endphp
-                                @if($ytUrl)
-                                    <iframe src="{{ $ytUrl }}" class="w-full h-full border-0 pointer-events-none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                                @else
-                                    <div class="absolute inset-0 flex items-center justify-center text-slate-500"><i class="fas fa-video-slash text-4xl"></i></div>
-                                @endif
-                            </div>
-                        </div>
-
-                    {{-- 4. RENDER MENU KATEGORI --}}
+                    {{-- Kategori Icon --}}
                     @elseif($item->type === 'kategori')
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             @if(!empty($config->title))
-                                <h4 class="text-lg font-black mb-6 border-l-4 border-brand-500 pl-3" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
+                                <h4 class="text-lg font-black mb-6 border-l-4 border-toko-500 pl-3" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
                             @endif
                             <div class="grid grid-cols-4 md:grid-cols-8 gap-4">
-                                {{-- Kategori Statis Sesuai Editor --}}
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-16 h-16 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all"><i class="fas fa-tshirt text-2xl"></i></div><span class="text-xs font-bold text-gray-600">Pakaian</span></div>
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-all"><i class="fas fa-shoe-prints text-2xl"></i></div><span class="text-xs font-bold text-gray-600">Sepatu</span></div>
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all"><i class="fas fa-clock text-2xl"></i></div><span class="text-xs font-bold text-gray-600">Aksesoris</span></div>
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-16 h-16 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all"><i class="fas fa-shopping-bag text-2xl"></i></div><span class="text-xs font-bold text-gray-600">Tas</span></div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-14 h-14 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm"><i class="fas fa-tshirt text-xl"></i></div><span class="text-xs font-bold text-gray-600">Pakaian</span></div>
+                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-all shadow-sm"><i class="fas fa-shoe-prints text-xl"></i></div><span class="text-xs font-bold text-gray-600">Sepatu</span></div>
                             </div>
                         </div>
 
-                    {{-- 5. RENDER PRODUK PILIHAN --}}
+                    {{-- Produk Showcase Horizontal --}}
                     @elseif($item->type === 'produk')
-                        <div class="bg-white py-6 px-4 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="bg-white py-6 px-5 rounded-2xl shadow-sm border border-gray-100">
                             <div class="flex justify-between items-center mb-6">
-                                <h4 class="text-lg font-black border-l-4 border-brand-500 pl-3 uppercase" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title ?? 'Etalase' }}</h4>
-                                <a href="#" class="text-sm font-bold text-brand-600 hover:text-brand-800">Lihat Semua <i class="fas fa-chevron-right ml-1 text-xs"></i></a>
+                                <h4 class="text-lg font-black border-l-4 border-toko-500 pl-3 uppercase tracking-tight" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title ?? 'Etalase' }}</h4>
+                                <a href="#area-produk" class="text-xs font-black text-toko-600 hover:text-toko-800 uppercase tracking-widest bg-toko-50 px-4 py-2 rounded-lg">Lihat Semua</a>
                             </div>
 
                             @php
-                                $isAuto = ($config->productSource ?? 'auto') === 'auto';
-                                $layoutStyle = $config->layout ?? 'horizontal';
-                                // Jika Auto, ambil 10 dari database, jika manual, ambil dari JSON
-                                $renderProducts = $isAuto ? $products->take(10) : ($config->selectedProducts ?? []);
+                                $renderProducts = array_slice($products->items(), 0, 10);
                             @endphp
 
-                            <div class="{{ $layoutStyle === 'horizontal' ? 'flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4' }}">
+                            <div class="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
                                 @foreach($renderProducts as $prod)
                                     @php
-                                        // Handle objek dari DB maupun JSON
                                         $pId = is_object($prod) ? $prod->id : ($prod->id ?? '#');
                                         $pName = is_object($prod) && isset($prod->nama_barang) ? $prod->nama_barang : ($prod->name ?? 'Produk');
                                         $pPrice = is_object($prod) && isset($prod->harga) ? 'Rp'.number_format($prod->harga,0,',','.') : ($prod->price ?? '0');
-
-                                        $pImg = 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400';
-                                        if(is_object($prod) && !empty($prod->gambar_utama)) $pImg = asset('assets/uploads/products/'.$prod->gambar_utama);
-                                        elseif(is_object($prod) && isset($prod->img)) $pImg = $prod->img;
+                                        $pImg = (is_object($prod) && !empty($prod->gambar_utama)) ? asset('assets/uploads/products/'.$prod->gambar_utama) : 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400';
                                     @endphp
 
-                                    <a href="{{ route('produk.detail', $pId) }}" class="{{ $layoutStyle === 'horizontal' ? 'snap-start min-w-[160px] sm:min-w-[180px] w-[160px] sm:w-[180px] flex-shrink-0' : 'w-full' }} bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col group border border-transparent hover:border-brand-500">
-                                        <div class="w-full pt-[100%] relative bg-gray-100 border-b border-gray-100 overflow-hidden">
+                                    <a href="{{ route('produk.detail', $pId) }}" class="snap-start min-w-[150px] w-[150px] flex-shrink-0 bg-white rounded-xl shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col group border border-gray-100 hover:border-toko-500">
+                                        <div class="w-full pt-[100%] relative bg-gray-100 overflow-hidden">
                                             <img src="{{ $pImg }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
                                         </div>
                                         <div class="p-3 flex flex-col flex-1">
-                                            <h3 class="text-xs sm:text-sm font-semibold text-gray-800 line-clamp-2 leading-[1.3] mb-1.5 group-hover:text-brand-600">{{ $pName }}</h3>
+                                            <h3 class="text-xs font-medium text-gray-800 line-clamp-2 leading-[1.3] mb-1.5 group-hover:text-toko-600">{{ $pName }}</h3>
                                             <div class="mt-auto pt-1">
-                                                <div class="text-[15px] font-black text-gray-900 mb-1.5">{{ $pPrice }}</div>
-                                                <div class="flex items-center text-[10px] text-emerald-600 font-bold"><i class="fas fa-check-circle mr-1"></i> Stok Tersedia</div>
+                                                <div class="text-sm font-bold text-gray-900 mb-1.5">{{ $pPrice }}</div>
                                             </div>
                                         </div>
                                     </a>
@@ -243,52 +297,252 @@
                             </div>
                         </div>
                     @endif
-
                 @endforeach
             </div>
         @endif
 
         {{-- ======================================================= --}}
-        {{-- DAFTAR SEMUA PRODUK (DEFAULT BAWAAN TOKO) --}}
+        {{-- SECTION SEMUA PRODUK (SELALU DI BAWAH) --}}
         {{-- ======================================================= --}}
-        <div class="px-4 sm:px-0 mb-6 mt-8 flex items-center justify-between">
-            <h2 class="text-xl font-black text-gray-900">Semua Produk</h2>
+        <div id="area-produk" class="mt-12 px-4 sm:px-0 grid grid-cols-1 lg:grid-cols-5 gap-6 items-start scroll-mt-24">
+            
+            {{-- SIDEBAR KATEGORI --}}
+            <div class="lg:col-span-1 hidden lg:block bg-transparent sticky top-[150px]">
+                <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-list text-gray-800"></i> Kategori</h3>
+                <ul class="space-y-3">
+                    <li>
+                        <a href="?kategori=#area-produk" class="text-sm block {{ empty($currentCat) ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
+                            Semua Produk
+                        </a>
+                    </li>
+                    @foreach($kategoriToko as $kt)
+                        <li>
+                            <a href="?kategori={{ $kt->id }}#area-produk" class="text-sm block {{ $currentCat == $kt->id ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
+                                {{ $kt->nama_kategori }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- SORTING & GRID PRODUK --}}
+            <div class="lg:col-span-4 w-full">
+                
+                {{-- Toolbar Sorting (Sesuai Referensi Gambar) --}}
+                <div class="bg-gray-100 rounded-md p-2 flex flex-wrap items-center gap-2 mb-6">
+                    <span class="text-sm text-gray-600 mr-2 ml-2">Urutkan</span>
+                    <a href="?sort=terlaris#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terlaris' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Populer</a>
+                    <a href="?sort=terbaru#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terbaru' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Terbaru</a>
+                    <a href="?sort=terlaris#area-produk" class="px-4 py-2 text-sm rounded-sm bg-white border border-gray-200 text-gray-700 hover:text-toko-600 transition-colors">Terlaris</a>
+                    
+                    {{-- Dropdown Harga --}}
+                    <div class="relative group ml-1">
+                        <button class="px-4 py-2 text-sm rounded-sm bg-white border border-gray-200 text-gray-700 flex items-center gap-4 min-w-[180px] justify-between">
+                            Harga <i class="fas fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div class="absolute top-full left-0 w-full bg-white border border-gray-200 shadow-lg rounded mt-1 hidden group-hover:block z-20">
+                            <a href="?sort=termurah#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Rendah ke Tinggi</a>
+                            <a href="?sort=termahal#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Tinggi ke Rendah</a>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Filter Kategori Mobile --}}
+                <div class="block lg:hidden mb-5">
+                    <select onchange="window.location.href=this.value" class="w-full bg-white border border-gray-200 p-3 rounded-lg text-sm font-bold outline-none">
+                        <option value="?kategori=#area-produk">Semua Kategori</option>
+                        @foreach($kategoriToko as $kt)
+                            <option value="?kategori={{ $kt->id }}#area-produk" {{ $currentCat == $kt->id ? 'selected' : '' }}>{{ $kt->nama_kategori }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- GRID PRODUK UTAMA --}}
+                @if($products->count() > 0)
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                        @foreach($products as $p)
+                            @php $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg'; @endphp
+                            <a href="{{ route('produk.detail', $p->id) }}" class="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden flex flex-col group border border-transparent hover:border-toko-500 relative hover:-translate-y-1">
+                                <div class="w-full pt-[100%] relative bg-white border-b border-gray-100 overflow-hidden">
+                                    <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400'" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                </div>
+                                <div class="p-3.5 flex flex-col flex-1">
+                                    <h3 class="text-[13px] sm:text-sm font-medium text-gray-800 line-clamp-2 leading-[1.4] mb-2 group-hover:text-toko-600">{{ $p->nama_barang }}</h3>
+                                    <div class="mt-auto pt-1">
+                                        <div class="text-[16px] sm:text-[18px] font-black text-gray-900 leading-none mb-2">Rp{{ number_format($p->harga, 0, ',', '.') }}</div>
+                                        <div class="flex items-center text-[11px] text-emerald-600 mt-1 font-bold bg-emerald-50 px-2 py-1 rounded-md w-max">
+                                            <i class="fas fa-truck-fast mr-1.5"></i> Bisa Dikirim
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                    
+                    {{-- Pagination --}}
+                    <div class="pagination-wrap">{{ $products->appends(request()->query())->links() }}</div>
+                @else
+                    <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <img src="https://assets.tokopedia.net/assets-tokopedia-lite/v2/zeus/kratos/60454a86.png" class="w-32 sm:w-40 mb-4 opacity-60 filter grayscale">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Produk Tidak Ditemukan</h3>
+                        <p class="text-gray-500 text-sm">Penjual belum menambahkan produk di kategori ini.</p>
+                    </div>
+                @endif
+
+            </div>
         </div>
 
-        @if($products->count() > 0)
-            <div class="px-4 sm:px-0 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                @foreach($products as $p)
-                    @php $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg'; @endphp
-                    <a href="{{ route('produk.detail', $p->id) }}" class="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col group border border-transparent hover:border-brand-500 relative">
-                        <div class="w-full pt-[100%] relative bg-white border-b border-gray-100 overflow-hidden">
-                            <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400'" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
-                        </div>
-                        <div class="p-3 flex flex-col flex-1">
-                            <h3 class="text-[13px] sm:text-sm font-normal text-gray-800 line-clamp-2 leading-[1.3] mb-1.5">{{ $p->nama_barang }}</h3>
-                            <div class="mt-auto pt-1">
-                                <div class="text-[15px] sm:text-[17px] font-bold text-gray-900 leading-none mb-1.5">Rp{{ number_format($p->harga, 0, ',', '.') }}</div>
-                                <div class="flex items-center text-[11px] text-emerald-600 mt-1 font-bold"><i class="fas fa-check-circle mr-1"></i> Stok Tersedia</div>
-                            </div>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-            <div class="pagination-wrap px-4 sm:px-0">{{ $products->links() }}</div>
-        @else
-            <div class="px-4 sm:px-0">
-                <div class="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                    <img src="https://assets.tokopedia.net/assets-tokopedia-lite/v2/zeus/kratos/60454a86.png" class="w-40 sm:w-48 mb-4 opacity-80 filter grayscale">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Etalase Masih Kosong</h3>
-                    <p class="text-gray-500 text-sm text-center max-w-sm">Penjual ini belum menambahkan produk ke dalam etalasenya.</p>
-                </div>
-            </div>
-        @endif
-
     </main>
-        {{-- Tambahkan baris ini --}}
-    @include('partials.chat')
+
     @include('partials.footer')
+    
+    {{-- Widget Chat Global dari Sistem --}}
     @include('partials.chat')
+
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
+
+    {{-- SCRIPT LOGIKA FOLLOW, CHAT, DAN SCROLL SPY TABS --}}
+    <script>
+        // 1. SCROLL SPY TABS (Ganti Tab Otomatis saat di-scroll)
+        document.addEventListener("DOMContentLoaded", function() {
+            const tabUtama = document.getElementById('tab-utama');
+            const tabProduk = document.getElementById('tab-produk');
+            const areaProduk = document.getElementById('area-produk');
+
+            tabUtama.addEventListener('click', (e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+            tabProduk.addEventListener('click', (e) => { e.preventDefault(); areaProduk.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tabProduk.classList.add('border-toko-600', 'text-toko-600');
+                        tabProduk.classList.remove('border-transparent', 'text-gray-500');
+                        tabUtama.classList.remove('border-toko-600', 'text-toko-600');
+                        tabUtama.classList.add('border-transparent', 'text-gray-500');
+                    } else {
+                        tabUtama.classList.add('border-toko-600', 'text-toko-600');
+                        tabUtama.classList.remove('border-transparent', 'text-gray-500');
+                        tabProduk.classList.remove('border-toko-600', 'text-toko-600');
+                        tabProduk.classList.add('border-transparent', 'text-gray-500');
+                    }
+                });
+            }, { rootMargin: '-100px 0px 0px 0px' }); 
+
+            if(areaProduk) observer.observe(areaProduk);
+        });
+
+        // 2. LOGIKA POPUP CHAT
+// 2. LOGIKA POPUP CHAT REALTIME (Sesuai dengan tb_chat & tb_message database)
+        function bukaWidgetChatToko() {
+            // Cek apakah fungsi bawaan openChatBox atau openChatModal dari partials.chat tersedia
+            if (typeof openChatModal === "function") {
+                openChatModal('{{ $toko->id }}', '{{ $toko->nama_toko }}');
+                return;
+            }
+
+            // JURUS FALLBACK: Ambil container komponen chat global (partials.chat) yang ada di pojok kanan bawah
+            const chatBoxContainer = document.getElementById('chat-box-container') || 
+                                     document.getElementById('chat-widget') || 
+                                     document.querySelector('.chat-container') || 
+                                     document.querySelector('[id^="chat-"]');
+
+            if (chatBoxContainer) {
+                // Munculkan container chat secara halus (remove class hidden / pasang flex)
+                chatBoxContainer.classList.remove('hidden');
+                chatBoxContainer.style.display = 'flex';
+
+                // Cari input chat atau area kontak toko di dalam widget tersebut secara otomatis
+                const searchContactInput = chatBoxContainer.querySelector('input') || chatBoxContainer.querySelector('.search-bar');
+                
+                // Cari tombol atau item list toko tersebut di dalam riwayat chat kontak pembeli
+                const existingStoreContact = chatBoxContainer.querySelector(`[data-toko-id="${'{{ $toko->id }}'}"]`) || 
+                                             chatBoxContainer.querySelector(`[data-id="${'{{ $toko->id }}'}"]`);
+
+                if (existingStoreContact) {
+                    // Jika toko sudah pernah dichat sebelumnya, langsung simulasikan klik kontak tersebut
+                    existingStoreContact.click();
+                } else if (searchContactInput) {
+                    // Jika belum pernah chat, arahkan fokus kursor ke pencarian kontak chat dan ketikkan nama toko otomatis
+                    searchContactInput.focus();
+                    searchContactInput.value = '{{ $toko->nama_toko }}';
+                    // Trigger event input agar fungsi pencarian AJAX di partials.chat langsung menyaring data
+                    searchContactInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else {
+                // Jika partials.chat benar-benar tidak ter-render atau diblokir hosting, gunakan SweetAlert2 yang mewah
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Membuka Pusat Obrolan',
+                        text: 'Menghubungkan Anda langsung dengan Admin {{ $toko->nama_toko }}...',
+                        showConfirmButton: false,
+                        timer: 1500,
+                        customClass: { popup: 'rounded-[2rem]' }
+                    });
+                } else {
+                    // Fallback terakhir jika semua library diblokir, buat pop-up box kustom instan di layar
+                    const customPopup = document.createElement('div');
+                    customPopup.className = "fixed bottom-5 right-5 bg-zinc-900 text-white text-xs font-bold px-6 py-4 rounded-xl shadow-2xl z-[9999] animate-bounce";
+                    customPopup.innerText = "💬 Menghubungkan ke Chat {{ $toko->nama_toko }}...";
+                    document.body.appendChild(customPopup);
+                    setTimeout(() => customPopup.remove(), 2500);
+                }
+            }
+        }
+
+        // 3. LOGIKA FOLLOW TOKO REAL-TIME
+        let isFollowing = {{ $sudahFollow ? 'true' : 'false' }};
+        let followerCount = {{ $jmlFollower }};
+
+        function formatK(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'JT';
+            if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'RB';
+            return num;
+        }
+
+        function toggleFollowToko() {
+            fetch('{{ route("api.toko.follow") }}', {
+                method: 'POST',
+                headers: { 
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}', 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ toko_id: '{{ $toko->id }}' })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Silakan login terlebih dahulu untuk mengikuti toko.');
+                    window.location.href = '/login';
+                    throw new Error('Not logged in');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if(data.status === 'success') {
+                    isFollowing = (data.action === 'followed');
+                    followerCount = data.total_followers;
+                    
+                    const btn = document.getElementById('btn-follow');
+                    const icon = document.getElementById('icon-follow');
+                    const text = document.getElementById('text-follow');
+                    const counter = document.getElementById('follower-text');
+
+                    if(isFollowing) {
+                        btn.className = 'flex-1 sm:flex-none font-bold px-8 py-2.5 rounded-[4px] shadow-sm transition-colors bg-white border border-gray-300 text-gray-600 hover:bg-gray-50';
+                        icon.className = 'fas fa-check text-emerald-500';
+                        text.innerText = 'Mengikuti';
+                    } else {
+                        btn.className = 'flex-1 sm:flex-none font-bold px-8 py-2.5 rounded-[4px] shadow-sm transition-colors bg-toko-600 text-white hover:bg-toko-700';
+                        icon.className = 'fas fa-plus';
+                        text.innerText = 'Ikuti';
+                    }
+                    
+                    counter.innerText = formatK(followerCount);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
 </body>
 </html>

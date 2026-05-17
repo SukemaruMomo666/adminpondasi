@@ -51,6 +51,8 @@ Route::controller(PageController::class)->group(function () {
     Route::get('/pages/toko', 'detailToko')->name('toko.detail');
     Route::get('/pages/search', 'search')->name('search');
 
+    Route::post('/api/toko/follow', 'toggleFollow')->name('api.toko.follow');
+
     // Route untuk menampilkan halaman (Link yang dipanggil di halaman Login)
     Route::get('/lupa-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
         ->name('password.request');

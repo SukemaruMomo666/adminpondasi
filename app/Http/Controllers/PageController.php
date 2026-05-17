@@ -1239,4 +1239,40 @@ class PageController extends Controller
             return back()->with('error', 'Gagal mengajukan komplain.');
         }
     }
+    // API: Toggle Follow / Unfollow Toko
+    public function toggleFollow(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['status' => 'error', 'message' => 'Silakan login terlebih dahulu.'], 401);
+        }
+
+        $userId = Auth::id();
+        $tokoId = $request->toko_id;
+
+        // Cek apakah sudah follow?
+        $existing = DB::table('tb_toko_follower')->where('toko_id', $tokoId)->where('user_id', $userId)->first();
+
+        if ($existing) {
+            // Jika sudah, maka UNFOLLOW (Hapus)
+            DB::table('tb_toko_follower')->where('id', $existing->id)->delete();
+            $action = 'unfollowed';
+        } else {
+            // Jika belum, maka FOLLOW (Tambah)
+            DB::table('tb_toko_follower')->insert([
+                'toko_id' => $tokoId,
+                'user_id' => $userId,
+                'created_at' => now()
+            ]);
+            $action = 'followed';
+        }
+
+        // Ambil jumlah follower terbaru untuk di-update di layar secara realtime
+        $totalFollowers = DB::table('tb_toko_follower')->where('toko_id', $tokoId)->count();
+
+        return response()->json([
+            'status' => 'success',
+            'action' => $action,
+            'total_followers' => $totalFollowers
+        ]);
+    }
 }
