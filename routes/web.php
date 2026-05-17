@@ -89,9 +89,21 @@ Route::controller(PageController::class)->group(function () {
     Route::get('/profil-saya/ganti-password', 'gantiPassword')->name('profil.password');
     Route::post('/profil-saya/ganti-password', 'updatePassword')->name('profil.password.update');
 
-    // Status Pesanan & Lacak
-    Route::get('/pesanan-saya', 'pesanan')->name('pesanan.index');
+    // =========================================================================
+    // FITUR ENTERPRISE: Status Pesanan, Lacak, & Siklus Aksi Transaksi
+    // =========================================================================
+    // FIX: Mengubah /pesanan-saya menjadi /pesanan agar Midtrans tidak 404
+    Route::get('/pesanan', 'pesanan')->name('pesanan.index'); 
     Route::get('/pesanan/{kode_invoice}', 'lacakPesanan')->name('pesanan.lacak');
+    
+    // Aksi Interaktif Customer
+    Route::post('/pesanan/batalkan', 'batalkanPesanan')->name('pesanan.batalkan');
+    Route::post('/pesanan/terima', 'terimaPesanan')->name('pesanan.terima');
+    Route::post('/pesanan/komplain', 'ajukanPengembalian')->name('pesanan.komplain');
+    
+    // Sinyal Realtime Midtrans (Auto-Update Status)
+    Route::post('/payment/update-status', 'updatePaymentStatus')->name('payment.update_status');
+    // =========================================================================
 });
 
 // 3. AUTHENTICATION SYSTEM
@@ -281,8 +293,10 @@ Route::middleware(['auth'])->group(function () {
     // ========================================================
 });
 
-// Webhook Midtrans (Payment Gateway)
-Route::post('/webhook/midtrans', [WebhookController::class, 'midtransHandler'])->name('webhook.midtrans');
+// Webhook Midtrans (Payment Gateway) - Pengecualian CSRF Token
+Route::post('/webhook/midtrans', [WebhookController::class, 'midtransHandler'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhook.midtrans');
 
 // 7. EXTERNAL & UTILS
 Route::get('/auth/google', [\App\Http\Controllers\AuthController::class, 'redirectToGoogle'])->name('google.login');
@@ -297,4 +311,4 @@ Route::get('/bersih', function() {
     \Illuminate\Support\Facades\Artisan::call('config:clear');
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
     return "<h1>Sapu Jagat Berhasil!</h1><p>Semua memori lama sudah dihapus. Silakan cek API sekarang.</p>";
-});
+}); 

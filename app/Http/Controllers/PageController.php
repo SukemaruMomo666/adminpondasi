@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http; // Wajib untuk hit API Biteship
+use Illuminate\Support\Facades\Log; // Untuk logging Webhook Midtrans
 
 class PageController extends Controller
 {
@@ -489,7 +490,6 @@ class PageController extends Controller
             $productId = $request->input('product_id');
             $jumlah = $request->input('jumlah', 1);
 
-            // PENYEMPURNAAN: Ambil area_id toko dan active_api_couriers toko
             $item = DB::table('tb_barang as b')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
                 ->select(
@@ -528,7 +528,6 @@ class PageController extends Controller
                 return redirect()->route('keranjang.index')->with('error', 'Tidak ada barang yang dipilih untuk checkout.');
             }
 
-            // PENYEMPURNAAN: Ambil area_id toko dan active_api_couriers toko
             $items = DB::table('tb_keranjang as k')
                 ->join('tb_barang as b', 'k.barang_id', '=', 'b.id')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
@@ -621,7 +620,7 @@ class PageController extends Controller
             $biayaPengirimanReal = 0;
             $rincianKurir = [];
 
-            if ($request->input('tipe_pengambilan') === 'pengiriman' && $request->has('shipping')) {
+            if (in_array($request->input('tipe_pengambilan'), ['kurir', 'armada']) && $request->has('shipping')) {
                 foreach ($request->shipping as $tokoId => $shippingVal) {
                     if (!empty($shippingVal)) {
                         $parts = explode('_', $shippingVal);
@@ -666,7 +665,7 @@ class PageController extends Controller
                 
                 'catatan'                   => $catatanFinal,
                 'biaya_pengiriman'          => $biayaPengirimanReal,
-                'tipe_pengambilan'          => $request->input('tipe_pengambilan') ?? 'pengiriman',
+                'tipe_pengambilan'          => $request->input('tipe_pengambilan') ?? 'kurir',
                 'tanggal_transaksi'         => now()
             ]);
 
@@ -678,7 +677,8 @@ class PageController extends Controller
                     'nama_barang_saat_transaksi' => $item['nama_barang'],
                     'harga_saat_transaksi'       => $item['harga'],
                     'jumlah'                     => $item['jumlah'],
-                    'subtotal'                   => $item['subtotal']
+                    'subtotal'                   => $item['subtotal'],
+                    'status_pesanan_item'        => 'menunggu_pembayaran'
                 ]);
             }
 
@@ -714,24 +714,88 @@ class PageController extends Controller
         }
     }
 
-// =================================================================
+    // =================================================================
+    // 9.5 MIDTRANS WEBHOOK / FRONTEND CALLBACK (Status Pembayaran)
+    // =================================================================
+    public function updatePaymentStatus(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $orderId = $request->order_id;
+            
+            DB::table('tb_transaksi')->where('kode_invoice', $orderId)->update([
+                'status_pembayaran' => 'paid',
+                'status_pesanan_global' => 'diproses',
+                'updated_at' => now()
+            ]);
+
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $orderId)->first();
+            if($transaksi) {
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false], 500);
+        }
+    }
+
+    // Webhook Murni dari Server Midtrans (Opsional untuk integrasi production)
+    public function midtransWebhook(Request $request)
+    {
+        $serverKey = DB::table('tb_pengaturan')->where('setting_nama', 'midtrans_server_key')->value('setting_nilai');
+        $hashed = hash("sha512", $request->order_id . $request->status_code . $request->gross_amount . $serverKey);
+        
+        if ($hashed == $request->signature_key) {
+            if ($request->transaction_status == 'capture' || $request->transaction_status == 'settlement') {
+                $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->first();
+                if($transaksi && $transaksi->status_pembayaran != 'paid') {
+                    DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->update([
+                        'status_pembayaran' => 'paid',
+                        'status_pesanan_global' => 'diproses',
+                        'updated_at' => now()
+                    ]);
+                    DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                        'status_pesanan_item' => 'diproses'
+                    ]);
+                }
+            } elseif (in_array($request->transaction_status, ['cancel', 'deny', 'expire'])) {
+                DB::table('tb_transaksi')->where('kode_invoice', $request->order_id)->update([
+                    'status_pembayaran' => 'failed',
+                    'status_pesanan_global' => 'dibatalkan',
+                    'updated_at' => now()
+                ]);
+            }
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'invalid signature'], 403);
+    }
+
+    // =================================================================
     // API Cek Ongkir (3 Mode: Ekspedisi / Armada / Pickup)
     // =================================================================
     public function cekOngkir(Request $request)
     {
         try {
-            $tipe = $request->query('tipe', 'kurir'); // 'kurir' atau 'armada'
+            $tipe = $request->query('tipe', 'kurir');
             
             $originAreaId = $request->query('origin');
             $destinationAreaId = $request->query('destination');
             $weight = $request->query('weight', 1000);
-            $couriers = $request->query('couriers', 'jne');
             $tokoId = $request->query('toko_id');
             $destLat = $request->query('dest_lat');
             $destLng = $request->query('dest_lng');
 
+            // FIX FATAL: Bersihkan string kurir dari format JSON sisaan masa lalu 
+            $rawCouriers = $request->query('couriers', 'jne');
+            $couriers = str_replace(['[', ']', '"', "'", ' '], '', $rawCouriers);
+
             // =================================================================
-            // LOGIKA 1: PENGIRIMAN VIA ARMADA TOKO (GPS ONLY - NO API BITESHIP)
+            // LOGIKA 1: PENGIRIMAN VIA ARMADA TOKO (GPS ONLY)
             // =================================================================
             if ($tipe === 'armada') {
                 if (!$tokoId || !$destLat || !$destLng) {
@@ -809,7 +873,7 @@ class PageController extends Controller
             ])->post('https://api.biteship.com/v1/rates/couriers', [
                 'origin_area_id' => $originAreaId,
                 'destination_area_id' => $destinationAreaId,
-                'couriers' => $couriers,
+                'couriers' => $couriers, // SUDAH BERSIH
                 'items' => [
                     ['name' => 'Material Bangunan', 'value' => 50000, 'weight' => (int) $weight, 'quantity' => 1]
                 ]
@@ -820,13 +884,15 @@ class PageController extends Controller
             // BYPASS SALDO KOSONG
             if (!$response->successful() && isset($data['error']) && str_contains(strtolower($data['error']), 'balance')) {
                 $bypassPricing = [];
-                foreach (explode(',', $couriers) as $cCode) {
+                $allCouriers = explode(',', $couriers);
+                foreach ($allCouriers as $index => $cCode) {
                     if (trim($cCode) !== '') {
+                        $randomPrice = 15000 + ($index * 1000) + rand(100, 900);
                         $bypassPricing[] = [
                             'company' => trim($cCode),
                             'courier_name' => strtoupper(trim($cCode)),
                             'courier_service_name' => 'REG (Bypass Testing)',
-                            'price' => 15000,
+                            'price' => $randomPrice,
                             'duration' => '1-3 days'
                         ];
                     }
@@ -840,12 +906,33 @@ class PageController extends Controller
             return response()->json(['success' => false, 'error' => 'Koneksi gagal: ' . $e->getMessage()], 500);
         }
     }
+
+// =================================================================
+    // 10. RIWAYAT PESANAN SAYA (Dengan Auto-Catch Midtrans)
     // =================================================================
-    // 10. RIWAYAT PESANAN SAYA
-    // =================================================================
-    public function pesanan()
+    public function pesanan(Request $request)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // AUTO-CATCH DARI MIDTRANS REDIRECT (Native URL)
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $orderId = $request->order_id;
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $orderId)->first();
+            
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses'
+                    // Kolom updated_at dihapus dari sini
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+                
+                // Redirect bersih agar URL tidak kotor panjang-panjang
+                return redirect()->route('pesanan.index')->with('success', 'Pembayaran berhasil dikonfirmasi sistem!');
+            }
+        }
 
         $orders = DB::table('tb_transaksi')
             ->where('user_id', Auth::id())
@@ -856,11 +943,30 @@ class PageController extends Controller
     }
 
     // =================================================================
-    // 11. DETAIL & LACAK PENGIRIMAN
+    // 11. DETAIL, LACAK, & AKSI PESANAN (ENTERPRISE LIFECYCLE)
     // =================================================================
-    public function lacakPesanan($kode_invoice)
+    public function lacakPesanan(Request $request, $kode_invoice)
     {
         if (!Auth::check()) return redirect()->route('login');
+
+        // AUTO-CATCH DARI JS POPUP MIDTRANS (onSuccess)
+        if ($request->has('transaction_status') && in_array($request->transaction_status, ['settlement', 'capture'])) {
+            $transaksi = DB::table('tb_transaksi')->where('kode_invoice', $kode_invoice)->first();
+            
+            if ($transaksi && $transaksi->status_pembayaran !== 'paid') {
+                DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+                    'status_pembayaran' => 'paid',
+                    'status_pesanan_global' => 'diproses'
+                    // Kolom updated_at dihapus dari sini
+                ]);
+                DB::table('tb_detail_transaksi')->where('transaksi_id', $transaksi->id)->update([
+                    'status_pesanan_item' => 'diproses'
+                ]);
+
+                // Redirect bersih agar URL kembali rapi
+                return redirect()->route('pesanan.lacak', $kode_invoice)->with('success', 'Pembayaran Lunas Terverifikasi!');
+            }
+        }
 
         $order = DB::table('tb_transaksi')
             ->where('kode_invoice', $kode_invoice)
@@ -879,9 +985,29 @@ class PageController extends Controller
             ->where('setting_nama', 'midtrans_client_key')
             ->value('setting_nilai');
 
-        $trackingLogs = [
-            ['status' => 'Menunggu Pembayaran', 'desc' => 'Pesanan berhasil dibuat, silakan selesaikan pembayaran.', 'time' => $order->tanggal_transaksi],
-        ];
+        // Dinamis Berdasarkan Status Global
+        $trackingLogs = [];
+        $trackingLogs[] = ['status' => 'Pesanan Dibuat', 'desc' => 'Pesanan berhasil dicatat oleh sistem.', 'time' => $order->tanggal_transaksi];
+        
+        if ($order->status_pembayaran == 'paid') {
+            // Karena tidak ada updated_at, kita pakai tanggal_transaksi untuk log bayar
+            $trackingLogs[] = ['status' => 'Pembayaran Terverifikasi', 'desc' => 'Dana telah diverifikasi oleh Midtrans.', 'time' => $order->tanggal_transaksi];
+        }
+
+        if (in_array($order->status_pesanan_global, ['diproses', 'siap_kirim', 'dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Pesanan Dikemas', 'desc' => 'Pesanan Anda sedang dikemas dan disiapkan oleh Penjual.', 'time' => $order->tanggal_transaksi];
+        }
+
+        if (in_array($order->status_pesanan_global, ['dikirim', 'sampai_tujuan', 'selesai'])) {
+            $trackingLogs[] = ['status' => 'Dalam Pengiriman', 'desc' => 'Paket telah diserahkan ke pihak logistik.', 'time' => $order->tanggal_transaksi];
+        }
+
+        if (in_array($order->status_pesanan_global, ['selesai', 'sampai_tujuan'])) {
+            $trackingLogs[] = ['status' => 'Pesanan Selesai', 'desc' => 'Pesanan telah diterima dengan baik.', 'time' => $order->tanggal_transaksi];
+        }
+
+        // Urutkan dari yang terbaru (Desc) untuk UI Timeline
+        $trackingLogs = array_reverse($trackingLogs);
 
         return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs'));
     }
