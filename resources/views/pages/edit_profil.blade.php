@@ -67,8 +67,8 @@
 
     @include('partials.navbar')
 
-    {{-- TOP NAVIGATION BAR --}}
-    <div class="bg-white border-b border-zinc-200 sticky top-[80px] z-50 shadow-sm hidden md:block">
+{{-- TOP NAVIGATION BAR --}}
+    <div class="bg-white border-b border-zinc-200 sticky top-[80px] z-30 shadow-sm hidden md:block">
         <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <a href="{{ route('profil.index') }}" class="flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-black transition-colors group">
                 <div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center group-hover:bg-zinc-200 transition-colors">
@@ -221,9 +221,13 @@
                         </div>
                     </div>
 
-                    {{-- CARD 3: DETAIL ALAMAT PENGIRIMAN --}}
-                    <div class="bg-white rounded-[2.5rem] shadow-soft border border-zinc-200 p-6 sm:p-10 relative mb-4">
-                        <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500 rounded-l-[2.5rem]"></div>
+{{-- CARD 3: DETAIL ALAMAT PENGIRIMAN --}}
+{{-- Tambahkan border-l-8 border-l-emerald-500 langsung di bungkusnya --}}
+<div class="bg-white rounded-[2.5rem] shadow-soft border border-zinc-200 border-l-8 border-l-emerald-500 p-6 sm:p-10 relative mb-4">
+    
+    {{-- div absolute warna hijaunya DIHAPUS SAJA Bang! --}}
+    
+    <div class="mb-8 border-b border-zinc-100 pb-4">
                         
                         <div class="mb-8 border-b border-zinc-100 pb-4">
                             <h2 class="text-xl font-black text-black">Detail Pengiriman</h2>

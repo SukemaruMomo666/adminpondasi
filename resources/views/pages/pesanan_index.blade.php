@@ -122,9 +122,6 @@
 
                 @foreach($orders as $row)
                     @php
-                        // ==========================================
-                        // LOGIKA PENGELOMPOKAN TAB BARU TINGKAT DEWA
-                        // ==========================================
                         $rawStatus = $row->status_pesanan_global;
                         $filterGroup = 'semua';
                         
@@ -155,10 +152,18 @@
                             'default' => ['color' => 'bg-zinc-50 text-zinc-600 border-zinc-200', 'icon' => 'fa-circle-info'],
                         ];
                         $cfg = $statusCfg[$row->status_pesanan_global] ?? $statusCfg['default'];
+
+                        // Hitung Waktu Sisa Detik (Untuk Validasi Real-time Auto-Cancel 20 Menit)
+                        $waktuTransaksi = \Carbon\Carbon::parse($row->tanggal_transaksi);
+                        $waktuKedaluwarsa = $waktuTransaksi->copy()->addMinutes(20);
+                        $sisaDetik = now()->diffInSeconds($waktuKedaluwarsa, false);
                     @endphp
 
                     {{-- Card Pesanan --}}
-                    <div class="order-card bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden transition-all duration-300 hover:shadow-float hover:border-zinc-300 group" data-group="{{ $filterGroup }}">
+                    <div class="order-card bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden transition-all duration-300 hover:shadow-float hover:border-zinc-300 group" 
+                         data-group="{{ $filterGroup }}"
+                         data-invoice="{{ $row->kode_invoice }}"
+                         data-sisa-detik="{{ $sisaDetik }}">
                         
                         {{-- Card Header: Nomor Invoice & Status --}}
                         <div class="bg-zinc-50/70 border-b border-zinc-100 px-6 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -175,7 +180,14 @@
                                 </div>
                             </div>
 
-                            <div class="flex items-center self-start sm:self-auto">
+                            <div class="flex items-center self-start sm:self-auto gap-3">
+                                {{-- KOTAK INDIKATOR TIMER COUNTDOWN MINI --}}
+                                @if($row->status_pesanan_global == 'menunggu_pembayaran' && $sisaDetik > 0)
+                                    <div class="px-2.5 py-1 rounded bg-red-50 text-red-600 border border-red-100 text-[11px] font-black tracking-tight flex items-center gap-1">
+                                        <i class="fas fa-clock fa-pulse"></i> <span class="card-timer-text">--:--</span>
+                                    </div>
+                                @endif
+
                                 <div class="px-3 py-1.5 rounded-lg border {{ $cfg['color'] }} text-[10px] font-black tracking-widest uppercase flex items-center gap-2 shadow-sm">
                                     <i class="fas {{ $cfg['icon'] }}"></i>
                                     {{ str_replace('_', ' ', $row->status_pesanan_global) }}
@@ -242,6 +254,12 @@
 
     </main>
 
+    {{-- HIDDEN AUTO-CANCEL SECURITY TOKEN FORM --}}
+    <form id="hidden-auto-cancel-form" action="{{ url('/pesanan/batalkan') }}" method="POST" class="hidden">
+        @csrf
+        <input type="hidden" name="order_id" id="hidden-cancel-invoice">
+    </form>
+
     @include('partials.footer')
     @include('partials.chat')
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
@@ -255,7 +273,58 @@
             const emptyFilterState = document.getElementById('empty-filter-state');
             const tabContainer = document.getElementById('tab-container');
 
-            // Fungsi Utama Filtering
+            // ==============================================================
+            // CORE DEWA LOGIC: REAL-TIME AUTO-CANCEL TIMER PER CARD
+            // ==============================================================
+            cards.forEach(card => {
+                const targetGroup = card.getAttribute('data-group');
+                let sisaDetik = parseInt(card.getAttribute('data-sisa-detik') || 0);
+                const invoiceCode = card.getAttribute('data-invoice');
+                const timerTextEl = card.querySelector('.card-timer-text');
+
+                // Hanya jalankan timer jika pesanan bertipe belum dibayar
+                if (targetGroup === 'menunggu_pembayaran' && sisaDetik > 0 && timerTextEl) {
+                    const cardInterval = setInterval(() => {
+                        sisaDetik--;
+                        
+                        if (sisaDetik <= 0) {
+                            clearInterval(cardInterval);
+                            timerTextEl.innerHTML = "00:00";
+                            
+                            // 1. Amankan form dan isikan nomor invoice target pembatalan
+                            document.getElementById('hidden-cancel-invoice').value = invoiceCode;
+                            
+                            // 2. Tembakkan perintah pembatalan asinkronus ke server (Mengembalikan Stok Otomatis)
+                            const formEl = document.getElementById('hidden-auto-cancel-form');
+                            const formData = new FormData(formEl);
+                            
+                            fetch(formEl.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            }).then(() => {
+                                // 3. Sukses membebaskan stok, paksa halaman refresh demi sinkronisasi manifest data gudang
+                                window.location.reload();
+                            }).catch(err => console.error("Gagal auto-cancel asinkronus:", err));
+
+                        } else {
+                            let m = Math.floor(sisaDetik / 60);
+                            let s = Math.floor(sisaDetik % 60);
+                            timerTextEl.innerHTML = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                        }
+                    }, 1000);
+                } else if (targetGroup === 'menunggu_pembayaran' && sisaDetik <= 0) {
+                    // Jika saat reload halaman ternyata detiknya sudah habis (minus/nol) tapi status masih pending, langsung babat pembatalan!
+                    document.getElementById('hidden-cancel-invoice').value = invoiceCode;
+                    const formEl = document.getElementById('hidden-auto-cancel-form');
+                    fetch(formEl.action, { method: 'POST', body: new FormData(formEl) })
+                    .then(() => { window.location.reload(); });
+                }
+            });
+
+            // ==============================================================
+            // FRONTEND TAB FILTERING SYSTEM
+            // ==============================================================
             function filterOrders(targetStatus) {
                 let visibleCount = 0;
 
@@ -263,9 +332,8 @@
                     const cardGroup = card.getAttribute('data-group');
                     if (targetStatus === 'semua' || cardGroup === targetStatus) {
                         card.style.display = 'block';
-                        // Refresh animasi biar keren
                         card.classList.remove('animate-fade-in');
-                        void card.offsetWidth; // Trigger reflow
+                        void card.offsetWidth; // Trigger layout reflow
                         card.classList.add('animate-fade-in'); 
                         visibleCount++;
                     } else {
@@ -273,7 +341,6 @@
                     }
                 });
 
-                // Tampilkan pesan kosong jika tidak ada pesanan di tab tersebut
                 if (visibleCount === 0) {
                     emptyFilterState.classList.remove('hidden');
                 } else {
@@ -281,25 +348,20 @@
                 }
             }
 
-            // Fungsi merubah warna Tab Menu
             function updateTabStyle(activeTab) {
                 tabs.forEach(tab => {
                     if (tab === activeTab) {
-                        // Style Tab Aktif (Hitam Elegan dengan border)
                         tab.classList.add('bg-zinc-900', 'text-white', 'border-zinc-900', 'shadow-md');
                         tab.classList.remove('bg-white', 'text-zinc-500', 'border-zinc-200', 'hover:bg-zinc-50');
                     } else {
-                        // Style Tab Inaktif (Putih outline)
                         tab.classList.remove('bg-zinc-900', 'text-white', 'border-zinc-900', 'shadow-md');
                         tab.classList.add('bg-white', 'text-zinc-500', 'border-zinc-200', 'hover:bg-zinc-50');
                     }
                 });
                 
-                // Auto-scroll tab supaya yang aktif selalu kelihatan di layar HP
                 activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
 
-            // Event Listener ke setiap Tab
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     const target = tab.getAttribute('data-target');
@@ -308,7 +370,7 @@
                 });
             });
 
-            // Set Default Tab saat halaman diload (Pilih Belum Dibayar)
+            // Set Default Tab awal muat halaman otomatis mengarah ke Belum Dibayar
             const defaultTab = document.querySelector('.tab-btn[data-target="menunggu_pembayaran"]');
             if (defaultTab) {
                 updateTabStyle(defaultTab);

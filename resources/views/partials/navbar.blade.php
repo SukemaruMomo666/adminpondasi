@@ -1,5 +1,5 @@
 {{-- ========================================================
-     ABSOLUTE CINEMA NAVBAR (BUG-FIXED SHADOW BLEED)
+     ABSOLUTE CINEMA NAVBAR (BUG-FIXED SHADOW BLEED & AVATAR)
      ======================================================== --}}
 <header class="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200 shadow-[0_4px_30px_rgba(0,0,0,0.03)] h-20 transition-all duration-500 flex items-center">
     <div class="max-w-7xl mx-auto px-4 w-full flex items-center justify-between gap-4">
@@ -60,9 +60,14 @@
 
             @auth
             <a href="{{ route('profil.index') }}" class="hidden md:flex items-center gap-3 p-1.5 pr-4 rounded-full bg-zinc-50 border border-zinc-200 hover:bg-black hover:text-white transition-all group">
-                <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shadow-inner">
-                    {{ strtoupper(substr(Auth::user()->nama, 0, 1)) }}
-                </div>
+                {{-- FIX AVATAR NAVBAR ATAS --}}
+                @if(Auth::user()->profile_picture_url)
+                    <img src="{{ asset('assets/uploads/avatars/' . Auth::user()->profile_picture_url) }}" class="w-8 h-8 rounded-full object-cover shadow-inner" onerror="this.src='{{ asset('assets/uploads/avatars/person-icon-1680.png') }}'">
+                @else
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shadow-inner">
+                        {{ strtoupper(substr(Auth::user()->nama, 0, 1)) }}
+                    </div>
+                @endif
                 <span class="text-xs font-bold text-zinc-700 group-hover:text-white transition-colors truncate max-w-[80px]">
                     {{ explode(' ', Auth::user()->nama)[0] }}
                 </span>
@@ -81,7 +86,6 @@
      ======================================================== --}}
 <div id="sidebar-overlay" class="fixed inset-0 bg-zinc-950/60 backdrop-blur-md z-50 opacity-0 invisible transition-all duration-500"></div>
 
-{{-- INI KUNCI FIX-NYA: Ganti -translate-x-full jadi -translate-x-[130%] agar shadow ikut terseret keluar layar --}}
 <div id="modern-sidebar" class="fixed top-0 left-0 h-screen w-[85%] max-w-[360px] bg-[#09090b] z-[60] shadow-[30px_0_60px_rgba(0,0,0,0.5)] transform -translate-x-[130%] transition-transform duration-500 ease-[cubic-bezier(0.87,0,0.13,1)] flex flex-col border-r border-zinc-800">
 
     <div class="p-6 border-b border-zinc-800 bg-zinc-900/50 flex justify-between items-start relative overflow-hidden">
@@ -89,9 +93,14 @@
 
         @auth
             <div class="flex items-center gap-4 relative z-10">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center text-2xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] border border-blue-400/30">
-                    {{ strtoupper(substr(Auth::user()->nama, 0, 1)) }}
-                </div>
+                {{-- FIX AVATAR SIDEBAR KIRI --}}
+                @if(Auth::user()->profile_picture_url)
+                    <img src="{{ asset('assets/uploads/avatars/' . Auth::user()->profile_picture_url) }}" class="w-14 h-14 rounded-2xl object-cover shadow-[0_0_20px_rgba(37,99,235,0.4)] border border-blue-400/30" onerror="this.src='{{ asset('assets/uploads/avatars/person-icon-1680.png') }}'">
+                @else
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center text-2xl font-black shadow-[0_0_20px_rgba(37,99,235,0.4)] border border-blue-400/30">
+                        {{ strtoupper(substr(Auth::user()->nama, 0, 1)) }}
+                    </div>
+                @endif
                 <div class="flex flex-col">
                     <span class="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Selamat Datang</span>
                     <h4 class="text-lg font-black text-white mt-0.5 line-clamp-1">{{ Auth::user()->nama }}</h4>
@@ -182,7 +191,6 @@
                         </li>
                     @elseif(Auth::user()->level === 'seller')
                         <li class="mt-6 pt-6 border-t border-zinc-800">
-                            {{-- Ganti href menjadi route Laravel yang benar --}}
                             <a href="{{ route('seller.dashboard') }}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-black font-bold bg-gradient-to-r from-white to-zinc-200 hover:from-white hover:to-white transition-all shadow-[0_10px_20px_rgba(255,255,255,0.1)] group">
                                 <div class="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center">
                                     <i class="fas fa-store group-hover:scale-110 transition-transform"></i>
@@ -208,7 +216,6 @@
 
         function openSidebar(e) {
             e.preventDefault();
-            // Hapus class -translate-x-[130%] untuk memunculkan menu
             sidebar.classList.remove('-translate-x-[130%]');
             overlay.classList.remove('opacity-0', 'invisible');
             overlay.classList.add('opacity-100', 'visible');
@@ -216,7 +223,6 @@
         }
 
         function closeSidebar() {
-            // Tambahkan class -translate-x-[130%] untuk membuang jauh bayangannya
             sidebar.classList.add('-translate-x-[130%]');
             overlay.classList.remove('opacity-100', 'visible');
             overlay.classList.add('opacity-0', 'invisible');
