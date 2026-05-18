@@ -13,6 +13,10 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+                        surface: '#fcfcfd',
+                    },
                     boxShadow: {
                         'soft': '0 4px 40px -4px rgba(0,0,0,0.03)',
                         'float': '0 10px 30px -5px rgba(0,0,0,0.08)',
@@ -57,7 +61,9 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-zinc-800 antialiased pt-[80px] pb-32">
+
+{{-- FIX 1: HAPUS pb-32 agar gak ada space bolong di bawah footer --}}
+<body class="text-zinc-800 antialiased pt-[80px] flex flex-col min-h-screen">
 
     @include('partials.navbar')
 
@@ -83,7 +89,8 @@
         </a>
     </div>
 
-    <main class="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 md:py-10">
+    {{-- FIX 2: Ganti mb-24 jadi pb-32 supaya konten gak ketutupan floating bar, tapi footer tetep nempel --}}
+    <main class="flex-grow w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-6 md:py-10 pb-32">
         
         {{-- BLOK ERROR JIKA VALIDASI GAGAL --}}
         @if ($errors->any())
@@ -214,10 +221,10 @@
                         </div>
                     </div>
 
-{{-- CARD 3: DETAIL ALAMAT PENGIRIMAN --}}
-<div class="bg-white rounded-[2.5rem] shadow-soft border border-zinc-200 p-6 sm:p-10 relative mb-4">
-    {{-- Tambahkan rounded-l-[2.5rem] di sini karena overflow-hidden dihapus --}}
-    <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500 rounded-l-[2.5rem]"></div>
+                    {{-- CARD 3: DETAIL ALAMAT PENGIRIMAN --}}
+                    <div class="bg-white rounded-[2.5rem] shadow-soft border border-zinc-200 p-6 sm:p-10 relative mb-4">
+                        <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500 rounded-l-[2.5rem]"></div>
+                        
                         <div class="mb-8 border-b border-zinc-100 pb-4">
                             <h2 class="text-xl font-black text-black">Detail Pengiriman</h2>
                             <p class="text-sm text-zinc-500 mt-1">Lengkapi data untuk keperluan resi ekspedisi.</p>
@@ -284,7 +291,7 @@
                                     <input type="hidden" name="area_id" id="area_id" value="{{ old('area_id', $alamatUtama->area_id ?? '') }}" required>
                                     
                                     <ul id="area_results" class="absolute z-[1000] w-full bg-white border border-zinc-200 rounded-xl shadow-lg mt-1 hidden max-h-60 overflow-y-auto custom-scrollbar">
-                                        </ul>
+                                    </ul>
                                 </div>
                                 <p class="text-[10px] text-zinc-500 mt-2 font-medium"><i class="fas fa-info-circle text-blue-500"></i> Klik hasil yang muncul di kotak dropdown agar <strong>area_id</strong> tersimpan dan ongkir bisa dihitung.</p>
                             </div>
@@ -294,26 +301,30 @@
                 </div>
             </div>
 
-            {{-- FLOATING BOTTOM BAR --}}
-            <div class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-200 p-4 sm:p-5 shadow-sticky-bottom z-[600] transform transition-transform duration-300">
-                <div class="max-w-[1200px] mx-auto flex items-center justify-between gap-4">
-                    <div class="hidden md:flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg"><i class="fas fa-shield-check"></i></div>
-                        <div>
-                            <h4 class="font-bold text-black text-sm leading-none mb-1">Keamanan Data</h4>
-                            <p class="text-[10px] text-zinc-500 font-medium">Data dienkripsi secara end-to-end.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 w-full md:w-auto">
-                        <a href="{{ route('profil.index') }}" class="flex-1 md:flex-none bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold py-3.5 px-6 rounded-xl transition-colors text-center text-sm">Batalkan</a>
-                        <button type="submit" id="btnSubmit" class="flex-1 md:flex-none bg-black hover:bg-blue-600 text-white font-black py-3.5 px-10 rounded-xl shadow-glow hover:-translate-y-1 transition-all duration-300 text-sm flex items-center justify-center gap-2">
-                            <i class="fas fa-save"></i> Simpan Data Pribadi
-                        </button>
-                    </div>
-                </div>
-            </div>
+</div>
+            {{-- Formnya kita tutup di sini aja Bang --}}
         </form>
     </main>
+{{-- NATIVE CSS STICKY BOTTOM BAR --}}
+    <div class="sticky bottom-0 w-full bg-white/95 backdrop-blur-xl border-t border-zinc-200 p-4 sm:p-5 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-10">
+        <div class="max-w-[1200px] mx-auto flex items-center justify-between gap-4">
+            <div class="hidden md:flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg"><i class="fas fa-shield-check"></i></div>
+                <div>
+                    <h4 class="font-bold text-black text-sm leading-none mb-1">Keamanan Data</h4>
+                    <p class="text-[10px] text-zinc-500 font-medium">Data dienkripsi secara end-to-end.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <a href="{{ route('profil.index') }}" class="flex-1 md:flex-none bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold py-3.5 px-6 rounded-xl transition-colors text-center text-sm">Batalkan</a>
+                
+                {{-- HTML5 TRICK: Pakai form="editProfileForm" agar tombol ini tetap bisa nge-submit form meskipun posisinya ada di luar tag <form>! --}}
+                <button type="submit" form="editProfileForm" id="btnSubmit" class="flex-1 md:flex-none bg-black hover:bg-blue-600 text-white font-black py-3.5 px-10 rounded-xl shadow-glow hover:-translate-y-1 transition-all duration-300 text-sm flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> Simpan Data Pribadi
+                </button>
+            </div>
+        </div>
+    </div>
 
     @include('partials.footer')
 
@@ -345,7 +356,6 @@
             const form = document.getElementById('editProfileForm');
             const btnSubmit = document.getElementById('btnSubmit');
             form.addEventListener('submit', function() {
-                // Biarkan form tersubmit, kita hanya visualisasi tombol
                 setTimeout(() => {
                     btnSubmit.disabled = true;
                     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
@@ -380,7 +390,7 @@
                             `;
                             li.addEventListener('click', () => {
                                 searchInput.value = `${area.name}, ${area.administrative_division_level_2_name}`;
-                                areaIdInput.value = area.id; // Menyimpan area_id (misal: IDNPxxx)
+                                areaIdInput.value = area.id; 
                                 resultsList.classList.add('hidden');
                             });
                             resultsList.appendChild(li);
@@ -411,7 +421,6 @@
                 }, 800);
             });
 
-            // Tutup dropdown jika klik di luar
             document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !resultsList.contains(e.target)) {
                     resultsList.classList.add('hidden');
@@ -509,6 +518,28 @@
             };
 
             setTimeout(() => { map.invalidateSize(); }, 500);
+        }); // <--- FIX 3: PENUTUP DOMContentLoaded YANG HILANG!
+
+        // ========================================================
+        // LOGIKA PINTAR: FLOATING BAR BERHENTI DI ATAS FOOTER
+        // ========================================================
+        document.addEventListener('scroll', function() {
+            const floatingBar = document.getElementById('floating-bottom-bar');
+            const footer = document.querySelector('footer'); 
+
+            if (floatingBar && footer) {
+                const footerRect = footer.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                // Jika bagian atas footer mulai masuk/terlihat di layar (viewport)
+                if (footerRect.top < windowHeight) {
+                    // Dorong floating bar ke atas secara instan sejauh porsi footer yang terlihat
+                    floatingBar.style.transform = `translateY(-${windowHeight - footerRect.top}px)`;
+                } else {
+                    // Kembalikan ke posisi normal (nempel di bawah layar)
+                    floatingBar.style.transform = 'translateY(0)';
+                }
+            }
         });
     </script>
 </body>

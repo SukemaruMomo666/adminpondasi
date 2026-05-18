@@ -328,8 +328,8 @@ class PageController extends Controller
         return view('pages.semua_toko', compact('locations', 'stores', 'filter_lokasi', 'allMapStores', 'lat', 'lng'));
     }
 
-    // =================================================================
-    // 5. HALAMAN PROFIL TOKO 
+// =================================================================
+    // 5. HALAMAN PROFIL TOKO (DENGAN FILTER & SORTING DEWA)
     // =================================================================
     public function detailToko(Request $request)
     {
@@ -341,9 +341,7 @@ class PageController extends Controller
             ->where('t.status', 'active')
             ->first();
 
-        if (!$toko) {
-            abort(404, 'Toko tidak ditemukan atau sedang tidak aktif.');
-        }
+        if (!$toko) { abort(404, 'Toko tidak ditemukan atau sedang tidak aktif.'); }
 
         $colors = ['#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047', '#7cb342', '#c0ca33', '#fdd835', '#ffb300', '#fb8c00', '#f4511e'];
         $storeColor = $colors[crc32($toko->nama_toko) % count($colors)];
@@ -354,15 +352,40 @@ class PageController extends Controller
         $storeInitials = strtoupper(substr($acronym, 0, 2));
         if (empty($storeInitials)) { $storeInitials = "TK"; }
 
-        $products = DB::table('tb_barang as b')
+        // --- CORE: LOGIKA FILTER KATEGORI & SORTING ---
+        $query = DB::table('tb_barang as b')
             ->where('b.toko_id', $toko->id)
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
-            ->paginate(12);
+            ->select('b.*');
+
+        // 1. Filter Kategori
+        if ($request->filled('kategori')) {
+            $query->where('b.kategori_id', $request->kategori);
+        }
+
+        // 2. Sorting Harga & Terlaris
+        if ($request->filled('sort')) {
+            if ($request->sort == 'termurah') {
+                $query->orderBy('b.harga', 'ASC');
+            } elseif ($request->sort == 'termahal') {
+                $query->orderBy('b.harga', 'DESC');
+            } elseif ($request->sort == 'terlaris') {
+                $query->selectRaw("(SELECT COALESCE(SUM(jumlah), 0) FROM tb_detail_transaksi WHERE barang_id = b.id AND status_pesanan_item NOT IN ('dibatalkan')) as stok_terjual")
+                      ->orderBy('stok_terjual', 'DESC');
+            } else {
+                $query->orderBy('b.created_at', 'DESC'); // terbaru
+            }
+        } else {
+            $query->orderBy('b.created_at', 'DESC'); // Default awal
+        }
+
+        // Tetap menempelkan query (slug, kategori, sort) di link pagination
+        $products = $query->paginate(12)->appends($request->query());
+        // ----------------------------------------------
 
         return view('pages.detail_toko', compact('toko', 'products', 'storeColor', 'storeInitials'));
     }
-
     // =================================================================
     // 6. HALAMAN KERANJANG
     // =================================================================
@@ -447,7 +470,7 @@ class PageController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    // =================================================================
+// =================================================================
     // 8. HALAMAN CHECKOUT (Sempurna: Sinkronisasi Lokasi & Kurir Seller)
     // =================================================================
     public function checkout(Request $request)
@@ -564,7 +587,7 @@ class PageController extends Controller
     }
 
     // =================================================================
-    // 9. PROSES CHECKOUT (ALUR REDIRECT SECURE BACKEND)
+    // 9. PROSES CHECKOUT (MARKETPLACE / MULTI-VENDOR LOGIC)
     // =================================================================
     public function prosesCheckout(Request $request)
     {
@@ -575,83 +598,132 @@ class PageController extends Controller
             $orderId = 'INV-' . time() . '-' . rand(100, 999);
 
             $totalProdukReal = 0;
+            $totalDiskonReal = 0;
+            $biayaPengirimanReal = 0;
+            $rincianKurir = [];
             $itemsToProcess = [];
 
+            // 1. KUMPULKAN BARANG
             if ($request->has('direct_purchase')) {
                 $produk = DB::table('tb_barang')->where('id', $request->input('product_id'))->first();
                 if ($produk) {
                     $qty = $request->input('jumlah', 1);
-                    $subtotal = $produk->harga * $qty;
-                    $totalProdukReal += $subtotal;
-                    
                     $itemsToProcess[] = [
-                        'toko_id' => $produk->toko_id,
-                        'barang_id' => $produk->id,
-                        'nama_barang' => $produk->nama_barang,
-                        'harga' => $produk->harga,
-                        'jumlah' => $qty,
-                        'subtotal' => $subtotal
+                        'toko_id' => $produk->toko_id, 'barang_id' => $produk->id,
+                        'nama_barang' => $produk->nama_barang, 'harga' => $produk->harga,
+                        'jumlah' => $qty, 'subtotal' => $produk->harga * $qty
                     ];
                 }
             } else {
                 $selectedIds = is_array($request->selected_items) ? $request->selected_items : explode(',', $request->selected_items);
                 $keranjangs = DB::table('tb_keranjang')
                     ->join('tb_barang', 'tb_keranjang.barang_id', '=', 'tb_barang.id')
-                    ->whereIn('tb_keranjang.id', $selectedIds)
-                    ->where('tb_keranjang.user_id', $user->id)
+                    ->whereIn('tb_keranjang.id', $selectedIds)->where('tb_keranjang.user_id', $user->id)
                     ->select('tb_keranjang.*', 'tb_barang.toko_id', 'tb_barang.harga', 'tb_barang.nama_barang')
                     ->get();
-
                 foreach ($keranjangs as $item) {
-                    $subtotal = $item->harga * $item->jumlah;
-                    $totalProdukReal += $subtotal;
-                    
                     $itemsToProcess[] = [
-                        'toko_id' => $item->toko_id,
-                        'barang_id' => $item->barang_id,
-                        'nama_barang' => $item->nama_barang,
-                        'harga' => $item->harga,
-                        'jumlah' => $item->jumlah,
-                        'subtotal' => $subtotal
+                        'toko_id' => $item->toko_id, 'barang_id' => $item->barang_id,
+                        'nama_barang' => $item->nama_barang, 'harga' => $item->harga,
+                        'jumlah' => $item->jumlah, 'subtotal' => $item->harga * $item->jumlah
                     ];
                 }
             }
 
-            $biayaPengirimanReal = 0;
-            $rincianKurir = [];
+            // 2. KELOMPOKKAN BERDASARKAN TOKO
+            $itemsPerToko = [];
+            foreach ($itemsToProcess as $item) {
+                $itemsPerToko[$item['toko_id']]['items'][] = $item;
+                if (!isset($itemsPerToko[$item['toko_id']]['subtotal'])) $itemsPerToko[$item['toko_id']]['subtotal'] = 0;
+                $itemsPerToko[$item['toko_id']]['subtotal'] += $item['subtotal'];
+            }
 
-            if (in_array($request->input('tipe_pengambilan'), ['kurir', 'armada']) && $request->has('shipping')) {
-                foreach ($request->shipping as $tokoId => $shippingVal) {
+            $tipePengambilan = $request->input('tipe_pengambilan') ?? 'kurir';
+            $detailTransaksiData = [];
+            
+            // 3. PROSES ONGKIR, VOUCHER, & CATATAN KHUSUS PER-TOKO (THE MAGIC!)
+            foreach ($itemsPerToko as $tokoId => $dataToko) {
+                $ongkirToko = 0; 
+                $kurirToko = NULL;
+                
+                // EKSTRAK ONGKIR TOKO INI
+                if (in_array($tipePengambilan, ['kurir', 'armada']) && $request->has("shipping.$tokoId")) {
+                    $shippingVal = $request->input("shipping.$tokoId");
                     if (!empty($shippingVal)) {
                         $parts = explode('_', $shippingVal);
-                        $hargaOngkir = (int) end($parts);
-                        $biayaPengirimanReal += $hargaOngkir;
-                        
-                        $namaKurir = str_replace("_" . $hargaOngkir, "", $shippingVal);
-                        $rincianKurir[] = "TokoID-$tokoId: " . strtoupper($namaKurir) . " (Rp " . number_format($hargaOngkir, 0, ',', '.') . ")";
+                        $ongkirToko = (int) end($parts);
+                        $kurirToko = strtoupper(str_replace("_" . $ongkirToko, "", $shippingVal));
+                        $biayaPengirimanReal += $ongkirToko;
+                        $rincianKurir[] = "Toko-$tokoId: " . $kurirToko . " (Rp" . number_format($ongkirToko, 0, ',', '.') . ")";
                     }
+                }
+
+                // EKSTRAK & VALIDASI VOUCHER TOKO INI DI DATABASE
+                $diskonToko = 0;
+                if ($request->has("voucher_toko.$tokoId") && !empty($request->input("voucher_toko.$tokoId"))) {
+                    $voucherCode = $request->input("voucher_toko.$tokoId");
+                    $cekVoucher = DB::table('vouchers')
+                        ->where('kode_voucher', $voucherCode)->where('toko_id', $tokoId)->where('status', 'AKTIF')
+                        ->where('tanggal_berakhir', '>', now())->where('min_pembelian', '<=', $dataToko['subtotal'])
+                        ->first();
+                        
+                    if ($cekVoucher) {
+                        if ($cekVoucher->tipe_diskon == 'PERSEN') {
+                            $diskonHitung = $dataToko['subtotal'] * ($cekVoucher->nilai_diskon / 100);
+                            $diskonToko = ($cekVoucher->maks_diskon && $diskonHitung > $cekVoucher->maks_diskon) ? $cekVoucher->maks_diskon : $diskonHitung;
+                        } else { 
+                            $diskonToko = $cekVoucher->nilai_diskon; 
+                        }
+                        $totalDiskonReal += $diskonToko;
+                        // Kurangi kuota voucher di database!
+                        DB::table('vouchers')->where('id', $cekVoucher->id)->increment('kuota_terpakai');
+                    }
+                }
+
+                // EKSTRAK CATATAN PEMBELI UNTUK TOKO INI
+                $catatanToko = $request->input("catatan_pembeli.$tokoId");
+
+// SUSUN DETAIL TRANSAKSI & AMANKAN STOK
+                foreach ($dataToko['items'] as $index => $item) {
+                    
+                    // CEK & POTONG STOK (MENGAMANKAN STOK SELAMA 20 MENIT)
+                    $cekStok = DB::table('tb_barang')->where('id', $item['barang_id'])->first();
+                    if(!$cekStok || $cekStok->stok < $item['jumlah']) {
+                        throw new \Exception('Gagal: Stok "' . $item['nama_barang'] . '" tidak cukup / baru saja dibeli orang lain.');
+                    }
+                    // Kurangi stok sekarang juga!
+                    DB::table('tb_barang')->where('id', $item['barang_id'])->decrement('stok', $item['jumlah']);
+                    
+                    $totalProdukReal += $item['subtotal'];
+                    $detailTransaksiData[] = [
+                        'transaksi_id'               => null, // Diupdate di bawah setelah master transaksi dibuat
+                        'toko_id'                    => $item['toko_id'],
+                        'barang_id'                  => $item['barang_id'],
+                        'nama_barang_saat_transaksi' => $item['nama_barang'],
+                        'harga_saat_transaksi'       => $item['harga'],
+                        'jumlah'                     => $item['jumlah'],
+                        'subtotal'                   => $item['subtotal'],
+                        'metode_pengiriman'          => strtoupper($tipePengambilan),
+                        'kurir_terpilih'             => $kurirToko,
+                        'biaya_pengiriman_item'      => ($index == 0) ? $ongkirToko : 0, 
+                        'catatan_pembeli'            => $catatanToko, 
+                        'status_pesanan_item'        => 'menunggu_pembayaran'
+                    ];
                 }
             }
 
-            $totalDiskon = (float) $request->input('total_diskon', 0);
-            if($totalDiskon > $totalProdukReal) $totalDiskon = 0;
+            $grandTotalReal = $totalProdukReal - $totalDiskonReal + $biayaPengirimanReal;
 
-            $grandTotalReal = $totalProdukReal - $totalDiskon + $biayaPengirimanReal;
-
-            $catatanFinal = $request->input('catatan');
-            if(!empty($rincianKurir)) {
-                $catatanFinal .= " | Kurir Pilihan: " . implode(', ', $rincianKurir);
-            }
-
+            // 4. INSERT GLOBAL TRANSAKSI
             $transaksiId = DB::table('tb_transaksi')->insertGetId([
-                'kode_invoice'              => $orderId,
-                'sumber_transaksi'          => 'ONLINE',
+                'kode_invoice'              => $orderId, 
+                'sumber_transaksi'          => 'ONLINE', 
                 'user_id'                   => $user->id,
-                'total_harga_produk'        => $totalProdukReal,
-                'total_diskon'              => $totalDiskon,
+                'total_harga_produk'        => $totalProdukReal, 
+                'total_diskon'              => $totalDiskonReal, 
                 'total_final'               => $grandTotalReal,
-                'tipe_pembayaran'           => 'LUNAS',
-                'status_pembayaran'         => 'pending',
+                'tipe_pembayaran'           => 'LUNAS', 
+                'status_pembayaran'         => 'pending', 
                 'status_pesanan_global'     => 'menunggu_pembayaran',
                 
                 'shipping_label_alamat'     => $request->input('shipping_label_alamat'),
@@ -663,34 +735,27 @@ class PageController extends Controller
                 'shipping_provinsi'         => $request->input('shipping_provinsi'),
                 'shipping_kode_pos'         => $request->input('shipping_kode_pos'),
                 
-                'catatan'                   => $catatanFinal,
-                'biaya_pengiriman'          => $biayaPengirimanReal,
-                'tipe_pengambilan'          => $request->input('tipe_pengambilan') ?? 'kurir',
+                'catatan'                   => 'Marketplace Multi-Vendor Order. ' . implode(', ', $rincianKurir),
+                'biaya_pengiriman'          => $biayaPengirimanReal, 
+                'tipe_pengambilan'          => $tipePengambilan,
                 'tanggal_transaksi'         => now()
             ]);
 
-            foreach ($itemsToProcess as $item) {
-                DB::table('tb_detail_transaksi')->insert([
-                    'transaksi_id'               => $transaksiId,
-                    'toko_id'                    => $item['toko_id'],
-                    'barang_id'                  => $item['barang_id'],
-                    'nama_barang_saat_transaksi' => $item['nama_barang'],
-                    'harga_saat_transaksi'       => $item['harga'],
-                    'jumlah'                     => $item['jumlah'],
-                    'subtotal'                   => $item['subtotal'],
-                    'status_pesanan_item'        => 'menunggu_pembayaran'
-                ]);
-            }
+            // 5. RELASIKAN TRANSAKSI ID LALU INSERT KE DETAIL
+            foreach ($detailTransaksiData as &$d) { $d['transaksi_id'] = $transaksiId; }
+            DB::table('tb_detail_transaksi')->insert($detailTransaksiData);
 
+            // 6. HAPUS KERANJANG
             if (!$request->has('direct_purchase')) {
                 $selectedIds = is_array($request->selected_items) ? $request->selected_items : explode(',', $request->selected_items);
                 DB::table('tb_keranjang')->where('user_id', $user->id)->whereIn('id', $selectedIds)->delete();
             }
 
+            // 7. MIDTRANS GATEWAY
             $settings = DB::table('tb_pengaturan')->whereIn('setting_nama', ['midtrans_server_key', 'midtrans_is_production'])->pluck('setting_nilai', 'setting_nama');
             \Midtrans\Config::$serverKey = $settings['midtrans_server_key'] ?? '';
             \Midtrans\Config::$isProduction = ($settings['midtrans_is_production'] ?? '0') == '1';
-            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$isSanitized = true; 
             \Midtrans\Config::$is3ds = true;
 
             $snapToken = \Midtrans\Snap::getSnapToken([
@@ -705,7 +770,6 @@ class PageController extends Controller
             DB::table('tb_transaksi')->where('id', $transaksiId)->update(['snap_token' => $snapToken]);
 
             DB::commit();
-
             return response()->json(['status' => 'success', 'kode_invoice' => $orderId]);
 
         } catch (\Exception $e) {
@@ -713,7 +777,6 @@ class PageController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Kesalahan Sistem: ' . $e->getMessage()], 500);
         }
     }
-
     // =================================================================
     // 9.5 MIDTRANS WEBHOOK / FRONTEND CALLBACK (Status Pembayaran)
     // =================================================================

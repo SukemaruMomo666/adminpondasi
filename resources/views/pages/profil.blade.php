@@ -40,7 +40,8 @@
         .bg-mesh { background-image: radial-gradient(at 80% 0%, hsla(225,100%,56%,0.15) 0px, transparent 50%), radial-gradient(at 0% 100%, hsla(240,100%,70%,0.1) 0px, transparent 50%); }
     </style>
 </head>
-<body class="text-zinc-800 antialiased pt-[80px] pb-20">
+{{-- FIX 1: Hapus pb-20, tambahkan flex, flex-col, dan min-h-screen --}}
+<body class="text-zinc-800 antialiased pt-[80px] flex flex-col min-h-screen">
 
     {{-- Include Navbar --}}
     @include('partials.navbar')
@@ -56,7 +57,8 @@
         </div>
     </div>
 
-    <main class="max-w-[1100px] mx-auto px-4 sm:px-6 py-8 lg:py-12">
+    {{-- FIX 2: Tambahkan flex-grow dan w-full agar main content mendorong footer ke bawah --}}
+    <main class="flex-grow w-full max-w-[1100px] mx-auto px-4 sm:px-6 py-8 lg:py-12">
 
         <div class="mb-8">
             <h1 class="text-3xl font-black text-black tracking-tight">Akun Saya</h1>
@@ -151,7 +153,6 @@
 
                         {{-- Tombol Buka Toko --}}
                         <div class="relative z-10 shrink-0 w-full sm:w-auto">
-                            {{-- Ganti route di bawah dengan rute pendaftaran seller Anda yang sebenarnya --}}
                             <a href="{{ route('seller.register') }}" class="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-4 rounded-xl transition-all duration-300 shadow-glow hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]">
                                 Buka Toko Sekarang <i class="fas fa-arrow-right ml-1"></i>
                             </a>
@@ -209,8 +210,8 @@
                             <i class="fas fa-map-marked-alt text-blue-600"></i> Alamat Pengiriman
                         </h3>
                         <a href="{{ route('profil.edit') }}#titik-lokasi"
-                        class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                        Ubah Alamat
+                           class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                            Ubah Alamat
                         </a>
                     </div>
 
@@ -230,7 +231,7 @@
                         <div class="text-center py-8 bg-zinc-50 rounded-2xl border border-dashed border-zinc-300">
                             <i class="fas fa-map-pin text-3xl text-zinc-300 mb-3"></i>
                             <p class="text-sm font-semibold text-zinc-500">Anda belum mengatur alamat pengiriman.</p>
-                            <button class="mt-3 text-xs font-bold bg-white border border-zinc-200 text-black px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-100 transition-colors">Tambah Alamat Sekarang</button>
+                            <a href="{{ route('profil.edit') }}#titik-lokasi" class="inline-block mt-3 text-xs font-bold bg-white border border-zinc-200 text-black px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-100 transition-colors">Tambah Alamat Sekarang</a>
                         </div>
                     @endif
                 </div>
@@ -238,10 +239,10 @@
             </div>
         </div>
     </main>
-        {{-- Tambahkan baris ini --}}
-    @include('partials.chat')
 
+    @include('partials.chat')
     @include('partials.footer')
+    
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>

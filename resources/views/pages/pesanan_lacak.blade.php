@@ -18,6 +18,7 @@
                     boxShadow: {
                         'premium': '0 20px 50px -12px rgba(0,0,0,0.05)',
                         'glow': '0 0 25px rgba(37,99,235,0.25)',
+                        'glow-red': '0 0 25px rgba(239,68,68,0.3)',
                     }
                 }
             }
@@ -56,6 +57,10 @@
             animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
 
+        .pulse-red::before {
+            background-color: #ef4444;
+        }
+
         /* Smooth Card Transition */
         .card-hover-effect { transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
         .card-hover-effect:hover { transform: translateY(-5px); box-shadow: 0 30px 60px -12px rgba(0,0,0,0.1); }
@@ -64,6 +69,23 @@
 <body class="text-zinc-900 antialiased pt-[90px] pb-20">
 
     @include('partials.navbar')
+
+    @php
+        // ==============================================================
+        // LOGIKA WAKTU KEDALUWARSA (20 MENIT UNTUK MENGAMANKAN STOK)
+        // ==============================================================
+        $isPending = ($order->status_pembayaran == 'pending' && $order->status_pesanan_global != 'dibatalkan');
+        
+        $waktuTransaksi = \Carbon\Carbon::parse($order->tanggal_transaksi);
+        $waktuKedaluwarsa = $waktuTransaksi->copy()->addMinutes(20);
+        $sisaDetik = 0;
+
+        if ($isPending) {
+            $sisaDetik = now()->diffInSeconds($waktuKedaluwarsa, false);
+            // Jika waktu sudah lewat (minus), kita set jadi 0
+            if ($sisaDetik < 0) $sisaDetik = 0;
+        }
+    @endphp
 
     <main class="max-w-[1250px] mx-auto px-4 sm:px-6">
 
@@ -257,24 +279,50 @@
                         </div>
 
                         {{-- AKSI DINAMIS SIKLUS TRANSAKSI ENTERPRISE --}}
-                        @if($order->status_pembayaran == 'pending' && $order->status_pesanan_global != 'dibatalkan')
-                            <button id="pay-button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-glow flex items-center justify-center gap-3 group active:scale-95 mb-4">
-                                <i class="fas fa-shield-check text-blue-200 group-hover:scale-110 transition-transform"></i>
-                                Selesaikan Pembayaran
-                            </button>
-
-                            {{-- TOMBOL PEMBATALAN PESANAN --}}
-                            <form action="{{ url('/pesanan/batalkan') }}" method="POST" id="cancel-form">
-                                @csrf
-                                <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
-                                <button type="button" onclick="confirmCancel()" class="w-full bg-white/5 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 text-xs font-black py-3.5 rounded-xl transition-all border border-white/10">
-                                    Batalkan Pesanan Ini
-                                </button>
-                            </form>
+                        @if($isPending)
                             
+                            @if($sisaDetik > 0)
+                                {{-- COUNTDOWN TIMER UI --}}
+                                <div class="bg-red-500/10 border border-red-500/20 rounded-[1.5rem] p-5 mb-5 text-center relative overflow-hidden">
+                                    <div class="absolute right-0 top-0 w-16 h-16 bg-red-500/20 rounded-full blur-xl"></div>
+                                    <p class="text-[10px] font-black text-red-400 uppercase tracking-[0.1em] mb-1">Selesaikan Pembayaran Dalam</p>
+                                    <div id="countdown-timer" class="text-3xl font-black text-red-500 tracking-tighter shadow-glow-red">
+                                        {{ sprintf("%02d:%02d", floor($sisaDetik / 60), $sisaDetik % 60) }}
+                                    </div>
+                                </div>
+
+                                <button id="pay-button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[1.5rem] transition-all duration-500 shadow-glow flex items-center justify-center gap-3 group active:scale-95 mb-4">
+                                    <i class="fas fa-shield-check text-blue-200 group-hover:scale-110 transition-transform"></i>
+                                    Selesaikan Pembayaran
+                                </button>
+
+                                {{-- TOMBOL PEMBATALAN PESANAN MANUAL --}}
+                                <form action="{{ url('/pesanan/batalkan') }}" method="POST" id="cancel-form">
+                                    @csrf
+                                    <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
+                                    <button type="button" onclick="confirmCancel()" class="w-full bg-white/5 hover:bg-red-600/20 text-zinc-400 hover:text-red-400 text-xs font-black py-3.5 rounded-xl transition-all border border-white/10">
+                                        Batalkan Pesanan Ini
+                                    </button>
+                                </form>
+                            @else
+                                {{-- UI KETIKA KEDALUWARSA --}}
+                                <div class="bg-red-500/20 border border-red-500/30 p-5 rounded-[1.5rem] flex items-center justify-center gap-3 mb-4 text-center">
+                                    <i class="fas fa-clock text-red-500 text-xl"></i>
+                                    <span class="text-sm font-black text-red-400 uppercase">Waktu Habis</span>
+                                </div>
+                                <p class="text-xs text-zinc-400 text-center">Membatalkan pesanan & mengembalikan stok material otomatis...</p>
+                                
+                                {{-- FORM AUTO CANCEL --}}
+                                <form action="{{ url('/pesanan/batalkan') }}" method="POST" id="auto-cancel-form" class="hidden">
+                                    @csrf
+                                    <input type="hidden" name="order_id" value="{{ $order->kode_invoice }}">
+                                </form>
+                            @endif
+
                             <p class="text-[10px] text-zinc-500 text-center mt-6 leading-relaxed font-medium">
                                 Enkripsi keamanan 256-bit terjamin oleh <span class="text-zinc-300">Midtrans Financial</span>.
                             </p>
+
                         @elseif($order->status_pesanan_global == 'dibatalkan')
                             <div class="bg-red-500/10 border border-red-500/20 p-5 rounded-[2rem] flex items-center gap-5">
                                 <div class="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center text-lg shadow-[0_0_20px_rgba(239,68,68,0.3)]">
@@ -386,36 +434,57 @@
                     </div>
                 </div>
 
-                {{-- 5. POTA AI SUPPORT CENTER --}}
-                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-glow relative overflow-hidden group cursor-pointer active:scale-95 transition-all mt-8">
-                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.1] pointer-events-none"></div>
-                    <div class="relative z-10 flex flex-col gap-6">
-                        <div class="flex items-center justify-between">
-                            <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
-                                <i class="fas fa-headset text-xl"></i>
-                            </div>
-                            <i class="fas fa-arrow-up-right-from-square text-xs opacity-50 group-hover:opacity-100 transition-opacity"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-lg font-black tracking-tight mb-1">Customer Success POTA</h4>
-                            <p class="text-[11px] font-medium text-blue-100 leading-relaxed">Punya masalah dengan kualitas material atau kendala pengiriman? Tim POTA siap membantu Anda 24/7.</p>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </main>
 
-    @include('partials.footer')
 
     {{-- Chat dipanggil di bawah agar tidak merusak head --}}
     @include('partials.chat')
 
-{{-- MIDTRANS SCRIPTS --}}
+    {{-- MIDTRANS SCRIPTS --}}
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ $clientKey }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script>
+// ==============================================================
+        // LOGIKA AUTO-CANCEL & COUNTDOWN JAVASCRIPT
+        // ==============================================================
+        @if($isPending)
+            let timeLeft = Math.floor({{ $sisaDetik }}); // Pastikan integer
+            const countdownEl = document.getElementById("countdown-timer");
+            const autoCancelForm = document.getElementById("auto-cancel-form");
+            
+            if (timeLeft <= 0 && autoCancelForm) {
+                // Jika load halaman dan ternyata waktu sudah habis di backend
+                autoCancelForm.submit();
+            } else if (timeLeft > 0 && countdownEl) {
+                // Jalankan timer per detik
+                const timer = setInterval(() => {
+                    timeLeft--;
+                    if(timeLeft <= 0) {
+                        clearInterval(timer);
+                        countdownEl.innerHTML = "00:00";
+                        
+                        // Disable tombol bayar agar tidak kecolongan klik
+                        const pb = document.getElementById('pay-button');
+                        if (pb) {
+                            pb.disabled = true;
+                            pb.innerHTML = "Waktu Habis...";
+                        }
+                        
+                        // Eksekusi auto cancel (Submit Form Batal) untuk merelease stok!
+                        document.getElementById("cancel-form").submit();
+                    } else {
+                        // FIX: Tambahkan Math.floor di detik biar gak muncul desimal panjang!
+                        let m = Math.floor(timeLeft / 60);
+                        let s = Math.floor(timeLeft % 60);
+                        countdownEl.innerHTML = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                    }
+                }, 1000);
+            }
+        @endif
+
         const payButton = document.getElementById('pay-button');
         if(payButton) {
             payButton.onclick = function(){

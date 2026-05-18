@@ -53,8 +53,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* Smooth Hide/Show Form & Map */
-        .manual-form-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.4s ease-out; }
+        /* FIX: Trik CSS Accordion Mulus Anti-Ngebug Padding */
+        .manual-form-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .manual-form-wrapper.active { grid-template-rows: 1fr; }
         .manual-form-inner { overflow: hidden; }
 
@@ -70,9 +70,7 @@
         .leaflet-control-attribution { display: none !important; }
 
         /* Custom Select Kurir yang lebih rapi */
-        .custom-dropdown-container button:focus {
-            outline: none;
-        }
+        .custom-dropdown-container button:focus { outline: none; }
     </style>
 </head>
 <body class="text-zinc-800 antialiased pt-[80px] pb-32 lg:pb-12">
@@ -99,9 +97,6 @@
         <input type="hidden" name="user_email" value="{{ $userEmail }}">
         <input type="hidden" name="total_produk_subtotal" value="{{ $totalProduk }}">
         <input type="hidden" name="grand_total" id="input_grand_total" value="{{ $totalProduk }}">
-        
-        {{-- Hidden Data Voucher & Diskon --}}
-        <input type="hidden" name="voucher_code" id="input-voucher-code" value="">
         <input type="hidden" name="total_diskon" id="input_total_diskon" value="0">
 
         {{-- Hidden Data Alamat Pengiriman --}}
@@ -135,11 +130,8 @@
         @endif
 
         <main class="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 lg:py-10">
-
             <div class="mb-8">
-                <h1 class="text-3xl font-black text-black tracking-tight flex items-center gap-3">
-                    Konfirmasi Pesanan
-                </h1>
+                <h1 class="text-3xl font-black text-black tracking-tight flex items-center gap-3">Konfirmasi Pesanan</h1>
                 <p class="text-sm font-medium text-zinc-500 mt-1">Sistem kami terhubung dengan Biteship & Armada Toko untuk kalkulasi ongkos kirim otomatis.</p>
             </div>
 
@@ -203,149 +195,175 @@
                             </label>
                         </div>
 
-                        {{-- WRAPPER FORM MANUAL --}}
-                        <div id="manual-address-form" class="manual-form-wrapper mt-4">
-                            <div class="manual-form-inner bg-zinc-50 border border-zinc-200 rounded-2xl p-5 sm:p-6">
-                                <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <i class="fas fa-pencil-alt text-blue-500"></i> Detail Penerima
-                                </h4>
-                                
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                    <input type="text" class="manual-input w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none" id="manual_nama" placeholder="Nama Penerima">
-                                    <input type="number" class="manual-input w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none" id="manual_telepon" placeholder="081234567890">
-                                </div>
-
-                                <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3 mt-6 flex items-center gap-2">
-                                    <i class="fas fa-search-location text-blue-500"></i> Cari Area (Kecamatan/Kota)
-                                </h4>
-                                
-                                {{-- AUTOCOMPLETE BITESHIP --}}
-                                <div class="relative w-full mb-4">
-                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <i class="fas fa-search text-zinc-400"></i>
-                                    </div>
-                                    <input type="text" id="biteship-search" class="w-full bg-white border border-zinc-300 text-sm font-bold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 pl-10 pr-4 py-3.5 outline-none placeholder:font-medium placeholder:text-zinc-400" placeholder="Ketik minimal 3 huruf (Cth: Cicendo, Bandung)..." autocomplete="off">
+                        {{-- FIX: WRAPPER FORM MANUAL LEBIH SIMETRIS --}}
+                        <div id="manual-address-form" class="manual-form-wrapper">
+                            <div class="manual-form-inner">
+                                <div class="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 sm:p-6 mt-4">
+                                    <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-pencil-alt text-blue-500"></i> Detail Penerima
+                                    </h4>
                                     
-                                    {{-- Dropdown Hasil --}}
-                                    <div id="biteship-results" class="absolute z-50 w-full bg-white border border-zinc-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto hidden"></div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                        <input type="text" class="manual-input w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none" id="manual_nama" placeholder="Nama Penerima">
+                                        <input type="number" class="manual-input w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none" id="manual_telepon" placeholder="081234567890">
+                                    </div>
+
+                                    <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-3 mt-6 flex items-center gap-2">
+                                        <i class="fas fa-search-location text-blue-500"></i> Cari Area (Kecamatan/Kota)
+                                    </h4>
+                                    
+                                    {{-- AUTOCOMPLETE BITESHIP --}}
+                                    <div class="relative w-full mb-4">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="fas fa-search text-zinc-400"></i>
+                                        </div>
+                                        <input type="text" id="biteship-search" class="w-full bg-white border border-zinc-300 text-sm font-bold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 pl-10 pr-4 py-3.5 outline-none placeholder:font-medium placeholder:text-zinc-400" placeholder="Ketik minimal 3 huruf (Cth: Cicendo, Bandung)..." autocomplete="off">
+                                        
+                                        {{-- Dropdown Hasil --}}
+                                        <div id="biteship-results" class="absolute z-50 w-full bg-white border border-zinc-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto hidden"></div>
+                                    </div>
+
+                                    {{-- Hidden Inputs for Manual Address --}}
+                                    <input type="hidden" id="manual_area_id">
+                                    <input type="hidden" id="manual_provinsi">
+                                    <input type="hidden" id="manual_kota">
+                                    <input type="hidden" id="manual_kecamatan">
+                                    <input type="hidden" id="manual_kodepos">
+                                    <input type="hidden" id="manual_lat">
+                                    <input type="hidden" id="manual_lng">
+
+                                    <div class="mb-4">
+                                        <textarea class="manual-input custom-scrollbar w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none resize-none" id="manual_alamat" rows="2" placeholder="Detail jalan, gang, RT/RW, nomor rumah..."></textarea>
+                                    </div>
+
+                                    {{-- LEAFLET MAP --}}
+                                    <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 mt-4 flex items-center gap-2">
+                                        <i class="fas fa-map-pin text-red-500"></i> Geser Pin ke Titik Akurat
+                                    </h4>
+                                    <div id="checkout-map"></div>
+                                    <p class="text-[10px] font-bold text-zinc-400 mt-2"><i class="fas fa-info-circle"></i> Peta otomatis berpindah saat Anda memilih area dari pencarian.</p>
                                 </div>
-
-                                {{-- Hidden Inputs for Manual Address --}}
-                                <input type="hidden" id="manual_area_id">
-                                <input type="hidden" id="manual_provinsi">
-                                <input type="hidden" id="manual_kota">
-                                <input type="hidden" id="manual_kecamatan">
-                                <input type="hidden" id="manual_kodepos">
-                                <input type="hidden" id="manual_lat">
-                                <input type="hidden" id="manual_lng">
-
-                                <div class="mb-4">
-                                    <textarea class="manual-input custom-scrollbar w-full bg-white border border-zinc-300 text-sm font-semibold rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 px-4 py-3 outline-none resize-none" id="manual_alamat" rows="2" placeholder="Detail jalan, gang, RT/RW, nomor rumah..."></textarea>
-                                </div>
-
-                                {{-- LEAFLET MAP --}}
-                                <h4 class="text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 mt-4 flex items-center gap-2">
-                                    <i class="fas fa-map-pin text-red-500"></i> Geser Pin ke Titik Akurat
-                                </h4>
-                                <div id="checkout-map"></div>
-                                <p class="text-[10px] font-bold text-zinc-400 mt-2"><i class="fas fa-info-circle"></i> Peta akan otomatis berpindah saat Anda memilih area dari kolom pencarian di atas.</p>
                             </div>
                         </div>
                     </div>
 
-                    {{-- 2. KARTU DAFTAR PRODUK --}}
+                    {{-- 2. KARTU DAFTAR PRODUK (MULTI-VENDOR) --}}
                     <div class="bg-white rounded-[2rem] shadow-soft border border-zinc-200 p-6 sm:p-8">
                         <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
                             <h2 class="text-xl font-black text-black">2. Rincian Pesanan</h2>
-                            <span class="bg-zinc-100 text-zinc-600 px-3 py-1 rounded-full text-xs font-bold">{{ count($itemsPerToko) }} Toko</span>
+                            <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">{{ count($itemsPerToko) }} Penjual</span>
                         </div>
 
-                        <div class="mb-8">
-                            <label class="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 ml-1">Metode Pengiriman Global</label>
-                            <div class="relative max-w-lg">
-                                <select name="tipe_pengambilan" id="tipe_pengambilan" class="w-full bg-blue-50 border border-blue-200 text-blue-800 text-sm font-bold rounded-xl focus:border-blue-600 px-4 py-3.5 outline-none cursor-pointer appearance-none">
-                                    <option value="kurir">🚀 Pengiriman Ekspedisi Nasional (JNE, Sicepat, dll)</option>
+                        <div class="mb-8 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+                            <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-1">Tipe Pengiriman Global</label>
+                            <div class="relative w-full">
+                                <select name="tipe_pengambilan" id="tipe_pengambilan" class="w-full bg-white border border-zinc-300 text-zinc-800 text-sm font-bold rounded-xl focus:border-blue-500 px-4 py-3.5 outline-none cursor-pointer appearance-none shadow-sm">
+                                    <option value="kurir">🚀 Pengiriman Ekspedisi Nasional (Reguler, Kargo, dll)</option>
                                     <option value="armada">🚚 Pengiriman Armada Toko (Khusus Material Berat)</option>
                                     <option value="ambil_di_toko">🏪 Ambil Sendiri di Toko Fisik (Gratis Ongkir)</option>
                                 </select>
-                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none"><i class="fas fa-chevron-down text-blue-500"></i></div>
+                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none"><i class="fas fa-chevron-down text-zinc-400"></i></div>
                             </div>
                         </div>
 
                         <div class="space-y-8">
                             @foreach($itemsPerToko as $tokoId => $toko)
-                                <div class="bg-zinc-50 border border-zinc-200 rounded-2xl store-container" 
+                                @php 
+                                    $subtotalToko = 0;
+                                    $totalBeratToko = 0;
+                                @endphp
+                                
+                                <div class="bg-white border-2 border-zinc-100 rounded-2xl shadow-sm store-container overflow-hidden" 
                                      data-toko-id="{{ $tokoId }}"
                                      data-origin="{{ $toko['origin_area_id'] }}" 
                                      data-couriers="{{ $toko['active_couriers'] }}">
                                     
-                                    <div class="bg-zinc-100 border-b border-zinc-200 rounded-t-2xl px-5 py-3 flex items-center justify-between">
+                                    {{-- NAMA TOKO --}}
+                                    <div class="bg-zinc-50 border-b border-zinc-100 px-5 py-3.5 flex items-center justify-between">
                                         <div class="flex items-center gap-2">
-                                            <i class="fas fa-store text-emerald-600 bg-white p-1.5 rounded-md shadow-sm text-xs"></i>
+                                            <i class="fas fa-store text-blue-600 bg-white p-1.5 rounded-md shadow-sm text-xs"></i>
                                             <h4 class="font-black text-sm text-zinc-900">{{ $toko['nama_toko'] }}</h4>
                                         </div>
                                     </div>
 
-                                    @php $totalBeratToko = 0; @endphp
                                     <div class="p-5 flex flex-col gap-4">
+                                        {{-- LIST BARANG PER-TOKO --}}
                                         @foreach($toko['items'] as $item)
                                             @php 
-                                                $subtotal = $item->harga * $item->jumlah; 
+                                                $subtotalItem = $item->harga * $item->jumlah; 
+                                                $subtotalToko += $subtotalItem;
                                                 $totalBeratToko += (1000 * $item->jumlah);
                                             @endphp
                                             <div class="flex gap-4">
-                                                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white border border-zinc-200 overflow-hidden shrink-0">
+                                                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-zinc-50 border border-zinc-200 overflow-hidden shrink-0">
                                                     <img src="{{ asset('assets/uploads/products/' . ($item->gambar_utama ?? 'default.jpg')) }}" class="w-full h-full object-cover mix-blend-multiply" onerror="this.onerror=null; this.src='{{ asset('assets/uploads/products/default.jpg') }}';">
                                                 </div>
                                                 <div class="flex-1 min-w-0 flex flex-col justify-center">
                                                     <h5 class="text-sm font-bold text-zinc-800 line-clamp-1 mb-1">{{ $item->nama_barang }}</h5>
                                                     <p class="text-xs font-semibold text-zinc-500 mb-2">{{ $item->jumlah }} x Rp{{ number_format($item->harga, 0, ',', '.') }}</p>
-                                                    <div class="text-sm font-black text-black">Rp{{ number_format($subtotal, 0, ',', '.') }}</div>
+                                                    <div class="text-sm font-black text-black">Rp{{ number_format($subtotalItem, 0, ',', '.') }}</div>
                                                 </div>
                                             </div>
                                         @endforeach
-                                    </div>
 
-                                    <input type="hidden" id="weight-toko-{{ $tokoId }}" value="{{ $totalBeratToko }}">
+                                        <input type="hidden" id="weight-toko-{{ $tokoId }}" value="{{ $totalBeratToko }}">
+                                        <input type="hidden" id="subtotal-toko-{{ $tokoId }}" value="{{ $subtotalToko }}">
 
-                                    {{-- KOTAK KURIR CUSTOM MEWAH --}}
-                                    <div class="px-5 pb-5 shipping-box-wrapper">
-                                        <div class="bg-white border border-blue-100 rounded-xl p-4">
-                                            <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Pilih Layanan Pengiriman</label>
-                                            
-                                            <div class="relative custom-dropdown-container">
-                                                {{-- Hidden input ini yang akan dikirim ke Backend --}}
-                                                <input type="hidden" name="shipping[{{ $tokoId }}]" id="shipping-input-{{ $tokoId }}" class="shipping-input" value="">
+                                        {{-- KOTAK KURIR PER-TOKO --}}
+                                        <div class="shipping-box-wrapper mt-3">
+                                            <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                                                <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Pilih Layanan Kurir Toko Ini</label>
                                                 
-                                                {{-- Tombol yang diklik untuk membuka dropdown --}}
-                                                <button type="button" onclick="toggleDropdown('{{ $tokoId }}')" id="dropdown-button-{{ $tokoId }}" class="w-full bg-transparent border-b-2 border-zinc-300 text-zinc-900 text-sm font-medium pb-2 pt-1 flex justify-between items-center outline-none focus:border-blue-600 transition-all text-left disabled:opacity-50">
-                                                    <span id="dropdown-text-{{ $tokoId }}">Menunggu alamat tujuan...</span>
-                                                    <i class="fas fa-chevron-down text-zinc-400 text-sm transition-transform duration-200" id="dropdown-icon-{{ $tokoId }}"></i>
-                                                </button>
-                                                
-                                                {{-- List CSS Mewah yang muncul ke bawah --}}
-                                                <div id="dropdown-menu-{{ $tokoId }}" class="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] hidden overflow-hidden">
-                                                    <ul id="shipping-list-{{ $tokoId }}" class="max-h-60 overflow-y-auto custom-scrollbar py-2">
-                                                        <li class="px-4 py-3 text-sm text-zinc-500 text-center">Menunggu alamat...</li>
-                                                    </ul>
+                                                <div class="relative custom-dropdown-container">
+                                                    <input type="hidden" name="shipping[{{ $tokoId }}]" id="shipping-input-{{ $tokoId }}" class="shipping-input" value="">
+                                                    
+                                                    <button type="button" onclick="toggleDropdown('{{ $tokoId }}')" id="dropdown-button-{{ $tokoId }}" class="w-full bg-white border border-blue-200 shadow-sm rounded-lg text-zinc-900 text-sm font-bold px-4 py-3 flex justify-between items-center outline-none hover:border-blue-400 transition-all text-left disabled:opacity-50 disabled:bg-zinc-100">
+                                                        <span id="dropdown-text-{{ $tokoId }}" class="truncate">Menunggu alamat tujuan...</span>
+                                                        <i class="fas fa-chevron-down text-zinc-400 text-sm transition-transform duration-200" id="dropdown-icon-{{ $tokoId }}"></i>
+                                                    </button>
+                                                    
+                                                    <div id="dropdown-menu-{{ $tokoId }}" class="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] hidden overflow-hidden">
+                                                        <ul id="shipping-list-{{ $tokoId }}" class="max-h-60 overflow-y-auto custom-scrollbar py-2">
+                                                            <li class="px-4 py-3 text-sm text-zinc-500 text-center">Menunggu alamat...</li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </div>
-
                                         </div>
+
+                                        {{-- CATATAN PER-TOKO --}}
+                                        <div class="mt-2 border-t border-dashed border-zinc-200 pt-5">
+                                            <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-1"><i class="fas fa-comment-alt text-emerald-500 mr-1"></i> Pesan untuk Penjual (Opsional)</label>
+                                            <input type="text" name="catatan_pembeli[{{ $tokoId }}]" class="w-full bg-zinc-50 border border-zinc-200 text-black text-sm font-medium rounded-xl focus:bg-white focus:border-emerald-500 px-4 py-3 outline-none" placeholder="Cth: Tolong packing kayu ya boss...">
+                                        </div>
+
+                                        {{-- VOUCHER PER-TOKO --}}
+                                        <div class="mt-1 border-t border-dashed border-zinc-200 pt-5">
+                                            <label class="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-1"><i class="fas fa-ticket-alt text-red-500 mr-1"></i> Voucher Toko Ini</label>
+                                            <div class="flex items-center gap-2">
+                                                <div class="relative flex-1">
+                                                    <input type="text" id="voucher-input-{{ $tokoId }}" class="w-full bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-xl focus:bg-white focus:border-red-500 px-4 py-3 outline-none uppercase placeholder:normal-case placeholder:font-medium placeholder:text-zinc-400" placeholder="Masukkan kode promo toko">
+                                                </div>
+                                                <button type="button" onclick="applyStoreVoucher('{{ $tokoId }}')" id="btn-apply-voucher-{{ $tokoId }}" class="bg-zinc-900 hover:bg-blue-600 text-white px-5 py-3 rounded-xl font-black transition-colors shadow-md text-[10px] uppercase tracking-widest shrink-0 w-[100px] flex justify-center items-center">
+                                                    Terapkan
+                                                </button>
+                                            </div>
+
+                                            <div id="voucher-msg-{{ $tokoId }}" class="mt-2 hidden"></div>
+                                            
+                                            {{-- Hidden form data yg akan dikirim ke Backend --}}
+                                            <input type="hidden" name="voucher_toko[{{ $tokoId }}]" id="hidden-voucher-{{ $tokoId }}">
+                                            <input type="hidden" id="discount-toko-{{ $tokoId }}" class="store-discount-val" value="0">
+                                        </div>
+
                                     </div>
                                 </div>
                             @endforeach
                         </div>
-                        
-                        {{-- CATATAN --}}
-                        <div class="mt-8 border-t border-zinc-100 pt-6">
-                            <label class="block text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-2 ml-1"><i class="fas fa-comment-alt mr-1"></i> Catatan Pesanan</label>
-                            <input type="text" name="catatan" class="w-full bg-zinc-50 border border-zinc-200 text-black text-sm font-medium rounded-xl focus:border-blue-600 px-4 py-3 outline-none" placeholder="Tinggalkan instruksi khusus pengiriman...">
-                        </div>
                     </div>
                 </div>
 
-                {{-- KOLOM KANAN (RINGKASAN & VOUCHER) --}}
+                {{-- KOLOM KANAN (RINGKASAN MARKETPLACE) --}}
                 <div class="w-full lg:col-span-4 lg:sticky lg:top-28 z-20 animate-fade-in" style="animation-delay: 0.1s;">
                     <div class="bg-white rounded-[2rem] shadow-soft border border-zinc-200 overflow-hidden">
                         <div class="bg-emerald-50 border-b border-emerald-100 px-6 py-3 flex items-center justify-center gap-2">
@@ -367,36 +385,10 @@
                                     <span id="shipping-total-display" class="font-bold text-black">Rp0</span>
                                 </div>
                                 
-                                {{-- Baris Diskon Voucher --}}
+                                {{-- Baris Total Diskon Semua Toko --}}
                                 <div id="discount-row" class="hidden justify-between items-center text-emerald-600 font-medium bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100">
-                                    <span>Diskon Promo</span>
+                                    <span>Total Diskon Toko</span>
                                     <span id="discount-total-display" class="font-black">- Rp0</span>
-                                </div>
-                            </div>
-
-                            {{-- FITUR VOUCHER GLOBAL --}}
-                            <div class="mb-6">
-                                <span class="text-[10px] font-black text-zinc-900 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                                    <i class="fas fa-ticket-alt text-blue-500"></i> Makin Hemat Pakai Promo
-                                </span>
-                                
-                                <div id="voucher-input-box" class="flex items-center gap-2">
-                                    <div class="relative flex-1">
-                                        <input type="text" id="voucher-input" placeholder="Masukkan kode promo" class="w-full bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs font-bold rounded-xl focus:bg-white focus:border-blue-500 block px-4 py-3.5 outline-none uppercase placeholder:normal-case placeholder:font-medium placeholder:text-zinc-400">
-                                    </div>
-                                    <button type="button" onclick="applyVoucher()" id="btn-apply-voucher" class="bg-zinc-900 hover:bg-blue-600 text-white px-5 py-3.5 rounded-xl font-black transition-colors shadow-md text-[10px] uppercase tracking-widest shrink-0 w-[100px] flex justify-center items-center">
-                                        Terapkan
-                                    </button>
-                                </div>
-
-                                <div id="voucher-message" class="mt-2 hidden"></div>
-
-                                <div id="applied-voucher-tag" class="hidden mt-3 items-center justify-between bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px]"><i class="fas fa-check"></i></div>
-                                        <span class="text-xs font-black text-emerald-700 uppercase tracking-wider" id="applied-voucher-code">PROMO10</span>
-                                    </div>
-                                    <button type="button" onclick="removeVoucher()" class="text-red-500 hover:text-red-700 p-1"><i class="fas fa-times"></i></button>
                                 </div>
                             </div>
 
@@ -438,11 +430,9 @@
 
     <script>
         // ==========================================
-        // VARIABEL GLOBAL
+        // VARIABEL GLOBAL & ELEMENT INIT
         // ==========================================
         const totalProdukAsli = {{ $totalProduk }};
-        let currentDiscountPercent = 0; 
-        let currentVoucherCode = null;
         let isFetchingRates = false;
 
         const radioAddress = document.querySelectorAll('input[name="address_type"]');
@@ -452,7 +442,6 @@
         
         const btnSubmitDesktop = document.getElementById('btn-submit-desktop');
         const btnSubmitMobile = document.getElementById('btn-submit-mobile');
-        const voucherInput = document.getElementById('voucher-input');
 
         const final = {
             label: document.getElementById('final_label'), nama: document.getElementById('final_nama'),
@@ -472,53 +461,40 @@
 
         function initMap() {
             if (checkoutMap) return; 
-            
-            // Set Default (Contoh: Bundaran HI)
-            const defaultLat = -6.1931; 
-            const defaultLng = 106.8231;
+            const defaultLat = -6.1931; const defaultLng = 106.8231;
 
             checkoutMap = L.map('checkout-map').setView([defaultLat, defaultLng], 14);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(checkoutMap);
 
             checkoutMarker = L.marker([defaultLat, defaultLng], {draggable: true}).addTo(checkoutMap);
 
-checkoutMarker.on('dragend', async function(e) {
+            checkoutMarker.on('dragend', async function(e) {
                 const position = e.target.getLatLng();
-                const lat = position.lat;
-                const lng = position.lng;
-                
-                // 1. Simpan kordinat baru
-                document.getElementById('manual_lat').value = lat;
-                document.getElementById('manual_lng').value = lng;
+                document.getElementById('manual_lat').value = position.lat;
+                document.getElementById('manual_lng').value = position.lng;
                 syncManualToHidden();
 
-                // 2. Beri efek loading di kotak pencarian
                 const searchInput = document.getElementById('biteship-search');
                 const searchIcon = searchInput.previousElementSibling.querySelector('i');
                 searchIcon.className = 'fas fa-spinner fa-spin text-blue-500';
                 searchInput.value = "Menerjemahkan titik peta...";
 
                 try {
-                    // 3. REVERSE GEOCODING (Minta nama daerah ke OpenStreetMap)
-                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`);
                     const geoData = await geoRes.json();
                     
                     if (geoData && geoData.address) {
-                        // Tampilkan alamat lengkap dari peta ke kolom input
                         searchInput.value = geoData.display_name;
-
-                        // Ambil variabel kecamatan & kota untuk dicari ID Biteship-nya
                         const kecamatan = geoData.address.suburb || geoData.address.village || geoData.address.town || '';
                         const kota = geoData.address.city || geoData.address.county || geoData.address.state || '';
                         const query = `${kecamatan} ${kota}`.trim();
 
-                        // 4. AUTO-SEARCH BITESHIP AREA ID (Agar ongkir JNE/Sicepat ikut berubah)
                         if (query) {
                             const biteRes = await fetch(`/api/biteship/search?q=${encodeURIComponent(query)}`);
                             const biteData = await biteRes.json();
 
                             if (biteData.areas && biteData.areas.length > 0) {
-                                const area = biteData.areas[0]; // Ambil hasil paling cocok
+                                const area = biteData.areas[0];
                                 document.getElementById('manual_area_id').value = area.id;
                                 document.getElementById('manual_kecamatan').value = area.name;
                                 document.getElementById('manual_kota').value = area.administrative_division_level_2_name;
@@ -530,10 +506,9 @@ checkoutMarker.on('dragend', async function(e) {
                     }
                 } catch (error) {
                     console.error("Gagal reverse geocode:", error);
-                    searchInput.value = "Gagal membaca area peta. Ketik manual saja.";
+                    searchInput.value = "Ketik area manual saja.";
                 } finally {
                     searchIcon.className = 'fas fa-search text-zinc-400';
-                    // 5. KALKULASI ULANG SEMUA ONGKIR!
                     triggerShippingFetch(); 
                 }
             });
@@ -550,10 +525,7 @@ checkoutMarker.on('dragend', async function(e) {
             clearTimeout(searchTimeout);
             const query = this.value.trim();
 
-            if (query.length < 3) {
-                areaResultsDiv.classList.add('hidden');
-                return;
-            }
+            if (query.length < 3) { areaResultsDiv.classList.add('hidden'); return; }
 
             const searchIcon = this.previousElementSibling.querySelector('i');
             searchIcon.className = 'fas fa-spinner fa-spin text-blue-500';
@@ -571,7 +543,6 @@ checkoutMarker.on('dragend', async function(e) {
                             div.innerHTML = `<span class="font-bold text-black">${area.name}</span>, ${area.administrative_division_level_2_name}, ${area.administrative_division_level_1_name}`;
                             
                             div.addEventListener('click', () => {
-                                // 1. Isi hidden inputs
                                 document.getElementById('manual_area_id').value = area.id;
                                 document.getElementById('manual_kecamatan').value = area.name;
                                 document.getElementById('manual_kota').value = area.administrative_division_level_2_name;
@@ -581,7 +552,6 @@ checkoutMarker.on('dragend', async function(e) {
                                 areaSearchInput.value = `${area.name}, ${area.administrative_division_level_2_name}`;
                                 areaResultsDiv.classList.add('hidden');
 
-                                // 2. GEOCODING OTOMATIS: Terbang ke Titik Kota/Kecamatan
                                 const geocodeQuery = `${area.name}, ${area.administrative_division_level_2_name}, Indonesia`;
                                 fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeQuery)}`)
                                     .then(res => res.json())
@@ -589,27 +559,16 @@ checkoutMarker.on('dragend', async function(e) {
                                         if (geoData && geoData.length > 0) {
                                             const newLat = parseFloat(geoData[0].lat);
                                             const newLng = parseFloat(geoData[0].lon);
-                                            
-                                            // Efek terbang (Fly To)
                                             if(checkoutMap && checkoutMarker) {
                                                 checkoutMap.flyTo([newLat, newLng], 15, { duration: 1.5 });
                                                 checkoutMarker.setLatLng([newLat, newLng]);
                                             }
-                                            
                                             document.getElementById('manual_lat').value = newLat;
                                             document.getElementById('manual_lng').value = newLng;
-                                            syncManualToHidden();
-                                            triggerShippingFetch(); 
-                                        } else {
-                                            // Fallback jika geocoding gagal
-                                            syncManualToHidden();
-                                            triggerShippingFetch();
                                         }
-                                    }).catch(err => {
-                                        console.log('Geocoding error:', err);
                                         syncManualToHidden();
-                                        triggerShippingFetch();
-                                    });
+                                        triggerShippingFetch(); 
+                                    }).catch(err => { syncManualToHidden(); triggerShippingFetch(); });
                             });
                             areaResultsDiv.appendChild(div);
                         });
@@ -618,11 +577,8 @@ checkoutMarker.on('dragend', async function(e) {
                         areaResultsDiv.innerHTML = '<div class="p-4 text-xs text-center text-zinc-500">Area tidak ditemukan</div>';
                         areaResultsDiv.classList.remove('hidden');
                     }
-                } catch (err) {
-                    console.error('Error fetching Biteship', err);
-                } finally {
-                    searchIcon.className = 'fas fa-search text-zinc-400';
-                }
+                } catch (err) { console.error('Error fetching Biteship', err); } 
+                finally { searchIcon.className = 'fas fa-search text-zinc-400'; }
             }, 600);
         });
 
@@ -651,7 +607,6 @@ checkoutMarker.on('dragend', async function(e) {
                     final.lat.value = savedData.dataset.lat;
                     final.lng.value = savedData.dataset.lng;
                     final.kodepos.value = savedData.dataset.pos;
-                    
                     triggerShippingFetch(); 
                 } else {
                     setCheckoutButtonsState(false, "Lengkapi Alamat Profil");
@@ -664,12 +619,9 @@ checkoutMarker.on('dragend', async function(e) {
                 final.label.value = "Alamat Manual";
                 syncManualToHidden();
                 
-                if(final.area_id.value) {
-                    triggerShippingFetch();
-                } else {
+                if(final.area_id.value) { triggerShippingFetch(); } 
+                else {
                     setCheckoutButtonsState(false, "Pilih Area Tujuan");
-                    
-                    // Reset dropdown kalau manual belum diisi
                     document.querySelectorAll('.shipping-input').forEach(input => {
                         const tokoId = input.id.replace('shipping-input-', '');
                         const btnTextEl = document.getElementById(`dropdown-text-${tokoId}`);
@@ -695,7 +647,7 @@ checkoutMarker.on('dragend', async function(e) {
         }
 
         // ==========================================
-        // FETCH ONGKIR KE BACKEND (BITESHIP + ARMADA TOKO + PICKUP)
+        // FETCH ONGKIR KE BACKEND PER-TOKO
         // ==========================================
         async function triggerShippingFetch() {
             const tipe = tipePengambilan.value; // 'kurir', 'armada', 'ambil_di_toko'
@@ -710,15 +662,13 @@ checkoutMarker.on('dragend', async function(e) {
 
             const destinationAreaId = final.area_id.value;
             if(!destinationAreaId && tipe === 'kurir') {
-                setCheckoutButtonsState(false, "Pilih Area Tujuan Dulu");
-                return;
+                setCheckoutButtonsState(false, "Pilih Area Tujuan Dulu"); return;
             }
 
             const destLat = final.lat.value || 0;
             const destLng = final.lng.value || 0;
             if((!destLat || !destLng) && tipe === 'armada') {
-                setCheckoutButtonsState(false, "Pin Peta Belum Ditemukan");
-                return;
+                setCheckoutButtonsState(false, "Pin Peta Belum Ditemukan"); return;
             }
 
             setCheckoutButtonsState(false, "Menghitung Ongkir...");
@@ -730,29 +680,25 @@ checkoutMarker.on('dragend', async function(e) {
             stores.forEach(store => {
                 const tokoId = store.getAttribute('data-toko-id');
                 const weight = document.getElementById(`weight-toko-${tokoId}`).value || 1000;
-                
                 const originAreaId = store.getAttribute('data-origin');
                 const sellerCouriers = store.getAttribute('data-couriers') || 'jne'; 
 
-                // Ambil elemen custom dropdown kita
                 const listEl = document.getElementById(`shipping-list-${tokoId}`);
                 const btnTextEl = document.getElementById(`dropdown-text-${tokoId}`);
                 const inputEl = document.getElementById(`shipping-input-${tokoId}`);
                 const btnEl = document.getElementById(`dropdown-button-${tokoId}`);
 
                 let loadingText = tipe === 'kurir' ? 'Mencari Kurir Nasional...' : 'Kalkulasi Jarak Armada...';
-                
                 btnTextEl.innerHTML = `<i class="fas fa-spinner fa-spin text-blue-500 mr-2"></i> ${loadingText}`;
                 btnEl.disabled = true;
 
                 if(!originAreaId && tipe === 'kurir') {
-                    btnTextEl.innerHTML = 'Toko belum mengatur Area ID';
+                    btnTextEl.innerHTML = '<span class="text-red-500">Toko belum mengatur Area ID</span>';
                     inputEl.value = '';
                     listEl.innerHTML = '<li class="px-4 py-3 text-sm text-red-500 text-center">Toko belum mengatur lokasi pengiriman</li>';
                     return; 
                 }
 
-                // HIT KE BACKEND LARAVEL (API CEK ONGKIR + KALKULASI JARAK ARMADA TOKO)
                 const url = `/api/cek-ongkir?tipe=${tipe}&toko_id=${tokoId}&origin=${originAreaId}&destination=${destinationAreaId}&weight=${weight}&couriers=${sellerCouriers}&dest_lat=${destLat}&dest_lng=${destLng}`;
 
                 const p = fetch(url)
@@ -761,36 +707,42 @@ checkoutMarker.on('dragend', async function(e) {
                         let html = '';
                         if (data.success !== false && data.pricing && data.pricing.length > 0) {
                             data.pricing.forEach((rate, index) => {
-                                // Desain List Pilihan (Bisa di-hover & diklik)
                                 let isSelectedClass = index === 0 ? 'bg-blue-50 border-blue-500' : 'border-transparent hover:bg-zinc-50';
                                 
-                                // Pilih opsi teratas secara otomatis
                                 if(index === 0) {
                                     inputEl.value = `${rate.company}_${rate.price}`;
-                                    btnTextEl.innerHTML = `${rate.courier_name} ${rate.courier_service_name} &mdash; <b>Rp ${rate.price.toLocaleString('id-ID')}</b>`;
+                                    btnTextEl.innerHTML = `
+                                        <div class="flex items-center gap-2 truncate">
+                                            <span class="font-black text-black">${rate.courier_name}</span> 
+                                            <span class="text-zinc-500 hidden sm:inline">- ${rate.courier_service_name}</span>
+                                        </div>
+                                        <div class="font-black text-blue-600 shrink-0">Rp ${rate.price.toLocaleString('id-ID')}</div>`;
                                 }
 
-                                html += `<li class="px-4 py-3 text-sm text-zinc-700 border-l-4 cursor-pointer transition-colors ${isSelectedClass}" 
+                                html += `<li class="px-4 py-3 text-sm text-zinc-700 border-l-4 cursor-pointer transition-colors flex justify-between items-center ${isSelectedClass}" 
                                              data-value="${rate.company}_${rate.price}" 
-                                             data-label="${rate.courier_name} ${rate.courier_service_name} &mdash; <b>Rp ${rate.price.toLocaleString('id-ID')}</b>"
+                                             data-label="<div class='flex items-center gap-2 truncate'><span class='font-black text-black'>${rate.courier_name}</span> <span class='text-zinc-500 hidden sm:inline'>- ${rate.courier_service_name}</span></div><div class='font-black text-blue-600 shrink-0'>Rp ${rate.price.toLocaleString('id-ID')}</div>"
                                              onclick="selectShippingOption('${tokoId}', this)">
-                                            <div class="font-black text-zinc-900">${rate.courier_name} <span class="font-semibold text-zinc-500">${rate.courier_service_name}</span></div>
-                                            <div class="text-blue-600 font-black mt-1">Rp ${rate.price.toLocaleString('id-ID')}</div>
+                                            <div>
+                                                <div class="font-black text-zinc-900">${rate.courier_name}</div>
+                                                <div class="font-semibold text-zinc-500 text-[10px]">${rate.courier_service_name}</div>
+                                            </div>
+                                            <div class="text-blue-600 font-black">Rp ${rate.price.toLocaleString('id-ID')}</div>
                                          </li>`;
                             });
                             btnEl.disabled = false;
                         } else {
-                            let errMsg = data.message || data.error || "Layanan tidak tersedia untuk area ini";
+                            let errMsg = data.message || data.error || "Layanan tidak tersedia";
                             html = `<li class="px-4 py-3 text-sm text-red-500 font-bold text-center"><i class="fas fa-exclamation-triangle"></i> ${errMsg}</li>`;
                             inputEl.value = "";
-                            btnTextEl.innerHTML = "Gagal memuat layanan";
+                            btnTextEl.innerHTML = `<span class="text-red-500">Gagal memuat layanan</span>`;
                             btnEl.disabled = true;
                         }
                         listEl.innerHTML = html;
                     })
                     .catch(err => {
                         inputEl.value = "";
-                        btnTextEl.innerHTML = "Gagal memuat layanan";
+                        btnTextEl.innerHTML = `<span class="text-red-500">Koneksi terputus</span>`;
                         listEl.innerHTML = '<li class="px-4 py-3 text-center text-red-500">Koneksi terputus.</li>';
                     });
                     
@@ -803,13 +755,13 @@ checkoutMarker.on('dragend', async function(e) {
         }
 
         // ==========================================
-        // LOGIKA CUSTOM DROPDOWN CSS MEWAH
+        // CUSTOM DROPDOWN CSS MEWAH PER-TOKO
         // ==========================================
         window.toggleDropdown = function(tokoId) {
             const menu = document.getElementById(`dropdown-menu-${tokoId}`);
             const icon = document.getElementById(`dropdown-icon-${tokoId}`);
             
-            // Tutup menu dropdown lain jika ada
+            // Tutup semua dulu
             document.querySelectorAll('[id^="dropdown-menu-"]').forEach(el => {
                 if(el.id !== `dropdown-menu-${tokoId}`) el.classList.add('hidden');
             });
@@ -832,7 +784,6 @@ checkoutMarker.on('dragend', async function(e) {
             const menuEl = document.getElementById(`dropdown-menu-${tokoId}`);
             const iconEl = document.getElementById(`dropdown-icon-${tokoId}`);
             
-            // Pindahkan warna biru (Highlight) ke opsi yang diklik
             element.parentElement.querySelectorAll('li').forEach(el => {
                 el.classList.remove('bg-blue-50', 'border-blue-500');
                 el.classList.add('border-transparent');
@@ -840,19 +791,15 @@ checkoutMarker.on('dragend', async function(e) {
             element.classList.add('bg-blue-50', 'border-blue-500');
             element.classList.remove('border-transparent');
             
-            // Update nilai hidden input dan tulisan di tombol
             inputEl.value = element.getAttribute('data-value');
             btnTextEl.innerHTML = element.getAttribute('data-label');
             
-            // Tutup menu dan putar balik ikon panah
             menuEl.classList.add('hidden');
             iconEl.style.transform = 'rotate(0deg)';
             
-            // Panggil ulang kalkulator harga
             calculateTotal();
         };
 
-        // Tutup dropdown kalau ngeklik sembarang tempat di layar
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.custom-dropdown-container')) {
                 document.querySelectorAll('[id^="dropdown-menu-"]').forEach(el => el.classList.add('hidden'));
@@ -861,37 +808,111 @@ checkoutMarker.on('dragend', async function(e) {
         });
 
         // ==========================================
-        // KALKULASI TOTAL
+        // VOUCHER PER-TOKO (MOCK VALIDATION)
+        // ==========================================
+        window.applyStoreVoucher = function(tokoId) {
+            const inputEl = document.getElementById(`voucher-input-${tokoId}`);
+            const code = inputEl.value.trim().toUpperCase();
+            const btn = document.getElementById(`btn-apply-voucher-${tokoId}`);
+            const msg = document.getElementById(`voucher-msg-${tokoId}`);
+            const hiddenCode = document.getElementById(`hidden-voucher-${tokoId}`);
+            const hiddenDiscountVal = document.getElementById(`discount-toko-${tokoId}`);
+
+            if(!code) return;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                // Ilustrasi UI Mock Validation (Backend yang asli akan memvalidasi ulang)
+                if(code === 'PROMO10' || code === 'HEMAT10') {
+                    // Ambil subtotal toko ini
+                    let storeSub = parseFloat(document.getElementById(`subtotal-toko-${tokoId}`).value);
+                    let discountAmount = storeSub * 0.10; // Cth: Diskon 10%
+                    
+                    msg.className = 'mt-2 text-[10px] font-bold text-emerald-600 flex items-center gap-1.5';
+                    msg.innerHTML = '<i class="fas fa-check-circle"></i> Voucher berhasil diterapkan!';
+                    msg.style.display = 'flex';
+
+                    // Update UI dan Value
+                    hiddenCode.value = code;
+                    hiddenDiscountVal.value = discountAmount;
+                    inputEl.readOnly = true;
+                    inputEl.classList.add('bg-zinc-100', 'text-emerald-600');
+                    
+                    btn.innerHTML = 'Batal';
+                    btn.classList.replace('bg-zinc-900', 'bg-red-500');
+                    btn.classList.replace('hover:bg-blue-600', 'hover:bg-red-600');
+                    btn.onclick = function() { removeStoreVoucher(tokoId); };
+                    btn.disabled = false;
+
+                    calculateTotal(); // Hitung ulang grand total
+                } else {
+                    msg.className = 'mt-2 text-[10px] font-bold text-red-500 flex items-center gap-1.5';
+                    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Kode promo tidak valid.';
+                    msg.style.display = 'flex';
+                    inputEl.classList.add('border-red-300', 'focus:border-red-500');
+                    
+                    btn.innerHTML = 'Terapkan';
+                    btn.disabled = false;
+                    setTimeout(() => { msg.style.display = 'none'; inputEl.classList.remove('border-red-300', 'focus:border-red-500'); }, 3000);
+                }
+            }, 600);
+        }
+
+        window.removeStoreVoucher = function(tokoId) {
+            const inputEl = document.getElementById(`voucher-input-${tokoId}`);
+            inputEl.value = '';
+            inputEl.readOnly = false;
+            inputEl.classList.remove('bg-zinc-100', 'text-emerald-600');
+
+            document.getElementById(`hidden-voucher-${tokoId}`).value = '';
+            document.getElementById(`discount-toko-${tokoId}`).value = '0';
+            document.getElementById(`voucher-msg-${tokoId}`).style.display = 'none';
+
+            const btn = document.getElementById(`btn-apply-voucher-${tokoId}`);
+            btn.innerHTML = 'Terapkan';
+            btn.classList.replace('bg-red-500', 'bg-zinc-900');
+            btn.classList.replace('hover:bg-red-600', 'hover:bg-blue-600');
+            btn.onclick = function() { applyStoreVoucher(tokoId); };
+
+            calculateTotal();
+        }
+
+        // ==========================================
+        // KALKULASI TOTAL AKHIR
         // ==========================================
         function calculateTotal() {
-            let shippingCost = 0;
+            let totalShipping = 0;
+            let totalDiscount = 0;
             const tipe = tipePengambilan.value;
             
-            if (tipe === 'kurir' || tipe === 'armada') {
-                document.querySelectorAll('.shipping-box-wrapper').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.store-container').forEach(store => {
+                const id = store.dataset.tokoId;
                 
-                // BACA DARI HIDDEN INPUT (shipping-input) BUKAN SELECT LAGI
-                document.querySelectorAll('.shipping-input').forEach(input => {
-                    if (input.value) {
-                        let valParts = input.value.split('_');
-                        if (valParts.length > 1) shippingCost += parseInt(valParts[valParts.length - 1]);
+                // Tambah Ongkir Toko
+                if (tipe !== 'ambil_di_toko') {
+                    const shipVal = document.getElementById(`shipping-input-${id}`).value;
+                    if (shipVal) {
+                        let valParts = shipVal.split('_');
+                        if (valParts.length > 1) totalShipping += parseInt(valParts[valParts.length - 1]);
                     }
-                });
-            } else {
-                document.querySelectorAll('.shipping-box-wrapper').forEach(el => el.style.display = 'none');
-                shippingCost = 0;
-            }
+                }
+                
+                // Tambah Diskon Toko
+                const discVal = document.getElementById(`discount-toko-${id}`).value;
+                if(discVal) totalDiscount += parseFloat(discVal);
+            });
 
-            let totalDiskon = totalProdukAsli * currentDiscountPercent;
-            let grandTotal = totalProdukAsli - totalDiskon + shippingCost;
+            let grandTotal = totalProdukAsli - totalDiscount + totalShipping;
 
             const formatRp = (angka) => 'Rp' + Math.round(angka).toLocaleString('id-ID');
 
-            document.getElementById('shipping-total-display').innerText = formatRp(shippingCost);
-            document.getElementById('discount-total-display').innerText = '- ' + formatRp(totalDiskon);
+            document.getElementById('shipping-total-display').innerText = formatRp(totalShipping);
+            document.getElementById('discount-total-display').innerText = '- ' + formatRp(totalDiscount);
             
             const rowDiscount = document.getElementById('discount-row');
-            if(totalDiskon > 0) {
+            if(totalDiscount > 0) {
                 rowDiscount.classList.remove('hidden'); rowDiscount.classList.add('flex');
             } else {
                 rowDiscount.classList.add('hidden'); rowDiscount.classList.remove('flex');
@@ -909,10 +930,10 @@ checkoutMarker.on('dragend', async function(e) {
             });
 
             document.getElementById('input_grand_total').value = grandTotal;
-            document.getElementById('input_total_diskon').value = totalDiskon;
+            document.getElementById('input_total_diskon').value = totalDiscount;
         }
 
-        function setCheckoutButtonsState(isEnabled, loadingText = 'Buat Pesanan Sekarang') {
+        function setCheckoutButtonsState(isEnabled, loadingText = 'Buat Pesanan') {
             if (isEnabled) {
                 btnSubmitDesktop.disabled = false;
                 btnSubmitDesktop.innerHTML = `<div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div><i class="fas fa-file-invoice text-sm relative z-10"></i><span class="relative z-10">${loadingText}</span>`;
@@ -930,75 +951,11 @@ checkoutMarker.on('dragend', async function(e) {
             }
         }
 
-        // Event Listeners
+        // Event Listeners Init
         radioAddress.forEach(radio => radio.addEventListener('change', updateAddressUI));
         document.querySelectorAll('.manual-input').forEach(input => input.addEventListener('input', syncManualToHidden));
         tipePengambilan.addEventListener('change', triggerShippingFetch); 
-        
-        // Init UI pertama kali
         updateAddressUI();
-
-        // ==========================================
-        // VOUCHER GLOBAL
-        // ==========================================
-        window.applyVoucher = function() {
-            const inputEl = document.getElementById('voucher-input');
-            const code = inputEl.value.trim().toUpperCase();
-            const btn = document.getElementById('btn-apply-voucher');
-            const msg = document.getElementById('voucher-message');
-            const tag = document.getElementById('applied-voucher-tag');
-            const inputBox = document.getElementById('voucher-input-box');
-
-            if(!code) return;
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
-            setTimeout(() => {
-                if(code === 'PROMO10' || code === 'HEMAT10') {
-                    currentVoucherCode = code;
-                    currentDiscountPercent = 0.10; 
-                    
-                    msg.className = 'mt-2 text-[10px] font-bold text-emerald-600 flex items-center gap-1.5';
-                    msg.innerHTML = '<i class="fas fa-check-circle"></i> Voucher berhasil diterapkan!';
-                    msg.style.display = 'flex';
-
-                    inputEl.value = '';
-                    inputBox.classList.add('hidden');
-                    
-                    document.getElementById('applied-voucher-code').innerText = code;
-                    tag.classList.remove('hidden');
-                    tag.classList.add('flex');
-                    document.getElementById('input-voucher-code').value = code;
-
-                    calculateTotal();
-                } else {
-                    msg.className = 'mt-2 text-[10px] font-bold text-red-500 flex items-center gap-1.5';
-                    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Kode promo tidak valid / kedaluwarsa.';
-                    msg.style.display = 'flex';
-                    inputEl.classList.add('border-red-300', 'focus:border-red-500');
-                }
-                
-                btn.innerHTML = 'Terapkan';
-                btn.disabled = false;
-                setTimeout(() => { msg.style.display = 'none'; inputEl.classList.remove('border-red-300', 'focus:border-red-500'); }, 3000);
-            }, 800);
-        }
-
-        window.removeVoucher = function() {
-            currentVoucherCode = null; currentDiscountPercent = 0;
-            document.getElementById('input-voucher-code').value = '';
-            document.getElementById('applied-voucher-tag').classList.add('hidden', 'flex');
-            document.getElementById('voucher-input-box').classList.remove('hidden');
-            document.getElementById('voucher-message').style.display = 'none';
-            calculateTotal();
-        }
-
-        if(voucherInput) {
-            voucherInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') { e.preventDefault(); window.applyVoucher(); }
-            });
-        }
 
         // ==========================================
         // SUBMIT CHECKOUT FORM (FINAL)

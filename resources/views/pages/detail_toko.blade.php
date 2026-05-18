@@ -13,7 +13,7 @@
                     fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'] },
                     colors: { 
                         brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
-                        toko: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#e11d48', 600: '#e11d48', 700: '#be123c' } // Merah Khas Official Store
+                        toko: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' } 
                     },
                     boxShadow: { 
                         'card': '0 1px 6px 0 rgba(49,53,59,0.12)', 
@@ -29,9 +29,9 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f4f6f8; scroll-behavior: smooth; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; scroll-behavior: smooth; }
         
-        /* Pagination */
+        /* Pagination E-commerce */
         .pagination-wrap nav { display: flex; justify-content: center; width: 100%; margin: 2rem 0; }
         .pagination-wrap .pagination { display: flex; gap: 0.25rem; background: white; padding: 0.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .pagination-wrap .page-item .page-link { display: flex; align-items: center; justify-content: center; min-width: 2.5rem; height: 2.5rem; border-radius: 0.25rem; font-weight: 600; color: #4b5563; padding: 0 0.5rem; transition: all 0.2s; }
@@ -67,7 +67,7 @@
 
     @php
         // =====================================================================
-        // ENGINE DATA REALTIME 
+        // ENGINE DATA REALTIME (Data Murni Database)
         // =====================================================================
 
         // 1. Data Banner & Logo Anti-Error Hosting
@@ -104,7 +104,7 @@
         // 4. Voucher Toko
         $vouchers = DB::table('vouchers')->where('toko_id', $toko->id)->where('status', 'AKTIF')->where('tanggal_berakhir', '>', now())->get();
 
-        // 5. Kategori Toko
+        // 5. Kategori Toko & Parameter Sorting
         $kategoriToko = DB::table('tb_kategori')
             ->join('tb_barang', 'tb_kategori.id', '=', 'tb_barang.kategori_id')
             ->where('tb_barang.toko_id', $toko->id)
@@ -125,21 +125,20 @@
         {{-- ======================================================= --}}
         <div class="bg-white sm:rounded-2xl shadow-card overflow-hidden border-b sm:border border-gray-200 relative z-10">
             
-            {{-- Banner: Fixed anti kepotong --}}
-            <div class="w-full h-44 sm:h-56 lg:h-[280px] relative bg-zinc-900 {{ $headerColorClass }}">
+            {{-- Banner --}}
+            <div class="w-full h-44 sm:h-56 lg:h-[320px] relative bg-zinc-900 {{ $headerColorClass }}">
                 @if($hasBannerImage)
                     <img src="{{ $bgBanner }}" alt="Banner Toko" class="absolute inset-0 w-full h-full object-cover object-center opacity-95">
                 @else
                     <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                 @endif
-                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             </div>
 
             <div class="px-5 sm:px-8 pb-6 relative bg-white">
-                {{-- FIX BUG: Memisahkan Struktur Logo dan Teks --}}
                 <div class="flex flex-col md:flex-row md:items-start gap-5 md:gap-8">
                     
-                    {{-- 1. Logo Toko (Ditarik naik) --}}
+                    {{-- Logo Toko --}}
                     <div class="-mt-16 md:-mt-20 relative z-10 shrink-0 mx-auto md:mx-0">
                         <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full border-[4px] border-white shadow-md bg-white overflow-hidden relative">
                             @if($logoPath)
@@ -151,11 +150,10 @@
                         </div>
                     </div>
                     
-                    {{-- 2. Nama & Statistik Toko (Tetap di bawah, tidak nabrak) --}}
+                    {{-- Nama & Statistik Toko --}}
                     <div class="text-center md:text-left pt-0 md:pt-4 flex-1">
                         
                         <div class="flex items-center justify-center md:justify-start gap-2 mb-2">
-                            {{-- SVG Official Anti-Pecah --}}
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-purple-600">
                                 <path d="M10.5 2.25L12 0L13.5 2.25H16.5V3.75L18.75 5.25L17.25 7.5L18.75 9.75L16.5 11.25V12.75H13.5L12 15L10.5 12.75H7.5V11.25L5.25 9.75L6.75 7.5L5.25 5.25L7.5 3.75V2.25H10.5Z" fill="#9333ea"/>
                                 <path d="M10 10.5L7.5 8L8.5 7L10 8.5L14.5 4L15.5 5L10 10.5Z" fill="white"/>
@@ -169,7 +167,6 @@
                             <span class="text-emerald-600 font-bold flex items-center gap-1"><i class="fas fa-clock"></i> Buka</span>
                         </div>
 
-                        {{-- GRID STATISTIK TOKO (Persis seperti Screenshot Referensi) --}}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-[13px] text-gray-700 max-w-2xl mx-auto md:mx-0 border-t border-gray-100 pt-4">
                             <div class="flex items-center gap-2"><i class="fas fa-store text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Produk:</span> <span class="font-bold text-toko-600">{{ formatAngkaK($totalProduk) }}</span></div>
                             <div class="flex items-center gap-2"><i class="fas fa-user-group text-gray-400 w-5 text-center"></i> <span class="text-gray-500">Pengikut:</span> <span class="font-bold text-toko-600" id="follower-text">{{ formatAngkaK($jmlFollower) }}</span></div>
@@ -182,12 +179,18 @@
                         </div>
                     </div>
 
-                    {{-- 3. Tombol Aksi --}}
+                    {{-- Tombol Aksi Chat & Follow --}}
                     <div class="flex flex-col items-center md:items-end pt-0 md:pt-4 w-full md:w-auto mt-4 md:mt-0 gap-3 border-t md:border-0 border-gray-100 pt-4">
                         <div class="flex items-center justify-center md:justify-end gap-3 w-full sm:w-auto">
-                            <button onclick="bukaWidgetChatToko()" class="flex-1 sm:flex-none bg-white border border-toko-600 text-toko-600 font-bold px-8 py-2.5 rounded-[4px] hover:bg-toko-50 transition-colors">
-                                <i class="fas fa-comment-dots"></i> Chat
-                            </button>
+                            @auth
+                                <button type="button" onclick="triggerOpenChat({{ $toko->id }}, '{{ addslashes($toko->nama_toko) }}', '{{ $storeInitials ?? 'TK' }}')" class="flex-1 sm:flex-none bg-white border border-toko-600 text-toko-600 font-bold px-8 py-2.5 rounded-[4px] hover:bg-toko-50 transition-colors">
+                                    <i class="fas fa-comment-dots"></i> Chat
+                                </button>
+                            @else
+                                <button type="button" onclick="requireChatLogin()" class="flex-1 sm:flex-none bg-white border border-toko-600 text-toko-600 font-bold px-8 py-2.5 rounded-[4px] hover:bg-toko-50 transition-colors">
+                                    <i class="fas fa-comment-dots"></i> Chat
+                                </button>
+                            @endauth
                             
                             <button id="btn-follow" onclick="toggleFollowToko()" class="flex-1 sm:flex-none font-bold px-8 py-2.5 rounded-[4px] shadow-sm transition-colors {{ $sudahFollow ? 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50' : 'bg-toko-600 text-white hover:bg-toko-700' }}">
                                 <i class="fas {{ $sudahFollow ? 'fa-check' : 'fa-plus' }}" id="icon-follow"></i> 
@@ -306,18 +309,18 @@
         {{-- ======================================================= --}}
         <div id="area-produk" class="mt-12 px-4 sm:px-0 grid grid-cols-1 lg:grid-cols-5 gap-6 items-start scroll-mt-24">
             
-            {{-- SIDEBAR KATEGORI --}}
+            {{-- SIDEBAR KATEGORI (ANTI-BUG URL) --}}
             <div class="lg:col-span-1 hidden lg:block bg-transparent sticky top-[150px]">
                 <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-list text-gray-800"></i> Kategori</h3>
                 <ul class="space-y-3">
                     <li>
-                        <a href="?kategori=#area-produk" class="text-sm block {{ empty($currentCat) ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
+                        <a href="{{ request()->fullUrlWithQuery(['kategori' => null]) }}#area-produk" class="text-sm block {{ empty($currentCat) ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
                             Semua Produk
                         </a>
                     </li>
                     @foreach($kategoriToko as $kt)
                         <li>
-                            <a href="?kategori={{ $kt->id }}#area-produk" class="text-sm block {{ $currentCat == $kt->id ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
+                            <a href="{{ request()->fullUrlWithQuery(['kategori' => $kt->id]) }}#area-produk" class="text-sm block {{ $currentCat == $kt->id ? 'text-toko-600 font-bold border-l-2 border-toko-600 pl-2' : 'text-gray-600 hover:text-toko-600' }}">
                                 {{ $kt->nama_kategori }}
                             </a>
                         </li>
@@ -328,12 +331,12 @@
             {{-- SORTING & GRID PRODUK --}}
             <div class="lg:col-span-4 w-full">
                 
-                {{-- Toolbar Sorting (Sesuai Referensi Gambar) --}}
+                {{-- Toolbar Sorting (ANTI-BUG URL) --}}
                 <div class="bg-gray-100 rounded-md p-2 flex flex-wrap items-center gap-2 mb-6">
                     <span class="text-sm text-gray-600 mr-2 ml-2">Urutkan</span>
-                    <a href="?sort=terlaris#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terlaris' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Populer</a>
-                    <a href="?sort=terbaru#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terbaru' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Terbaru</a>
-                    <a href="?sort=terlaris#area-produk" class="px-4 py-2 text-sm rounded-sm bg-white border border-gray-200 text-gray-700 hover:text-toko-600 transition-colors">Terlaris</a>
+                    <a href="{{ request()->fullUrlWithQuery(['sort' => 'terlaris']) }}#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terlaris' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Populer</a>
+                    <a href="{{ request()->fullUrlWithQuery(['sort' => 'terbaru']) }}#area-produk" class="px-4 py-2 text-sm rounded-sm {{ $currentSort == 'terbaru' ? 'bg-toko-600 text-white font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:text-toko-600' }} transition-colors">Terbaru</a>
+                    <a href="{{ request()->fullUrlWithQuery(['sort' => 'terlaris']) }}#area-produk" class="px-4 py-2 text-sm rounded-sm bg-white border border-gray-200 text-gray-700 hover:text-toko-600 transition-colors">Terlaris</a>
                     
                     {{-- Dropdown Harga --}}
                     <div class="relative group ml-1">
@@ -341,18 +344,18 @@
                             Harga <i class="fas fa-chevron-down text-[10px]"></i>
                         </button>
                         <div class="absolute top-full left-0 w-full bg-white border border-gray-200 shadow-lg rounded mt-1 hidden group-hover:block z-20">
-                            <a href="?sort=termurah#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Rendah ke Tinggi</a>
-                            <a href="?sort=termahal#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Tinggi ke Rendah</a>
+                            <a href="{{ request()->fullUrlWithQuery(['sort' => 'termurah']) }}#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Rendah ke Tinggi</a>
+                            <a href="{{ request()->fullUrlWithQuery(['sort' => 'termahal']) }}#area-produk" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-toko-600">Harga: Tinggi ke Rendah</a>
                         </div>
                     </div>
                 </div>
 
-                {{-- Filter Kategori Mobile --}}
+                {{-- Filter Kategori Mobile (ANTI-BUG URL) --}}
                 <div class="block lg:hidden mb-5">
                     <select onchange="window.location.href=this.value" class="w-full bg-white border border-gray-200 p-3 rounded-lg text-sm font-bold outline-none">
-                        <option value="?kategori=#area-produk">Semua Kategori</option>
+                        <option value="{{ request()->fullUrlWithQuery(['kategori' => null]) }}#area-produk">Semua Kategori</option>
                         @foreach($kategoriToko as $kt)
-                            <option value="?kategori={{ $kt->id }}#area-produk" {{ $currentCat == $kt->id ? 'selected' : '' }}>{{ $kt->nama_kategori }}</option>
+                            <option value="{{ request()->fullUrlWithQuery(['kategori' => $kt->id]) }}#area-produk" {{ $currentCat == $kt->id ? 'selected' : '' }}>{{ $kt->nama_kategori }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -431,66 +434,47 @@
             if(areaProduk) observer.observe(areaProduk);
         });
 
-        // 2. LOGIKA POPUP CHAT
-// 2. LOGIKA POPUP CHAT REALTIME (Sesuai dengan tb_chat & tb_message database)
-        function bukaWidgetChatToko() {
-            // Cek apakah fungsi bawaan openChatBox atau openChatModal dari partials.chat tersedia
-            if (typeof openChatModal === "function") {
-                openChatModal('{{ $toko->id }}', '{{ $toko->nama_toko }}');
-                return;
-            }
-
-            // JURUS FALLBACK: Ambil container komponen chat global (partials.chat) yang ada di pojok kanan bawah
-            const chatBoxContainer = document.getElementById('chat-box-container') || 
-                                     document.getElementById('chat-widget') || 
-                                     document.querySelector('.chat-container') || 
-                                     document.querySelector('[id^="chat-"]');
-
-            if (chatBoxContainer) {
-                // Munculkan container chat secara halus (remove class hidden / pasang flex)
-                chatBoxContainer.classList.remove('hidden');
-                chatBoxContainer.style.display = 'flex';
-
-                // Cari input chat atau area kontak toko di dalam widget tersebut secara otomatis
-                const searchContactInput = chatBoxContainer.querySelector('input') || chatBoxContainer.querySelector('.search-bar');
-                
-                // Cari tombol atau item list toko tersebut di dalam riwayat chat kontak pembeli
-                const existingStoreContact = chatBoxContainer.querySelector(`[data-toko-id="${'{{ $toko->id }}'}"]`) || 
-                                             chatBoxContainer.querySelector(`[data-id="${'{{ $toko->id }}'}"]`);
-
-                if (existingStoreContact) {
-                    // Jika toko sudah pernah dichat sebelumnya, langsung simulasikan klik kontak tersebut
-                    existingStoreContact.click();
-                } else if (searchContactInput) {
-                    // Jika belum pernah chat, arahkan fokus kursor ke pencarian kontak chat dan ketikkan nama toko otomatis
-                    searchContactInput.focus();
-                    searchContactInput.value = '{{ $toko->nama_toko }}';
-                    // Trigger event input agar fungsi pencarian AJAX di partials.chat langsung menyaring data
-                    searchContactInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
+        // 2. FUNGSI PERINGATAN CHAT (Bagi yang belum login)
+        function requireChatLogin() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'lock',
+                    title: 'Akses Ditolak',
+                    text: 'Silakan login terlebih dahulu untuk memulai obrolan dengan penjual.',
+                    confirmButtonText: 'Login Sekarang',
+                    confirmButtonColor: '#e11d48',
+                    showCancelButton: true,
+                    cancelButtonText: 'Batal',
+                    customClass: { popup: 'rounded-3xl' }
+                }).then((result) => {
+                    if (result.isConfirmed) { window.location.href = "{{ route('login') }}"; }
+                });
             } else {
-                // Jika partials.chat benar-benar tidak ter-render atau diblokir hosting, gunakan SweetAlert2 yang mewah
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Membuka Pusat Obrolan',
-                        text: 'Menghubungkan Anda langsung dengan Admin {{ $toko->nama_toko }}...',
-                        showConfirmButton: false,
-                        timer: 1500,
-                        customClass: { popup: 'rounded-[2rem]' }
-                    });
-                } else {
-                    // Fallback terakhir jika semua library diblokir, buat pop-up box kustom instan di layar
-                    const customPopup = document.createElement('div');
-                    customPopup.className = "fixed bottom-5 right-5 bg-zinc-900 text-white text-xs font-bold px-6 py-4 rounded-xl shadow-2xl z-[9999] animate-bounce";
-                    customPopup.innerText = "💬 Menghubungkan ke Chat {{ $toko->nama_toko }}...";
-                    document.body.appendChild(customPopup);
-                    setTimeout(() => customPopup.remove(), 2500);
-                }
+                alert('Silakan login terlebih dahulu untuk memulai obrolan.');
+                window.location.href = "{{ route('login') }}";
             }
         }
 
-        // 3. LOGIKA FOLLOW TOKO REAL-TIME
+        // 3. FUNGSI BUKA CHAT GLOBAL
+        function triggerOpenChat(tokoId, namaToko, inisial) {
+            const chatWin = document.getElementById('live-chat-window');
+            if(chatWin) {
+                chatWin.classList.remove('hidden');
+                setTimeout(() => {
+                    chatWin.classList.remove('opacity-0', 'translate-y-10', 'scale-95', 'pointer-events-none');
+                    chatWin.classList.add('flex', 'opacity-100', 'translate-y-0', 'scale-100');
+                }, 10);
+                sessionStorage.setItem('pota_chat_open', 'true');
+                if(typeof window.switchChatTab === 'function') window.switchChatTab('seller', true);
+                setTimeout(() => {
+                    if(typeof window.openStoreChat === 'function') window.openStoreChat(tokoId, namaToko, inisial, false);
+                }, 100);
+            } else {
+                console.error("Elemen chat window tidak ditemukan. Pastikan partials.chat termuat di halaman ini.");
+            }
+        }
+
+        // 4. LOGIKA FOLLOW TOKO REAL-TIME
         let isFollowing = {{ $sudahFollow ? 'true' : 'false' }};
         let followerCount = {{ $jmlFollower }};
 
@@ -512,8 +496,18 @@
             })
             .then(response => {
                 if (response.status === 401) {
-                    alert('Silakan login terlebih dahulu untuk mengikuti toko.');
-                    window.location.href = '/login';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'lock',
+                            title: 'Akses Ditolak',
+                            text: 'Silakan login terlebih dahulu untuk mengikuti toko ini.',
+                            confirmButtonText: 'Login Sekarang',
+                            confirmButtonColor: '#e11d48'
+                        }).then(() => { window.location.href = '/login'; });
+                    } else {
+                        alert('Silakan login terlebih dahulu untuk mengikuti toko.');
+                        window.location.href = '/login';
+                    }
                     throw new Error('Not logged in');
                 }
                 return response.json();
