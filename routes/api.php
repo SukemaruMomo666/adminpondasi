@@ -29,6 +29,7 @@ Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
 
 // Direktori Toko / Mitra
 Route::get('/stores', [LandingController::class, 'getStores']);
+Route::get('/stores/{slug}', [LandingController::class, 'getStoreDetail']);
 
 
 // ========================================================

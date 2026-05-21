@@ -378,6 +378,60 @@ class LandingController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+    // ==========================================
+    // 2C. API UNTUK DETAIL SATU TOKO & PRODUKNYA
+    // ==========================================
+    public function getStoreDetail($slug)
+    {
+        try {
+            // 1. Cari toko berdasarkan slug
+            $toko = \Illuminate\Support\Facades\DB::table('tb_toko')
+                ->where('slug', $slug)
+                ->where('status', 'active')
+                ->first();
+
+            // Jika toko tidak ada, kembalikan error 404
+            if (!$toko) {
+                return response()->json([
+                    'status' => 'error', 
+                    'message' => 'Toko tidak ditemukan'
+                ], 404);
+            }
+
+            // 2. Perbaiki URL Gambar Toko
+            $toko->logo_toko = $toko->logo_toko ? asset('assets/uploads/logos/' . $toko->logo_toko) : null;
+            $toko->banner_toko = $toko->banner_toko ? asset('assets/uploads/banners/' . $toko->banner_toko) : null;
+
+            // Hitung jumlah follower (Opsional)
+            $toko->followers = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+                ->where('toko_id', $toko->id)
+                ->count();
+
+            // 3. Ambil data produk milik toko ini
+            $products = \Illuminate\Support\Facades\DB::table('tb_barang')
+                ->where('toko_id', $toko->id)
+                ->where('is_active', 1)
+                ->where('status_moderasi', 'approved')
+                ->get();
+
+            // 4. Perbaiki URL Gambar Produk
+            $productItems = collect($products)->map(function ($item) {
+                $item->gambar_utama = $item->gambar_utama ? asset('assets/uploads/products/' . $item->gambar_utama) : null;
+                return $item;
+            });
+
+            // 5. Kembalikan balasan JSON
+            return response()->json([
+                'status'       => 'success',
+                'toko'         => $toko,
+                'products'     => $productItems,
+                'is_following' => false // Default false untuk guest, bisa dikembangkan pakai auth sanctum
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 
     // ==========================================
     // 3. PRIVATE HELPER FUNCTIONS
