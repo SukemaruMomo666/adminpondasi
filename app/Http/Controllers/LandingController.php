@@ -309,6 +309,75 @@ class LandingController extends Controller
         }
     }
 
+    // ==========================================
+    // 2B. API UNTUK HALAMAN SEMUA TOKO (REACT NATIVE & WEB AJAX)
+    // ==========================================
+    public function getStores(Request $request)
+    {
+        try {
+            // 1. Ambil input dari aplikasi mobile
+            $lat = $request->input('lat');
+            $lng = $request->input('lng');
+            $cityId = $request->input('lokasi');
+
+            // 2. Query dasar: Ambil toko yang aktif
+            $query = \Illuminate\Support\Facades\DB::table('tb_toko as t')
+                ->select(
+                    't.id', 't.nama_toko', 't.slug', 't.logo_toko', 
+                    't.banner_toko', 't.tier_toko', 't.kota', 't.latitude', 't.longitude'
+                )
+                ->where('t.status', 'active')
+                ->where('t.status_operasional', 'Buka');
+
+            // 3. Filter Geospasial (Hyper Local) jika GPS dikirim dari HP
+            if ($lat && $lng) {
+                // Rumus Haversine untuk mencari toko dalam radius 100km
+                $query->selectRaw(
+                    '( 6371 * acos( cos( radians(?) ) *
+                      cos( radians( t.latitude ) ) *
+                      cos( radians( t.longitude ) - radians(?) ) +
+                      sin( radians(?) ) *
+                      sin( radians( t.latitude ) ) )
+                    ) AS jarak_km', [$lat, $lng, $lat]
+                )
+                ->having('jarak_km', '<=', 100)
+                ->orderBy('jarak_km', 'asc');
+            } 
+            // 4. Atau filter Kota jika user memilih dari dropdown (opsional)
+            elseif ($cityId && $cityId !== 'semua') {
+                $query->where('t.city_id', $cityId);
+            }
+
+            // Hitung jumlah produk (Opsional, agar sesuai UI Mobile)
+            $query->selectSub(function ($q) {
+                $q->from('tb_barang')
+                    ->whereColumn('toko_id', 't.id')
+                    ->where('is_active', 1)
+                    ->where('status_moderasi', 'approved')
+                    ->selectRaw('count(id)');
+            }, 'jumlah_produk');
+
+            // 5. Eksekusi Query (Paginate)
+            $stores = $query->paginate(20);
+
+            // Perbaiki URL Gambar
+            $storeItems = collect($stores->items())->map(function ($store) {
+                $store->logo_toko = $store->logo_toko ? asset('assets/uploads/logos/' . $store->logo_toko) : null;
+                $store->banner_toko = $store->banner_toko ? asset('assets/uploads/banners/' . $store->banner_toko) : null;
+                return $store;
+            });
+
+            // 6. Kembalikan balasan JSON yang rapi untuk React Native
+            return response()->json([
+                'status' => 'success',
+                'data'   => $storeItems,
+                'total'  => $stores->total()
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 
     // ==========================================
     // 3. PRIVATE HELPER FUNCTIONS
