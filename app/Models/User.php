@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens; // <-- WAJIB DITAMBAHKAN UNTUK API MOBILE
 
 class User extends Authenticatable
 {
-    // Gunakan trait bawaan Laravel, hapus 'HasApiTokens' jika tidak membuat API untuk mobile app saat ini
-    use HasFactory, Notifiable; 
+    // Masukkan HasApiTokens di sini agar fitur token Sanctum aktif
+    use HasApiTokens, HasFactory, Notifiable; 
 
     // WAJIB: Beritahu Laravel bahwa tabel yang dipakai adalah 'tb_user', bukan 'users'
     protected $table = 'tb_user'; 

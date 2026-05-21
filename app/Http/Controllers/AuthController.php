@@ -310,7 +310,6 @@ class AuthController extends Controller
 
     // ==========================================================
     // 7. API WILAYAH (AJAX) - DIBEKUKAN / KOSONGKAN SAJA
-    // (Agar jika masih ada script lama yg nyasar tidak memunculkan error 404)
     // ==========================================================
     public function getCities($provinceId)
     {
@@ -322,45 +321,41 @@ class AuthController extends Controller
         return response()->json([]);
     }
 
-    // 1. Mengarahkan user ke halaman login Google
+    // ==========================================================
+    // 8. LOGIN GOOGLE OAUTH
+    // ==========================================================
     public function redirectToGoogle()
     {
         return Socialite::driver('google')->redirect();
     }
 
-    // 2. Menerima balasan dari Google setelah user login
     public function handleGoogleCallback()
     {
         try {
-            // Tambahan ->stateless() untuk mencegah error session di localhost
             $googleUser = Socialite::driver('google')->stateless()->user();
 
-            // Cek apakah email ini sudah terdaftar di database
-            $existingUser = \Illuminate\Support\Facades\DB::table('tb_user')
+            $existingUser = DB::table('tb_user')
                                 ->where('email', $googleUser->getEmail())
                                 ->first();
 
             if ($existingUser) {
-                // Jika sudah ada, update google_id-nya dan login
-                \Illuminate\Support\Facades\DB::table('tb_user')
+                DB::table('tb_user')
                     ->where('id', $existingUser->id)
                     ->update(['google_id' => $googleUser->getId()]);
                 
                 Auth::loginUsingId($existingUser->id);
             } else {
-                // BIKIN USERNAME OTOMATIS (Ini biasanya yang bikin Crash kalau kosong)
-                $baseUsername = \Illuminate\Support\Str::slug($googleUser->getName());
-                $randomString = \Illuminate\Support\Str::random(4);
+                $baseUsername = Str::slug($googleUser->getName());
+                $randomString = Str::random(4);
                 $finalUsername = $baseUsername . '-' . $randomString;
 
-                // Buatkan akun baru otomatis sbg customer
-                $newUserId = \Illuminate\Support\Facades\DB::table('tb_user')->insertGetId([
+                $newUserId = DB::table('tb_user')->insertGetId([
                     'nama' => $googleUser->getName(),
                     'email' => $googleUser->getEmail(),
-                    'username' => $finalUsername, // <-- Kolom ini wajib ada!
+                    'username' => $finalUsername,
                     'google_id' => $googleUser->getId(),
                     'level' => 'customer',
-                    'password' => Hash::make(\Illuminate\Support\Str::random(16)),
+                    'password' => Hash::make(Str::random(16)),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -371,8 +366,58 @@ class AuthController extends Controller
             return redirect()->route('home')->with('success', 'Berhasil masuk menggunakan Google!');
 
         } catch (\Exception $e) {
-            // MATIKAN REDIRECT, KITA TAMPILKAN ERROR ASLINYA DI LAYAR PUTIH!
             dd('TANGKAPAN ERROR BOS: ' . $e->getMessage());
         }
+    }
+
+    // ==========================================================
+    // 9. API LOGIN UNTUK REACT NATIVE (SANCTUM)
+    // ==========================================================
+    public function loginApi(Request $request)
+    {
+        // 1. Validasi input dari React Native
+        $request->validate([
+            'username' => 'required',
+            'password' => 'required',
+        ]);
+
+        // 2. Cek apakah yang diinput itu format Email atau Username
+        $loginType = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        // 3. Cari user di database
+        $user = User::where($loginType, $request->username)->first();
+
+        // 4. Jika user tidak ketemu atau password salah
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email/Username atau Password salah!'
+            ], 401);
+        }
+
+        // 5. Cek apakah akun di-banned (Opsional, menyesuaikan field di database)
+        if (isset($user->is_banned) && $user->is_banned == 1) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akun Anda telah ditangguhkan.'
+            ], 403);
+        }
+
+        // 6. Buat Token Sanctum
+        $token = $user->createToken('MobileAppToken')->plainTextToken;
+
+        // 7. Kembalikan response JSON yang sesuai dengan yang diharapkan React Native
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Login Berhasil',
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'nama' => $user->nama,
+                'email' => $user->email,
+                'username' => $user->username,
+                'level' => $user->level
+            ]
+        ], 200);
     }
 }

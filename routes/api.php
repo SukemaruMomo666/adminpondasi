@@ -34,8 +34,11 @@ Route::get('/stores', [LandingController::class, 'getStores']);
 // ========================================================
 // 2. AUTENTIKASI
 // ========================================================
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Catatan: Anda perlu membuat fungsi registerApi() di AuthController nanti
+Route::post('/register', [AuthController::class, 'registerApi']);
+
+// PERBAIKAN: Gunakan fungsi loginApi yang sudah kita buat sebelumnya
+Route::post('/login', [AuthController::class, 'loginApi']);
 
 
 // ========================================================
@@ -43,9 +46,22 @@ Route::post('/login', [AuthController::class, 'login']);
 // ========================================================
 Route::middleware('auth:sanctum')->group(function () {
 
-    // User Profile & Logout
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    // PERBAIKAN: Langsung kembalikan data user menggunakan fungsi anonim (lebih praktis)
+    Route::get('/me', function (Request $request) {
+        return response()->json([
+            'status' => 'success',
+            'user' => $request->user()
+        ], 200);
+    });
+
+    // PERBAIKAN: Hapus token dari database langsung dari route agar tidak bentrok dengan logout versi Web
+    Route::post('/logout', function (Request $request) {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Berhasil logout dari aplikasi mobile.'
+        ], 200);
+    });
 
     // Keranjang Belanja
     Route::get('/cart', [CartController::class, 'index']);
