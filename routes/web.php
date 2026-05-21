@@ -314,3 +314,13 @@ Route::get('/bersih', function() {
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
     return "<h1>Sapu Jagat Berhasil!</h1><p>Semua memori lama sudah dihapus. Silakan cek API sekarang.</p>";
 }); 
+
+Route::get('/buat-tabel-token', function() {
+    try {
+        // Memaksa Laravel menjalankan perintah migrasi database di server production
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return 'Mantap bos! Tabel personal_access_tokens berhasil dibuat!';
+    } catch (\Exception $e) {
+        return 'Gagal: ' . $e->getMessage();
+    }
+});
