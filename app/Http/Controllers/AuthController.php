@@ -420,4 +420,33 @@ class AuthController extends Controller
             ]
         ], 200);
     }
+    // ==========================================================
+    // 10. API REGISTER UNTUK REACT NATIVE (SANCTUM)
+    // ==========================================================
+    public function registerApi(Request $request)
+    {
+        $request->validate([
+            'nama'     => 'required|string|max:255',
+            'username' => 'required|string|unique:tb_user,username',
+            'email'    => 'required|email|unique:tb_user,email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $user = User::create([
+            'nama'        => $request->nama,
+            'email'       => $request->email,
+            'username'    => $request->username,
+            'password'    => Hash::make($request->password),
+            'level'       => 'customer',
+            'status'      => 'offline',
+            'is_verified' => 1,
+            'is_banned'   => 0
+        ]);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Akun berhasil dibuat',
+            'user'    => $user
+        ], 201);
+    }
 }
