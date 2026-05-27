@@ -75,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/proyek', [ProjectController::class, 'index']);
 
     // Katalog Produk & Pencarian
-    Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
+    
 
 });
+
+Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
