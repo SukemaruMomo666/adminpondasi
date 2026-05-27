@@ -74,7 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
 
-    // Katalog Produk & Pencarian
+    // API CHAT (Dalam group middleware auth:sanctum)
+    Route::get('/chat/messages/{toko_id}', [ChatController::class, 'getMessages']);
+    Route::post('/chat/send', [ChatController::class, 'sendMessage']);
     
 
 });
