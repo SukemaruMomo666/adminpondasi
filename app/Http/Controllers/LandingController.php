@@ -258,16 +258,16 @@ class LandingController extends Controller
 
             // Top Stores Global
             $stores = DB::table('tb_toko as t')
-                // FIX: Mengambil kolom kota secara langsung
-                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
+                // PERBAIKAN: Tambahkan 't.slug' di sini
+                ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
                 ->where('t.status', 'active')
                 ->where('t.status_operasional', 'Buka')
                 ->limit(4)->get();
 
             // Nearby Stores Hyper Local
             $nearbyStores = DB::table('tb_toko as t')
-                // FIX: Mengambil kolom kota secara langsung
-                ->select('t.id', 't.nama_toko', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
+                // PERBAIKAN: Tambahkan 't.slug' di sini juga
+                ->select('t.id', 't.nama_toko', 't.slug', 't.logo_toko', 't.banner_toko', 't.tier_toko', 't.kota')
                 ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(t.latitude)) * cos(radians(t.longitude) - radians(?)) + sin(radians(?)) * sin(radians(t.latitude)))) AS jarak_km', [$userLat, $userLng, $userLat])
                 ->where('t.status', 'active')
                 ->where('t.status_operasional', 'Buka')
