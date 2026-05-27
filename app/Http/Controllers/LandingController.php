@@ -434,6 +434,75 @@ class LandingController extends Controller
     }
 
     // ==========================================
+    // API DETAIL SATU PRODUK
+    // ==========================================
+    public function getProductDetail($id)
+    {
+        try {
+            $product = \Illuminate\Support\Facades\DB::table('tb_barang')
+                ->where('id', $id)
+                ->where('is_active', 1)
+                ->first();
+
+            if (!$product) {
+                return response()->json(['status' => 'error', 'message' => 'Produk tidak ditemukan'], 404);
+            }
+
+            // Ambil data toko pemilik produk
+            $toko = \Illuminate\Support\Facades\DB::table('tb_toko')
+                ->where('id', $product->toko_id)
+                ->first();
+
+            // Hitung terjual
+            $terjual = \Illuminate\Support\Facades\DB::table('tb_detail_transaksi')
+                ->where('barang_id', $product->id)
+                ->where('status_pesanan_item', 'sampai_tujuan')
+                ->sum('jumlah') ?? 0;
+
+            // Hitung rating (jika ada tabel review, jika tidak set default)
+            $rating = 4.8;
+            $ulasan = 0;
+            // Jika kamu punya tabel tb_review_produk:
+            // $rating = DB::table('tb_review_produk')->where('barang_id', $product->id)->avg('rating') ?? 0;
+            // $ulasan = DB::table('tb_review_produk')->where('barang_id', $product->id)->count();
+
+            // Perbaiki URL Gambar
+            $product->gambar_utama = $product->gambar_utama ? asset('assets/uploads/products/' . $product->gambar_utama) : 'https://picsum.photos/800/800';
+
+            // Ambil Kategori
+            $kategori = \Illuminate\Support\Facades\DB::table('tb_kategori')
+                ->where('id', $product->kategori_id)
+                ->value('nama_kategori') ?? 'Bahan Bangunan';
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'id' => $product->id,
+                    'nama_barang' => $product->nama_barang,
+                    'harga' => $product->harga,
+                    'deskripsi' => $product->deskripsi,
+                    'stok' => $product->stok,
+                    'gambar' => $product->gambar_utama,
+                    'terjual' => $terjual,
+                    'rating' => $rating,
+                    'ulasan' => $ulasan,
+                    'kategori' => $kategori,
+                    'toko' => [
+                        'id' => $toko->id,
+                        'slug' => $toko->slug,
+                        'nama' => $toko->nama_toko,
+                        'lokasi' => $toko->kota ?? 'Nasional',
+                        'badge' => $toko->tier_toko == 'official_store' ? 'OFFICIAL' : 'VERIFIED',
+                        'avatar' => strtoupper(substr($toko->nama_toko, 0, 2)),
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // ==========================================
     // 3. PRIVATE HELPER FUNCTIONS
     // ==========================================
     private function getBestSellingProducts($userLat = null, $userLng = null, $areaId = null, $isApi = false)

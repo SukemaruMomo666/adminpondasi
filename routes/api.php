@@ -74,4 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
 
+    // Katalog Produk & Pencarian
+    Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
+
 });
