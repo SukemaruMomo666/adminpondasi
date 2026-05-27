@@ -239,4 +239,19 @@ class ChatController extends Controller
             return $date->format('d/m/y');
         }
     }
+    
+    public function getChatList() {
+    $userId = Auth::id();
+    // Mengambil daftar toko yang pernah di-chat oleh user
+    $chats = DB::table('tb_chat as c')
+        ->join('tb_toko as t', 'c.toko_id', '=', 't.id')
+        ->select('t.id as toko_id', 't.nama_toko', 't.logo_toko')
+        ->selectRaw('(SELECT message FROM tb_chat WHERE toko_id = t.id AND user_id = ? ORDER BY created_at DESC LIMIT 1) as pesan_terakhir', [$userId])
+        ->selectRaw('(SELECT created_at FROM tb_chat WHERE toko_id = t.id AND user_id = ? ORDER BY created_at DESC LIMIT 1) as waktu_terakhir', [$userId])
+        ->where('c.user_id', $userId)
+        ->groupBy('t.id', 't.nama_toko', 't.logo_toko')
+        ->get();
+
+    return response()->json(['status' => 'success', 'data' => $chats]);
+}
 }
