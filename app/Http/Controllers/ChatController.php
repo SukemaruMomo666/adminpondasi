@@ -175,9 +175,12 @@ class ChatController extends Controller
                 $fileData = base64_decode(substr($rawMessage, strpos($rawMessage, ',') + 1));
 
                 $fileName = 'chat_' . time() . '_' . uniqid() . '.' . $extension;
-                Storage::disk('local')->put('private_chats/' . $fileName, $fileData);
 
-                $fileUrl = route('chat.file', ['filename' => $fileName]);
+                // Simpan ke folder public agar sejajar dengan gambar dari seller
+                Storage::disk('public')->put('chat_media/' . $fileName, $fileData);
+
+                // Gunakan URL langsung yang bebas blokir
+                $fileUrl = '/storage/chat_media/' . $fileName;
                 $messageText = $msgType === 'file' ? ($request->input('file_name') ?? 'Dokumen') : '';
             } elseif ($msgType === 'text') {
                 $fileUrl = null;
