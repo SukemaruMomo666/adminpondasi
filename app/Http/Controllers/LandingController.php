@@ -570,4 +570,35 @@ class LandingController extends Controller
         $index = crc32($nama) % count($colors);
         return $colors[$index];
     }
+
+    public function getAllProducts(Request $request)
+    {
+        // 1. Ambil Data Kategori & Sub Kategori
+        // Menggunakan Model agar relasi subKategori (seperti di Blade) ikut terbawa
+        $categories = \App\Models\Kategori::with('subKategori')->orderBy('nama_kategori', 'ASC')->get();
+
+        // 2. Ambil Data Produk (Sama persis dengan PageController)
+        $query = DB::table('tb_barang as b')
+            ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
+            ->leftJoin('tb_kategori as k', 'b.kategori_id', '=', 'k.id') // Join untuk ambil nama kategori
+            ->select(
+                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit', 'b.stok_terjual',
+                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota',
+                'k.nama_kategori as kategori' // Nama kategori untuk filter di Mobile
+            )
+            ->where('b.is_active', 1)
+            ->where('b.status_moderasi', 'approved')
+            ->where('t.status', 'active');
+
+        // Tarik semua data yang disetujui (Mobile akan memfilter ini secara real-time / ngebut)
+        $products = $query->orderBy('b.created_at', 'DESC')->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'categories' => $categories,
+                'products' => $products
+            ]
+        ], 200);
+    }
 }
