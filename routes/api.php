@@ -36,10 +36,10 @@ Route::get('/stores/{slug}', [LandingController::class, 'getStoreDetail']);
 // ========================================================
 // 2. AUTENTIKASI
 // ========================================================
-// Catatan: Anda perlu membuat fungsi registerApi() di AuthController nanti
+// Endpoint untuk Register Mobile
 Route::post('/register', [AuthController::class, 'registerApi']);
 
-// PERBAIKAN: Gunakan fungsi loginApi yang sudah kita buat sebelumnya
+// Endpoint untuk Login Mobile (Mendapatkan Sanctum Token)
 Route::post('/login', [AuthController::class, 'loginApi']);
 
 
@@ -48,7 +48,7 @@ Route::post('/login', [AuthController::class, 'loginApi']);
 // ========================================================
 Route::middleware('auth:sanctum')->group(function () {
 
-    // PERBAIKAN: Langsung kembalikan data user menggunakan fungsi anonim (lebih praktis)
+    // Mengambil data profil user yang sedang aktif
     Route::get('/me', function (Request $request) {
         return response()->json([
             'status' => 'success',
@@ -56,7 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 200);
     });
 
-    // PERBAIKAN: Hapus token dari database langsung dari route agar tidak bentrok dengan logout versi Web
+    // Menghapus token dari database server saat Logout
     Route::post('/logout', function (Request $request) {
         $request->user()->currentAccessToken()->delete();
         return response()->json([
@@ -75,12 +75,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
 
-    /// ========================================================
+    // ========================================================
     // RUTE CHAT KHUSUS MOBILE APP (VIP SANCTUM)
     // ========================================================
     Route::get('/m-chat/contacts', [ChatController::class, 'getContacts']);
     Route::get('/m-chat/messages/{storeId}', [ChatController::class, 'getMessages']);
     Route::post('/m-chat/send', [ChatController::class, 'sendMessage']);
-});
 
-Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
+});
