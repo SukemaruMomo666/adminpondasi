@@ -74,8 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
 
-    // API CHAT (Dalam group middleware auth:sanctum)
-    Route::get('/chat/messages/{toko_id}', [ChatController::class, 'getMessages']);
+    // Rute Chat yang benar di dalam grup API
+    Route::get('/chat/contacts', [ChatController::class, 'getContacts']);
+    Route::get('/chat/messages/{storeId}', [ChatController::class, 'getMessages']);
     Route::post('/chat/send', [ChatController::class, 'sendMessage']);
     
 
