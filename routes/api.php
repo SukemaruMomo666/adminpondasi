@@ -9,6 +9,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ChatController;
 
 /*
 |--------------------------------------------------------------------------
