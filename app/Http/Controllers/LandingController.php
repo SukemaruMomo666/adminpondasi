@@ -573,32 +573,58 @@ class LandingController extends Controller
 
     public function getAllProducts(Request $request)
     {
-        // 1. Ambil Data Kategori & Sub Kategori
-        // Menggunakan Model agar relasi subKategori (seperti di Blade) ikut terbawa
-        $categories = \App\Models\Kategori::with('subKategori')->orderBy('nama_kategori', 'ASC')->get();
+        try {
+            // 1. Ambil Data Kategori & Sub Kategori dengan DB Builder (Anti-Crash)
+            $kategoriUtama = DB::table('tb_kategori')->whereNull('parent_id')->orderBy('nama_kategori', 'ASC')->get();
+            $kategoriAnak = DB::table('tb_kategori')->whereNotNull('parent_id')->get();
+            
+            // Susun relasinya secara manual (mirip seperti yang ada di fungsi index web kamu)
+            foreach ($kategoriUtama as $utama) {
+                $utama->subKategori = $kategoriAnak->where('parent_id', $utama->id)->values();
+            }
 
-        // 2. Ambil Data Produk (Sama persis dengan PageController)
-        $query = DB::table('tb_barang as b')
-            ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->leftJoin('tb_kategori as k', 'b.kategori_id', '=', 'k.id') // Join untuk ambil nama kategori
-            ->select(
-                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit', 'b.stok_terjual',
-                't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota',
-                'k.nama_kategori as kategori' // Nama kategori untuk filter di Mobile
-            )
-            ->where('b.is_active', 1)
-            ->where('b.status_moderasi', 'approved')
-            ->where('t.status', 'active');
+            // 2. Ambil Data Produk 
+            $query = DB::table('tb_barang as b')
+                ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
+                ->leftJoin('tb_kategori as k', 'b.kategori_id', '=', 'k.id') 
+                ->select(
+                    'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
+                    't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota',
+                    'k.nama_kategori as kategori' 
+                )
+                // Subquery aman untuk menghitung stok terjual (Sama seperti getBestSellingProducts)
+                ->selectSub(function ($q) {
+                    $q->from('tb_detail_transaksi')
+                      ->whereColumn('barang_id', 'b.id')
+                      ->where('status_pesanan_item', 'sampai_tujuan')
+                      ->selectRaw('COALESCE(SUM(jumlah), 0)');
+                }, 'stok_terjual')
+                ->where('b.is_active', 1)
+                ->where('b.status_moderasi', 'approved')
+                ->where('t.status', 'active');
 
-        // Tarik semua data yang disetujui (Mobile akan memfilter ini secara real-time / ngebut)
-        $products = $query->orderBy('b.created_at', 'DESC')->get();
+            // Eksekusi query produk
+            $products = $query->orderBy('b.created_at', 'DESC')->get();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'categories' => $categories,
-                'products' => $products
-            ]
-        ], 200);
+            // Tambahkan Base URL ke gambar agar tidak blank di Mobile
+            foreach($products as $p) {
+                $p->gambar_utama = $p->gambar_utama ? asset('assets/uploads/products/' . $p->gambar_utama) : asset('assets/uploads/products/default.jpg');
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'categories' => $kategoriUtama, // Kirim kategori yang sudah tersusun manual
+                    'products' => $products
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            // CCTV: Lempar pesan error spesifik jika gagal
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Terjadi kesalahan saat memuat produk: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
