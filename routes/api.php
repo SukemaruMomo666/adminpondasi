@@ -74,12 +74,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
 
-    // Rute Chat yang benar di dalam grup API
-    Route::get('/chat/contacts', [ChatController::class, 'getContacts']);
-    Route::get('/chat/messages/{storeId}', [ChatController::class, 'getMessages']);
-    Route::post('/chat/send', [ChatController::class, 'sendMessage']);
-    
-
+    /// ========================================================
+    // RUTE CHAT KHUSUS MOBILE APP (VIP SANCTUM)
+    // ========================================================
+    Route::get('/m-chat/contacts', [ChatController::class, 'getContacts']);
+    Route::get('/m-chat/messages/{storeId}', [ChatController::class, 'getMessages']);
+    Route::post('/m-chat/send', [ChatController::class, 'sendMessage']);
 });
 
 Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
