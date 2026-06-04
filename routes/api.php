@@ -7,12 +7,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\TransactionController; // Controller Web (Hati-hati jangan tertukar)
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI UNTUK PROFIL
+
+// Alias khusus untuk Controller Mobile
 use App\Http\Controllers\Api\Mobile\TransactionController as MobileTransaction;
-
-
 
 // ========================================================
 // 1. DATA PUBLIK (Bisa diakses tanpa login)
@@ -29,7 +30,6 @@ Route::get('/products/{id}', [LandingController::class, 'getProductDetail']);
 Route::get('/stores', [LandingController::class, 'getStores']);
 Route::get('/stores/{slug}', [LandingController::class, 'getStoreDetail']);
 
-
 // ========================================================
 // 2. AUTENTIKASI
 // ========================================================
@@ -38,7 +38,6 @@ Route::post('/register', [AuthController::class, 'registerApi']);
 
 // Endpoint untuk Login Mobile (Mendapatkan Sanctum Token)
 Route::post('/login', [AuthController::class, 'loginApi']);
-
 
 // ========================================================
 // 3. PRIVATE ROUTES (Wajib Login & Menggunakan Sanctum Token)
@@ -62,17 +61,26 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 200);
     });
 
+    // ========================================================
+    // FITUR PENGGUNA & TRANSAKSI
+    // ========================================================
+    
+    // Edit Profil & Password (Baru ditambahkan)
+    Route::post('/profile/update', [UserController::class, 'updateProfile']);
+    Route::post('/profile/password', [UserController::class, 'updatePassword']);
+
     // Keranjang Belanja
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/add', [CartController::class, 'store']);
 
-    // Transaksi / Checkout
-    Route::post('/checkout', [TransactionController::class, 'checkout']);
+    // Transaksi / Checkout ---> SEKARANG MENGARAH KE KODE MIDTRANS YANG BENAR!
+    Route::post('/checkout', [MobileTransaction::class, 'checkout']);
+    
+    // Riwayat Pesanan
+    Route::get('/orders', [MobileTransaction::class, 'userOrders']);
 
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
-
-    Route::get('/orders', [MobileTransaction::class, 'userOrders']);
 
     // ========================================================
     // RUTE CHAT KHUSUS MOBILE APP (VIP SANCTUM)
