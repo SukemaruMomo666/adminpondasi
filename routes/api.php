@@ -10,12 +10,9 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Api\Mobile\TransactionController as MobileTransaction;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
+
 
 // ========================================================
 // 1. DATA PUBLIK (Bisa diakses tanpa login)
@@ -74,6 +71,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Manajemen Proyek / RAB (Mandor POTA AI)
     Route::get('/proyek', [ProjectController::class, 'index']);
+
+    Route::get('/orders', [MobileTransaction::class, 'userOrders']);
 
     // ========================================================
     // RUTE CHAT KHUSUS MOBILE APP (VIP SANCTUM)
