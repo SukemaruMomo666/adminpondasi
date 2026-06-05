@@ -574,16 +574,18 @@ class LandingController extends Controller
     public function getAllProducts(Request $request)
     {
         try {
-            // 1. Ambil Data Kategori & Sub Kategori dengan DB Builder (Anti-Crash)
+            // 1. TANGKAP KATA KUNCI PENCARIAN DARI REACT NATIVE
+            $search = $request->input('search');
+
+            // 2. Ambil Data Kategori & Sub Kategori dengan DB Builder
             $kategoriUtama = DB::table('tb_kategori')->whereNull('parent_id')->orderBy('nama_kategori', 'ASC')->get();
             $kategoriAnak = DB::table('tb_kategori')->whereNotNull('parent_id')->get();
             
-            // Susun relasinya secara manual (mirip seperti yang ada di fungsi index web kamu)
             foreach ($kategoriUtama as $utama) {
                 $utama->subKategori = $kategoriAnak->where('parent_id', $utama->id)->values();
             }
 
-            // 2. Ambil Data Produk 
+            // 3. Ambil Data Produk 
             $query = DB::table('tb_barang as b')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
                 ->leftJoin('tb_kategori as k', 'b.kategori_id', '=', 'k.id') 
@@ -592,7 +594,6 @@ class LandingController extends Controller
                     't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota',
                     'k.nama_kategori as kategori' 
                 )
-                // Subquery aman untuk menghitung stok terjual (Sama seperti getBestSellingProducts)
                 ->selectSub(function ($q) {
                     $q->from('tb_detail_transaksi')
                       ->whereColumn('barang_id', 'b.id')
@@ -603,10 +604,18 @@ class LandingController extends Controller
                 ->where('b.status_moderasi', 'approved')
                 ->where('t.status', 'active');
 
+            // 4. LOGIKA PENCARIAN (WHERE LIKE)
+            if (!empty($search)) {
+                $query->where(function($q) use ($search) {
+                    $q->where('b.nama_barang', 'LIKE', '%' . $search . '%')
+                      ->orWhere('t.nama_toko', 'LIKE', '%' . $search . '%')
+                      ->orWhere('k.nama_kategori', 'LIKE', '%' . $search . '%');
+                });
+            }
+
             // Eksekusi query produk
             $products = $query->orderBy('b.created_at', 'DESC')->get();
 
-            // Tambahkan Base URL ke gambar agar tidak blank di Mobile
             foreach($products as $p) {
                 $p->gambar_utama = $p->gambar_utama ? asset('assets/uploads/products/' . $p->gambar_utama) : asset('assets/uploads/products/default.jpg');
             }
@@ -614,13 +623,12 @@ class LandingController extends Controller
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'categories' => $kategoriUtama, // Kirim kategori yang sudah tersusun manual
+                    'categories' => $kategoriUtama, 
                     'products' => $products
                 ]
             ], 200);
 
         } catch (\Exception $e) {
-            // CCTV: Lempar pesan error spesifik jika gagal
             return response()->json([
                 'status' => 'error', 
                 'message' => 'Terjadi kesalahan saat memuat produk: ' . $e->getMessage()
