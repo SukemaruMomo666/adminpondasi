@@ -65,9 +65,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // FITUR PENGGUNA & TRANSAKSI
     // ========================================================
     
-    // Edit Profil & Password (Baru ditambahkan)
+    // Edit Profil & Password
     Route::post('/profile/update', [UserController::class, 'updateProfile']);
     Route::post('/profile/password', [UserController::class, 'updatePassword']);
+
+    // --- RUTE BARU: ALAMAT PENGIRIMAN & LEAFLET MAPS ---
+    Route::get('/addresses', [LandingController::class, 'getUserAddresses']);
+    Route::post('/addresses', [LandingController::class, 'storeUserAddress']);
+    // Opsional untuk halaman Daftar Alamat (Set Utama & Hapus)
+    Route::post('/addresses/{id}/set-utama', [LandingController::class, 'setUtamaAddress']);
+    Route::delete('/addresses/{id}', [LandingController::class, 'deleteAddress']);
 
     // Keranjang Belanja
     Route::get('/cart', [CartController::class, 'index']);

@@ -635,4 +635,176 @@ class LandingController extends Controller
             ], 500);
         }
     }
+
+   // ==========================================
+    // API UNTUK ALAMAT PENGIRIMAN (REACT NATIVE)
+    // ==========================================
+    
+    // Mengambil daftar alamat milik user
+    public function getUserAddresses(Request $request)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            // Ambil semua alamat user ini, urutkan yang UTAMA di paling atas, lalu yang terbaru
+            $addresses = DB::table('tb_user_alamat')
+                ->where('user_id', $user->id)
+                ->orderBy('is_utama', 'DESC')
+                ->orderBy('created_at', 'DESC')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $addresses
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // Menyimpan alamat baru dari peta Leaflet
+    public function storeUserAddress(Request $request)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            // 1. VALIDASI: Pagar Keamanan agar DB tidak error jika ada field wajib yang kosong
+            $request->validate([
+                'label' => 'required|string',
+                'nama_penerima' => 'required|string',
+                'telepon' => 'required|string',
+                'alamat_lengkap' => 'required|string',
+                'desa' => 'required|string',
+                'kecamatan' => 'required|string',
+                'kota' => 'required|string',
+                'latitude' => 'required',
+                'longitude' => 'required',
+            ]);
+
+            $isUtama = $request->input('is_utama', 0);
+            
+            // 2. Cek apakah ini alamat pertama user? Jika iya, paksa jadi alamat utama
+            $cekAlamat = DB::table('tb_user_alamat')->where('user_id', $user->id)->count();
+            if ($cekAlamat == 0) {
+                $isUtama = 1; 
+            }
+
+            // 3. Jika alamat baru ini diset jadi utama, matikan status utama di alamat lainnya
+            if ($isUtama == 1) {
+                DB::table('tb_user_alamat')
+                    ->where('user_id', $user->id)
+                    ->update(['is_utama' => 0]);
+            }
+
+            // 4. Insert ke database (Gunakan Null Coalescing '??' untuk field yang tidak wajib)
+            DB::table('tb_user_alamat')->insert([
+                'user_id' => $user->id,
+                'label' => $request->label,
+                'nama_penerima' => $request->nama_penerima,
+                'telepon' => $request->telepon,
+                'alamat_lengkap' => $request->alamat_lengkap,
+                'rt' => $request->rt ?? '',         // Jika user tidak isi RT, simpan string kosong
+                'rw' => $request->rw ?? '',         // Jika user tidak isi RW, simpan string kosong
+                'desa' => $request->desa,
+                'kecamatan' => $request->kecamatan,
+                'kota' => $request->kota,
+                'kode_pos' => $request->kode_pos ?? '', 
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'is_utama' => $isUtama,
+                'created_at' => \Carbon\Carbon::now(),
+                'updated_at' => \Carbon\Carbon::now(),
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Alamat berhasil ditambahkan'], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error dari validasi (misal lupa isi form) dilempar dengan status 422
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Data tidak lengkap, periksa form Anda.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            // Error query/sistem lainnya
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+    // ==========================================
+    // MENGUBAH ALAMAT MENJADI ALAMAT UTAMA
+    // ==========================================
+    public function setUtamaAddress(Request $request, $id)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            // 1. Matikan semua status utama (is_utama = 0) untuk user ini
+            DB::table('tb_user_alamat')
+                ->where('user_id', $user->id)
+                ->update(['is_utama' => 0]);
+
+            // 2. Jadikan alamat yang dipilih sebagai utama (is_utama = 1)
+            $updated = DB::table('tb_user_alamat')
+                ->where('id', $id)
+                ->where('user_id', $user->id)
+                ->update(['is_utama' => 1]);
+
+            if ($updated) {
+                return response()->json(['status' => 'success', 'message' => 'Alamat utama berhasil diubah'], 200);
+            } else {
+                return response()->json(['status' => 'error', 'message' => 'Alamat tidak ditemukan'], 404);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // ==========================================
+    // MENGHAPUS ALAMAT PENGIRIMAN
+    // ==========================================
+    public function deleteAddress(Request $request, $id)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+
+            // Hapus alamat berdasarkan ID dan pastikan itu milik user yang sedang login
+            $deleted = DB::table('tb_user_alamat')
+                ->where('id', $id)
+                ->where('user_id', $user->id)
+                ->delete();
+
+            if ($deleted) {
+                // Opsional: Jika yang dihapus adalah alamat utama, dan user masih punya alamat lain, 
+                // jadikan salah satu alamat yang tersisa sebagai utama agar sistem tidak bingung.
+                $sisaAlamat = DB::table('tb_user_alamat')->where('user_id', $user->id)->first();
+                if ($sisaAlamat) {
+                    $cekUtama = DB::table('tb_user_alamat')->where('user_id', $user->id)->where('is_utama', 1)->count();
+                    if ($cekUtama == 0) {
+                        DB::table('tb_user_alamat')->where('id', $sisaAlamat->id)->update(['is_utama' => 1]);
+                    }
+                }
+
+                return response()->json(['status' => 'success', 'message' => 'Alamat berhasil dihapus'], 200);
+            } else {
+                return response()->json(['status' => 'error', 'message' => 'Alamat tidak ditemukan atau sudah dihapus'], 404);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }
