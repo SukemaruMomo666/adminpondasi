@@ -144,4 +144,27 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+    public function followingStores(Request $request)
+    {
+        // Mengambil ID user yang sedang login dari token Sanctum
+        $userId = $request->user()->id;
+
+        $stores = DB::table('tb_toko_follower')
+            ->join('tb_toko', 'tb_toko_follower.toko_id', '=', 'tb_toko.id')
+            ->where('tb_toko_follower.user_id', $userId)
+            ->select(
+                'tb_toko.id', 
+                'tb_toko.nama_toko', 
+                'tb_toko.slug', 
+                'tb_toko.logo_toko', 
+                'tb_toko.kota', 
+                'tb_toko.tier_toko'
+            )
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $stores
+        ]);
+    }
 }
