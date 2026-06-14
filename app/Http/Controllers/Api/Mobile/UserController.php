@@ -167,4 +167,47 @@ class UserController extends Controller
             'data' => $stores
         ]);
     }
+    // ==========================================================
+    // API UNTUK TOMBOL FOLLOW / UNFOLLOW
+    // ==========================================================
+    public function toggleFollow(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'toko_id' => 'required|integer'
+        ]);
+
+        $userId = $request->user()->id;
+        $tokoId = $request->toko_id;
+
+        // Cek apakah user sudah memfollow toko ini
+        $isFollowing = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+            ->where('user_id', $userId)
+            ->where('toko_id', $tokoId)
+            ->first();
+
+        if ($isFollowing) {
+            // Jika sudah follow -> Batal Ikuti (Unfollow)
+            \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+                ->where('user_id', $userId)
+                ->where('toko_id', $tokoId)
+                ->delete();
+                
+            $action = 'unfollowed';
+        } else {
+            // Jika belum follow -> Ikuti (Follow)
+            \Illuminate\Support\Facades\DB::table('tb_toko_follower')->insert([
+                'user_id' => $userId,
+                'toko_id' => $tokoId,
+                'created_at' => now(),
+            ]);
+            
+            $action = 'followed';
+        }
+
+        // Kembalikan response JSON yang ditangkap oleh React Native
+        return response()->json([
+            'status' => 'success',
+            'action' => $action
+        ]);
+    }
 }
