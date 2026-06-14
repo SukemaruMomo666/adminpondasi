@@ -64,6 +64,13 @@
             ], 200);
         });
 
+            // Rute untuk List Toko Diikuti
+            Route::get('/following-stores', [App\Http\Controllers\Api\UserController::class, 'followingStores']);
+            
+            // Rute untuk Tombol Ikuti / Batal Ikuti
+            Route::post('/toko/follow', [App\Http\Controllers\Api\UserController::class, 'toggleFollow']);
+        });
+
         // ========================================================
         // FITUR PENGGUNA & TRANSAKSI
         // ========================================================
@@ -108,6 +115,4 @@ Route::get('/biteship/areas', [App\Http\Controllers\Api\BiteshipController::clas
         Route::post('/profile/request-otp', [MobileUserController::class, 'requestPasswordOtp']);
         Route::post('/profile/password-otp', [MobileUserController::class, 'updatePasswordWithOtp']);
 
-        // routes/api.php
-        Route::get('/following-stores', [App\Http\Controllers\Api\Mobile\UserController::class, 'followingStores'])->middleware('auth:sanctum');
     });
