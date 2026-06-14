@@ -66,11 +66,11 @@
 
 
         // Rute untuk List Toko Diikuti
-        Route::get('/following-stores', [App\Http\Controllers\Api\UserController::class, 'followingStores']);
+        Route::get('/following-stores', [MobileUserController::class, 'followingStores']);
         
         // Rute untuk Tombol Ikuti / Batal Ikuti
-        Route::post('/toko/follow', [App\Http\Controllers\Api\UserController::class, 'toggleFollow']);
-       
+        Route::post('/toko/follow', [MobileUserController::class, 'toggleFollow']);
+        
         // ========================================================
         // FITUR PENGGUNA & TRANSAKSI
         // ========================================================
