@@ -698,24 +698,23 @@ class LandingController extends Controller
                 DB::table('tb_user_alamat')->where('user_id', $user->id)->update(['is_utama' => 0]);
             }
 
+            // Gabungkan alamat detail karena di DB hanya ada kolom alamat_lengkap dan ID Wilayah
             $rt = $request->rt ?? '-';
             $rw = $request->rw ?? '-';
-            $kodepos = $request->kode_pos ?? '-';
-            
-            $fullAddress = "[{$request->label}] {$request->alamat_lengkap}, RT {$rt}/RW {$rw}, Desa/Kel. {$request->desa}, Kec. {$request->kecamatan}, Kode Pos: {$kodepos}";
+            $fullAddress = "{$request->alamat_lengkap}, RT {$rt}/RW {$rw}, Desa/Kel. {$request->desa}, Kec. {$request->kecamatan}, Kota/Kab. {$request->kota}";
 
-            // KUNCI PERBAIKAN: Ganti 'telepon' menjadi 'no_telepon' sesuai standar database kamu
+            // INSERT SESUAI NAMA KOLOM ASLI DI DATABASE X-FORCE (TIDAK ADA created_at & updated_at)
             DB::table('tb_user_alamat')->insert([
-                'user_id'        => $user->id,
-                'nama_penerima'  => $request->nama_penerima,
-                'no_telepon'     => $request->telepon, // <--- INI YANG DIGANTI
-                'alamat_lengkap' => $fullAddress,
-                'kota'           => $request->kota,
-                'latitude'       => $request->latitude,
-                'longitude'      => $request->longitude,
-                'is_utama'       => $isUtama,
-                'created_at'     => \Carbon\Carbon::now(),
-                'updated_at'     => \Carbon\Carbon::now(),
+                'user_id'          => $user->id,
+                'label_alamat'     => $request->label,
+                'nama_penerima'    => $request->nama_penerima,
+                'telepon_penerima' => $request->telepon,
+                'alamat_lengkap'   => $fullAddress,
+                'kode_pos'         => $request->kode_pos ?? null,
+                'latitude'         => $request->latitude,
+                'longitude'        => $request->longitude,
+                'is_utama'         => $isUtama
+                // province_id, city_id, district_id dibiarkan kosong karena defaultnya NULL di database
             ]);
 
             return response()->json(['status' => 'success', 'message' => 'Alamat berhasil ditambahkan'], 200);
