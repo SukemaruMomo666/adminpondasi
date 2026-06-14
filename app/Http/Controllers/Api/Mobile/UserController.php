@@ -20,10 +20,11 @@ class UserController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
 
+            // Validasi: unique:tb_user,email,{id},id -> Ini format paling aman di Laravel
             $request->validate([
                 'nama' => 'required|string|max:255',
-                'email' => 'required|email|unique:tb_user,email,' . $user->id,
-                'no_telepon' => 'nullable|string', // <-- Pastikan ini nullable
+                'email' => 'required|email|unique:tb_user,email,' . $user->id . ',id',
+                'no_telepon' => 'nullable|string',
             ]);
 
             DB::table('tb_user')->where('id', $user->id)->update([
@@ -39,7 +40,6 @@ class UserController extends Controller
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // INI YANG AKAN DITANGKAP OLEH HP-MU JIKA ERROR 422
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validasi gagal.',
