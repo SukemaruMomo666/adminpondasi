@@ -87,11 +87,25 @@ class TransactionController extends Controller
                 $totalProduk += $item->harga * $jumlah;
             }
         } else {
+            // ALUR DARI KERANJANG - KUNCI PERBAIKAN BACKEND
             $rawSelectedItems = $request->input('selected_items');
-            $selectedItems = is_string($rawSelectedItems) ? explode(',', $rawSelectedItems) : (is_array($rawSelectedItems) ? $rawSelectedItems : []);
+            
+            $selectedItems = [];
+            if (is_array($rawSelectedItems)) {
+                $selectedItems = $rawSelectedItems;
+            } elseif (is_string($rawSelectedItems) && trim($rawSelectedItems) !== '') {
+                $selectedItems = explode(',', $rawSelectedItems);
+            } elseif (!empty($rawSelectedItems)) {
+                $selectedItems = [$rawSelectedItems];
+            }
 
+            // Jika setelah dikonversi tetap kosong, return log info untuk debug
             if (empty($selectedItems)) {
-                return response()->json(['status' => 'error', 'message' => 'Tidak ada barang yang dipilih'], 400);
+                return response()->json([
+                    'status' => 'error', 
+                    'message' => 'Tidak ada barang yang dipilih atau format selected_items tidak valid.',
+                    'debug_input' => $rawSelectedItems
+                ], 400);
             }
 
             $items = DB::table('tb_keranjang as k')
