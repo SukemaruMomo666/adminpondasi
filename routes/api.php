@@ -84,6 +84,9 @@
 
         Route::get('/checkout/data', [MobileTransaction::class, 'getCheckoutData']);
         Route::get('/cek-ongkir', [MobileTransaction::class, 'cekOngkir']);
+
+        // Tambahkan di dalam group middleware 'auth:sanctum' atau di luar jika ingin public
+Route::get('/biteship/areas', [App\Http\Controllers\Api\BiteshipController::class, 'searchArea']);
         
         // Riwayat Pesanan
         Route::get('/orders', [MobileTransaction::class, 'userOrders']);
