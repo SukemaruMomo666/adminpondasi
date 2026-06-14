@@ -39,6 +39,19 @@ class UserController extends Controller
         try {
             $user = Auth::guard('sanctum')->user();
 
+            // 1. Validasi input email dari React Native
+            $request->validate([
+                'email' => 'required|email'
+            ]);
+
+            // 2. Keamanan Ekstra: Cek apakah email yang diketik cocok dengan email di database
+            if (strtolower($request->email) !== strtolower($user->email)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Alamat email yang Anda masukkan tidak cocok dengan akun ini.'
+                ], 400);
+            }
+
             // Generate 6 digit angka OTP acak
             $otp = rand(100000, 999999);
 
@@ -48,14 +61,13 @@ class UserController extends Controller
                 'reset_token_expires_at' => Carbon::now()->addMinutes(10)
             ]);
 
-            // Kirim Email OTP ke user (Pastikan settingan SMTP di .env Laravel kamu sudah benar)
+            // Kirim Email OTP ke user
             try {
                 Mail::raw("Halo {$user->nama},\n\nKode OTP Anda untuk mengganti password adalah: {$otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.", function ($message) use ($user) {
                     $message->to($user->email)
                             ->subject('Kode OTP Ganti Password - PondasiKita');
                 });
             } catch (\Exception $e) {
-                // Jika SMTP belum di-setting, kita tetap berikan status success tapi OTP dimunculkan di respons untuk testing Mobile
                 return response()->json([
                     'status' => 'success', 
                     'message' => 'Email gagal dikirim (SMTP belum diatur), TAPI OTP berhasil dibuat untuk testing.',
