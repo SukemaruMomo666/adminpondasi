@@ -666,7 +666,7 @@ class LandingController extends Controller
         }
     }
 
-    // Menyimpan alamat baru dari peta Leaflet
+   // Menyimpan alamat baru dari peta Leaflet
     public function storeUserAddress(Request $request)
     {
         try {
@@ -675,7 +675,6 @@ class LandingController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
 
-            // 1. VALIDASI: Pagar Keamanan agar DB tidak error jika ada field wajib yang kosong
             $request->validate([
                 'label' => 'required|string',
                 'nama_penerima' => 'required|string',
@@ -690,32 +689,30 @@ class LandingController extends Controller
 
             $isUtama = $request->input('is_utama', 0);
             
-            // 2. Cek apakah ini alamat pertama user? Jika iya, paksa jadi alamat utama
             $cekAlamat = DB::table('tb_user_alamat')->where('user_id', $user->id)->count();
             if ($cekAlamat == 0) {
                 $isUtama = 1; 
             }
 
-            // 3. Jika alamat baru ini diset jadi utama, matikan status utama di alamat lainnya
             if ($isUtama == 1) {
-                DB::table('tb_user_alamat')
-                    ->where('user_id', $user->id)
-                    ->update(['is_utama' => 0]);
+                DB::table('tb_user_alamat')->where('user_id', $user->id)->update(['is_utama' => 0]);
             }
 
-            // 4. Insert ke database (Gunakan Null Coalescing '??' untuk field yang tidak wajib)
+            // KUNCI PERBAIKAN: Gabungkan semua field ekstra menjadi satu string text yang rapi
+            $rt = $request->rt ?? '-';
+            $rw = $request->rw ?? '-';
+            $kodepos = $request->kode_pos ?? '-';
+            
+            // Format jadinya: "[Rumah] Jl. Diponegoro No.1, RT 01/RW 02, Desa Subang, Kec. Subang, Kode Pos: 41211"
+            $fullAddress = "[{$request->label}] {$request->alamat_lengkap}, RT {$rt}/RW {$rw}, Desa/Kel. {$request->desa}, Kec. {$request->kecamatan}, Kode Pos: {$kodepos}";
+
+            // Insert ke database X-Force HANYA menggunakan kolom yang pasti ada di DB kamu
             DB::table('tb_user_alamat')->insert([
                 'user_id' => $user->id,
-                'label' => $request->label,
                 'nama_penerima' => $request->nama_penerima,
                 'telepon' => $request->telepon,
-                'alamat_lengkap' => $request->alamat_lengkap,
-                'rt' => $request->rt ?? '',         // Jika user tidak isi RT, simpan string kosong
-                'rw' => $request->rw ?? '',         // Jika user tidak isi RW, simpan string kosong
-                'desa' => $request->desa,
-                'kecamatan' => $request->kecamatan,
+                'alamat_lengkap' => $fullAddress, // <-- Masukkan string yang sudah digabung ke sini
                 'kota' => $request->kota,
-                'kode_pos' => $request->kode_pos ?? '', 
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'is_utama' => $isUtama,
@@ -726,14 +723,12 @@ class LandingController extends Controller
             return response()->json(['status' => 'success', 'message' => 'Alamat berhasil ditambahkan'], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Error dari validasi (misal lupa isi form) dilempar dengan status 422
             return response()->json([
                 'status' => 'error', 
                 'message' => 'Data tidak lengkap, periksa form Anda.',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            // Error query/sistem lainnya
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
