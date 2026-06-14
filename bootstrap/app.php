@@ -28,7 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Biarkan Midtrans bisa mengakses route ini tanpa diblokir sistem keamanan Laravel
         $middleware->validateCsrfTokens(except: [
             '/webhook/midtrans',
+            'api/*',
         ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
