@@ -64,13 +64,13 @@
             ], 200);
         });
 
-            // Rute untuk List Toko Diikuti
-            Route::get('/following-stores', [App\Http\Controllers\Api\UserController::class, 'followingStores']);
-            
-            // Rute untuk Tombol Ikuti / Batal Ikuti
-            Route::post('/toko/follow', [App\Http\Controllers\Api\UserController::class, 'toggleFollow']);
-        });
 
+        // Rute untuk List Toko Diikuti
+        Route::get('/following-stores', [App\Http\Controllers\Api\UserController::class, 'followingStores']);
+        
+        // Rute untuk Tombol Ikuti / Batal Ikuti
+        Route::post('/toko/follow', [App\Http\Controllers\Api\UserController::class, 'toggleFollow']);
+       
         // ========================================================
         // FITUR PENGGUNA & TRANSAKSI
         // ========================================================
