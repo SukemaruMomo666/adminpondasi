@@ -10,7 +10,6 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\TransactionController; // Controller Web (Hati-hati jangan tertukar)
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ChatController;
-use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI UNTUK PROFIL
 use App\Http\Controllers\Api\Mobile\UserController as MobileUserController;
 
 // Alias khusus untuk Controller Mobile
@@ -65,10 +64,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // ========================================================
     // FITUR PENGGUNA & TRANSAKSI
     // ========================================================
-    
-    // Edit Profil & Password
-    Route::post('/profile/update', [UserController::class, 'updateProfile']);
-    Route::post('/profile/password', [UserController::class, 'updatePassword']);
 
     // --- RUTE BARU: ALAMAT PENGIRIMAN & LEAFLET MAPS ---
     Route::get('/addresses', [LandingController::class, 'getUserAddresses']);

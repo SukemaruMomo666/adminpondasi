@@ -12,25 +12,47 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
-    // 1. UPDATE DATA PROFIL (Yang Dipakai di Edit Profile Sebelumnya)
+    // 1. UPDATE DATA PROFIL
     public function updateProfile(Request $request)
     {
-        $user = Auth::guard('sanctum')->user();
-        
-        $request->validate([
-            'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:tb_user,email,'.$user->id,
-            'no_telepon' => 'required|string',
-        ]);
+        try {
+            $user = Auth::guard('sanctum')->user();
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
 
-        DB::table('tb_user')->where('id', $user->id)->update([
-            'nama' => $request->nama,
-            'email' => $request->email,
-            'no_telepon' => $request->no_telepon,
-            'updated_at' => Carbon::now(),
-        ]);
+            // Validasi input
+            $request->validate([
+                'nama' => 'required|string|max:255',
+                'email' => 'required|email|unique:tb_user,email,' . $user->id,
+                'no_telepon' => 'required|string',
+            ]);
 
-        return response()->json(['status' => 'success', 'message' => 'Profil berhasil diupdate.']);
+            // Update ke database
+            DB::table('tb_user')->where('id', $user->id)->update([
+                'nama' => $request->nama,
+                'email' => $request->email,
+                'no_telepon' => $request->no_telepon,
+                'updated_at' => \Carbon\Carbon::now(),
+            ]);
+
+            return response()->json([
+                'status' => 'success', 
+                'message' => 'Data profil berhasil diperbarui!'
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Email ini sudah terdaftar pada akun lain atau format salah.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // 2. REQUEST OTP KE EMAIL UNTUK GANTI PASSWORD
