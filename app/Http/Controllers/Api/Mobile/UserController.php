@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Http\Controllers\Api\Mobile;
+use App\Http\Controllers\Controller;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
+
+class UserController extends Controller
+{
+    // 1. UPDATE DATA PROFIL (Yang Dipakai di Edit Profile Sebelumnya)
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+        
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'email' => 'required|email|unique:tb_user,email,'.$user->id,
+            'no_telepon' => 'required|string',
+        ]);
+
+        DB::table('tb_user')->where('id', $user->id)->update([
+            'nama' => $request->nama,
+            'email' => $request->email,
+            'no_telepon' => $request->no_telepon,
+            'updated_at' => Carbon::now(),
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'Profil berhasil diupdate.']);
+    }
+
+    // 2. REQUEST OTP KE EMAIL UNTUK GANTI PASSWORD
+    public function requestPasswordOtp(Request $request)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+
+            // Generate 6 digit angka OTP acak
+            $otp = rand(100000, 999999);
+
+            // Simpan OTP ke database dan set expired 10 menit dari sekarang
+            DB::table('tb_user')->where('id', $user->id)->update([
+                'reset_token' => $otp,
+                'reset_token_expires_at' => Carbon::now()->addMinutes(10)
+            ]);
+
+            // Kirim Email OTP ke user (Pastikan settingan SMTP di .env Laravel kamu sudah benar)
+            try {
+                Mail::raw("Halo {$user->nama},\n\nKode OTP Anda untuk mengganti password adalah: {$otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.", function ($message) use ($user) {
+                    $message->to($user->email)
+                            ->subject('Kode OTP Ganti Password - PondasiKita');
+                });
+            } catch (\Exception $e) {
+                // Jika SMTP belum di-setting, kita tetap berikan status success tapi OTP dimunculkan di respons untuk testing Mobile
+                return response()->json([
+                    'status' => 'success', 
+                    'message' => 'Email gagal dikirim (SMTP belum diatur), TAPI OTP berhasil dibuat untuk testing.',
+                    'otp_testing' => $otp // HAPUS INI JIKA SUDAH PRODUCTION!
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'success', 
+                'message' => 'Kode OTP telah dikirim ke email Anda.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // 3. VALIDASI OTP & SIMPAN PASSWORD BARU
+    public function updatePasswordWithOtp(Request $request)
+    {
+        try {
+            $user = Auth::guard('sanctum')->user();
+
+            $request->validate([
+                'otp' => 'required',
+                'new_password' => 'required|min:8|confirmed',
+            ]);
+
+            // Ambil data user terbaru untuk ngecek OTP
+            $userData = DB::table('tb_user')->where('id', $user->id)->first();
+
+            // Cek apakah OTP cocok dan belum expired
+            if ($userData->reset_token !== $request->otp) {
+                return response()->json(['status' => 'error', 'message' => 'Kode OTP salah.'], 400);
+            }
+
+            if (Carbon::now()->isAfter($userData->reset_token_expires_at)) {
+                return response()->json(['status' => 'error', 'message' => 'Kode OTP sudah kedaluwarsa.'], 400);
+            }
+
+            // Jika lulus validasi, ganti password dan bersihkan token
+            DB::table('tb_user')->where('id', $user->id)->update([
+                'password' => Hash::make($request->new_password),
+                'reset_token' => null,
+                'reset_token_expires_at' => null,
+                'updated_at' => Carbon::now(),
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Password berhasil diubah!']);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['status' => 'error', 'message' => 'Format password salah atau tidak cocok.'], 422);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+}

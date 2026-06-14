@@ -11,6 +11,7 @@ use App\Http\Controllers\TransactionController; // Controller Web (Hati-hati jan
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI UNTUK PROFIL
+use App\Http\Controllers\Api\Mobile\UserController as MobileUserController;
 
 // Alias khusus untuk Controller Mobile
 use App\Http\Controllers\Api\Mobile\TransactionController as MobileTransaction;
@@ -96,4 +97,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/m-chat/messages/{storeId}', [ChatController::class, 'getMessages']);
     Route::post('/m-chat/send', [ChatController::class, 'sendMessage']);
 
+   // ========================================================
+    // FITUR PENGGUNA (PROFIL & PASSWORD)
+    // ========================================================
+    Route::post('/profile/update', [MobileUserController::class, 'updateProfile']);
+    Route::post('/profile/request-otp', [MobileUserController::class, 'requestPasswordOtp']);
+    Route::post('/profile/password-otp', [MobileUserController::class, 'updatePasswordWithOtp']);
 });
