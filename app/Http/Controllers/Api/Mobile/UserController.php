@@ -22,9 +22,8 @@ class UserController extends Controller
 
             $request->validate([
                 'nama' => 'required|string|max:255',
-                // Pastikan unique mengecualikan ID user ini sendiri agar dia bisa simpan emailnya sendiri
                 'email' => 'required|email|unique:tb_user,email,' . $user->id,
-                'no_telepon' => 'required|string',
+                'no_telepon' => 'nullable|string', // <-- Pastikan ini nullable
             ]);
 
             DB::table('tb_user')->where('id', $user->id)->update([
