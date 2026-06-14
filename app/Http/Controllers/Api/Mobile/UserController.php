@@ -12,7 +12,6 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
-    // 1. UPDATE DATA PROFIL
     public function updateProfile(Request $request)
     {
         try {
@@ -21,14 +20,13 @@ class UserController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
 
-            // Validasi input
             $request->validate([
                 'nama' => 'required|string|max:255',
+                // Pastikan unique mengecualikan ID user ini sendiri agar dia bisa simpan emailnya sendiri
                 'email' => 'required|email|unique:tb_user,email,' . $user->id,
                 'no_telepon' => 'required|string',
             ]);
 
-            // Update ke database
             DB::table('tb_user')->where('id', $user->id)->update([
                 'nama' => $request->nama,
                 'email' => $request->email,
@@ -42,10 +40,11 @@ class UserController extends Controller
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            // INI YANG AKAN DITANGKAP OLEH HP-MU JIKA ERROR 422
             return response()->json([
                 'status' => 'error',
-                'message' => 'Email ini sudah terdaftar pada akun lain atau format salah.',
-                'errors' => $e->errors()
+                'message' => 'Validasi gagal.',
+                'errors' => $e->errors() 
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
