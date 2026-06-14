@@ -453,4 +453,69 @@ class AuthController extends Controller
             'user'    => $user
         ], 201);
     }
+    // ==========================================================
+    // 11. API LOGIN / REGISTER GOOGLE UNTUK REACT NATIVE
+    // ==========================================================
+    public function googleLoginApi(Request $request)
+    {
+        $request->validate([
+            'token' => 'required' // Token akses yang dikirim dari React Native
+        ]);
+
+        try {
+            // 1. Validasi token langsung ke server Google menggunakan Socialite
+            $googleUser = Socialite::driver('google')->stateless()->userFromToken($request->token);
+
+            // 2. Cek apakah email sudah terdaftar di database
+            $user = User::where('email', $googleUser->getEmail())->first();
+
+            if ($user) {
+                // Jika user ada tapi belum punya google_id, update datanya
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleUser->getId()]);
+                }
+            } else {
+                // 3. Jika user belum ada, buat akun baru (Register Otomatis)
+                $baseUsername = Str::slug($googleUser->getName());
+                $randomString = Str::random(4);
+                $finalUsername = $baseUsername . '-' . $randomString;
+
+                $user = User::create([
+                    'nama'        => $googleUser->getName(),
+                    'email'       => $googleUser->getEmail(),
+                    'username'    => $finalUsername,
+                    'google_id'   => $googleUser->getId(),
+                    'password'    => Hash::make(Str::random(16)), // Password acak karena login via Google
+                    'level'       => 'customer',
+                    'status'      => 'online',
+                    'is_verified' => 1,
+                    'is_banned'   => 0
+                    // no_telepon dibiarkan NULL dulu, nanti user bisa isi di Edit Profil
+                ]);
+            }
+
+            // 4. Buatkan Token Sanctum untuk akses Mobile
+            $token = $user->createToken('MobileAppToken')->plainTextToken;
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Berhasil masuk dengan Google',
+                'token'   => $token,
+                'user'    => [
+                    'id'       => $user->id,
+                    'nama'     => $user->nama,
+                    'email'    => $user->email,
+                    'username' => $user->username,
+                    'level'    => $user->level
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error', 
+                'message' => 'Autentikasi Google gagal atau token kedaluwarsa.',
+                'error'   => $e->getMessage()
+            ], 401);
+        }
+    }
 }

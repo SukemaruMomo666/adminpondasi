@@ -39,6 +39,9 @@
     // Endpoint untuk Login Mobile (Mendapatkan Sanctum Token)
     Route::post('/login', [AuthController::class, 'loginApi']);
 
+    // Endpoint untuk Login/Register via Google Mobile
+    Route::post('/google-login', [AuthController::class, 'googleLoginApi']);
+
     // ========================================================
     // 3. PRIVATE ROUTES (Wajib Login & Menggunakan Sanctum Token)
     // ========================================================
@@ -78,6 +81,8 @@
 
         // Transaksi / Checkout ---> SEKARANG MENGARAH KE KODE MIDTRANS YANG BENAR!
         Route::post('/checkout', [MobileTransaction::class, 'checkout']);
+
+        Route::get('/checkout/data', [MobileTransaction::class, 'getCheckoutData']);
         
         // Riwayat Pesanan
         Route::get('/orders', [MobileTransaction::class, 'userOrders']);
