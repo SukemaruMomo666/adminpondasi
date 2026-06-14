@@ -144,12 +144,12 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
-    public function followingStores(Request $request)
+    public function followingStores(\Illuminate\Http\Request $request)
     {
         // Mengambil ID user yang sedang login dari token Sanctum
         $userId = $request->user()->id;
 
-        $stores = DB::table('tb_toko_follower')
+        $stores = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
             ->join('tb_toko', 'tb_toko_follower.toko_id', '=', 'tb_toko.id')
             ->where('tb_toko_follower.user_id', $userId)
             ->select(
@@ -162,12 +162,34 @@ class UserController extends Controller
             )
             ->get();
 
+        // KUNCI PERBAIKAN: Menambahkan jumlah produk dan rating untuk setiap toko
+        foreach ($stores as $store) {
+            // Hitung total produk aktif di toko tersebut
+            $store->total_produk = \Illuminate\Support\Facades\DB::table('tb_barang')
+                ->where('toko_id', $store->id)
+                ->where('is_active', 1)
+                ->count();
+
+            // Hitung rata-rata rating toko
+            $avgRating = \Illuminate\Support\Facades\DB::table('tb_toko_review')
+                ->where('toko_id', $store->id)
+                ->avg('rating');
+            
+            // Format rating jadi 1 angka di belakang koma (contoh: 4.8)
+            $store->rating = $avgRating ? round($avgRating, 1) : 0;
+            
+            // Ubah format logo agar jadi URL penuh jika ada
+            if ($store->logo_toko) {
+                $store->logo_toko = asset('assets/uploads/logos/' . $store->logo_toko);
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'data' => $stores
         ]);
     }
-    // ==========================================================
+   // ==========================================================
     // API UNTUK TOMBOL FOLLOW / UNFOLLOW
     // ==========================================================
     public function toggleFollow(\Illuminate\Http\Request $request)
@@ -204,10 +226,18 @@ class UserController extends Controller
             $action = 'followed';
         }
 
-        // Kembalikan response JSON yang ditangkap oleh React Native
+        // ========================================================
+        // KUNCI PERBAIKAN: Hitung jumlah follower terbaru setelah aksi
+        // ========================================================
+        $totalFollowers = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+            ->where('toko_id', $tokoId)
+            ->count();
+
+        // Kembalikan response JSON yang ditangkap oleh React Native & Web
         return response()->json([
             'status' => 'success',
-            'action' => $action
+            'action' => $action,
+            'total_followers' => $totalFollowers // Dikirim ke HP dan Web!
         ]);
     }
 }

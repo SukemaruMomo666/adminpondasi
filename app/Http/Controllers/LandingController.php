@@ -453,18 +453,40 @@ class LandingController extends Controller
                 ->where('id', $product->toko_id)
                 ->first();
 
-            // Hitung terjual
+            // Hitung terjual asli dari detail transaksi yang sudah sampai
             $terjual = \Illuminate\Support\Facades\DB::table('tb_detail_transaksi')
                 ->where('barang_id', $product->id)
                 ->where('status_pesanan_item', 'sampai_tujuan')
                 ->sum('jumlah') ?? 0;
 
-            // Hitung rating (jika ada tabel review, jika tidak set default)
-            $rating = 4.8;
-            $ulasan = 0;
-            // Jika kamu punya tabel tb_review_produk:
-            // $rating = DB::table('tb_review_produk')->where('barang_id', $product->id)->avg('rating') ?? 0;
-            // $ulasan = DB::table('tb_review_produk')->where('barang_id', $product->id)->count();
+            // ========================================================
+            // 1. HITUNG RATING & ULASAN ASLI
+            // ========================================================
+            // Catatan: Pastikan nama tabel review kamu benar. 
+            // Jika namanya 'tb_review_produk', silakan ganti 'tb_toko_review' di bawah.
+            $queryUlasan = \Illuminate\Support\Facades\DB::table('tb_toko_review')->where('barang_id', $product->id);
+            $ulasan = $queryUlasan->count();
+            $avgRating = $ulasan > 0 ? $queryUlasan->avg('rating') : 0;
+            $rating = round($avgRating, 1); // Format jadi 1 angka di belakang koma
+
+            // ========================================================
+            // 2. HITUNG JUMLAH FOLLOWER TOKO ASLI
+            // ========================================================
+            $totalFollower = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+                ->where('toko_id', $toko->id)
+                ->count();
+
+            // ========================================================
+            // 3. CEK STATUS "APAKAH USER INI SUDAH FOLLOW?" (OTOMATIS)
+            // ========================================================
+            $isFollowing = false;
+            // Cek apakah ada token login yang dikirim dari HP
+            if ($userId = \Illuminate\Support\Facades\Auth::guard('sanctum')->id()) {
+                $isFollowing = \Illuminate\Support\Facades\DB::table('tb_toko_follower')
+                    ->where('toko_id', $toko->id)
+                    ->where('user_id', $userId)
+                    ->exists();
+            }
 
             // Perbaiki URL Gambar
             $product->gambar_utama = $product->gambar_utama ? asset('assets/uploads/products/' . $product->gambar_utama) : 'https://picsum.photos/800/800';
@@ -481,12 +503,13 @@ class LandingController extends Controller
                     'nama_barang' => $product->nama_barang,
                     'harga' => $product->harga,
                     'deskripsi' => $product->deskripsi,
-                    'stok' => $product->stok,
+                    'stok' => $product->stok, // pastikan kolom ini benar di database kamu
                     'gambar' => $product->gambar_utama,
-                    'terjual' => $terjual,
-                    'rating' => $rating,
-                    'ulasan' => $ulasan,
+                    'terjual' => (int)$terjual,
+                    'rating' => $rating,     // Sudah data real!
+                    'ulasan' => $ulasan,     // Sudah data real!
                     'kategori' => $kategori,
+                    'toko_id' => $toko->id,
                     'toko' => [
                         'id' => $toko->id,
                         'slug' => $toko->slug,
@@ -494,6 +517,8 @@ class LandingController extends Controller
                         'lokasi' => $toko->kota ?? 'Nasional',
                         'badge' => $toko->tier_toko == 'official_store' ? 'OFFICIAL' : 'VERIFIED',
                         'avatar' => strtoupper(substr($toko->nama_toko, 0, 2)),
+                        'total_followers' => $totalFollower, // Ini yang bikin UI pengikut jalan
+                        'is_following' => $isFollowing       // Ini yang bikin tombol Ikuti/Mengikuti pintar
                     ]
                 ]
             ]);
