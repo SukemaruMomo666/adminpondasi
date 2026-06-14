@@ -107,4 +107,7 @@ Route::get('/biteship/areas', [App\Http\Controllers\Api\BiteshipController::clas
         Route::post('/profile/update', [MobileUserController::class, 'updateProfile']);
         Route::post('/profile/request-otp', [MobileUserController::class, 'requestPasswordOtp']);
         Route::post('/profile/password-otp', [MobileUserController::class, 'updatePasswordWithOtp']);
+
+        // routes/api.php
+        Route::get('/following-stores', [App\Http\Controllers\Api\Mobile\TransactionController::class, 'followingStores'])->middleware('auth:sanctum');
     });
