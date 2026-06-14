@@ -698,26 +698,24 @@ class LandingController extends Controller
                 DB::table('tb_user_alamat')->where('user_id', $user->id)->update(['is_utama' => 0]);
             }
 
-            // KUNCI PERBAIKAN: Gabungkan semua field ekstra menjadi satu string text yang rapi
             $rt = $request->rt ?? '-';
             $rw = $request->rw ?? '-';
             $kodepos = $request->kode_pos ?? '-';
             
-            // Format jadinya: "[Rumah] Jl. Diponegoro No.1, RT 01/RW 02, Desa Subang, Kec. Subang, Kode Pos: 41211"
             $fullAddress = "[{$request->label}] {$request->alamat_lengkap}, RT {$rt}/RW {$rw}, Desa/Kel. {$request->desa}, Kec. {$request->kecamatan}, Kode Pos: {$kodepos}";
 
-            // Insert ke database X-Force HANYA menggunakan kolom yang pasti ada di DB kamu
+            // KUNCI PERBAIKAN: Ganti 'telepon' menjadi 'no_telepon' sesuai standar database kamu
             DB::table('tb_user_alamat')->insert([
-                'user_id' => $user->id,
-                'nama_penerima' => $request->nama_penerima,
-                'telepon' => $request->telepon,
-                'alamat_lengkap' => $fullAddress, // <-- Masukkan string yang sudah digabung ke sini
-                'kota' => $request->kota,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'is_utama' => $isUtama,
-                'created_at' => \Carbon\Carbon::now(),
-                'updated_at' => \Carbon\Carbon::now(),
+                'user_id'        => $user->id,
+                'nama_penerima'  => $request->nama_penerima,
+                'no_telepon'     => $request->telepon, // <--- INI YANG DIGANTI
+                'alamat_lengkap' => $fullAddress,
+                'kota'           => $request->kota,
+                'latitude'       => $request->latitude,
+                'longitude'      => $request->longitude,
+                'is_utama'       => $isUtama,
+                'created_at'     => \Carbon\Carbon::now(),
+                'updated_at'     => \Carbon\Carbon::now(),
             ]);
 
             return response()->json(['status' => 'success', 'message' => 'Alamat berhasil ditambahkan'], 200);
