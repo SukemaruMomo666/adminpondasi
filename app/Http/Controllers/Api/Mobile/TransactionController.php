@@ -328,4 +328,50 @@ class TransactionController extends Controller
             ], 500);
         }
     }
+
+    // ==========================================================
+    // 4. API CEK ONGKIR BITESHIP (UNTUK REACT NATIVE)
+    // ==========================================================
+    public function cekOngkir(Request $request)
+    {
+        try {
+            $apiKey = DB::table('tb_pengaturan')->where('setting_nama', 'biteship_api_key')->value('setting_nilai');
+            
+            if (empty($apiKey)) {
+                return response()->json(['success' => false, 'error' => 'API Key Biteship belum disetting.']);
+            }
+
+            $originAreaId = $request->query('origin');
+            $destinationAreaId = $request->query('destination');
+            $weight = $request->query('weight', 1000);
+            $couriers = $request->query('couriers', 'jne'); 
+
+            if (empty($originAreaId) || empty($destinationAreaId)) {
+                return response()->json(['success' => false, 'error' => 'Origin atau Destination Area ID tidak valid/kosong.']);
+            }
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type'  => 'application/json'
+            ])->post('https://api.biteship.com/v1/rates/couriers', [
+                'origin_area_id' => $originAreaId,
+                'destination_area_id' => $destinationAreaId,
+                'couriers' => $couriers, 
+                'items' => [
+                    [
+                        'name' => 'Barang PondasiKita',
+                        'description' => 'Paket Material',
+                        'value' => 50000,
+                        'weight' => (int) $weight,
+                        'quantity' => 1
+                    ]
+                ]
+            ]);
+
+            return $response->json();
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => 'Koneksi API gagal: ' . $e->getMessage()], 500);
+        }
+    }
 }

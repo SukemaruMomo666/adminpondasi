@@ -83,6 +83,7 @@
         Route::post('/checkout', [MobileTransaction::class, 'checkout']);
 
         Route::get('/checkout/data', [MobileTransaction::class, 'getCheckoutData']);
+        Route::get('/cek-ongkir', [MobileTransaction::class, 'cekOngkir']);
         
         // Riwayat Pesanan
         Route::get('/orders', [MobileTransaction::class, 'userOrders']);
