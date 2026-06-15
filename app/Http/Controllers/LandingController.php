@@ -178,6 +178,8 @@ class LandingController extends Controller
             ->where('b.status_moderasi', 'approved')
             ->whereNotNull('t.latitude')
             ->where('b.nilai_diskon', '>', 0)
+            ->where('b.diskon_mulai', '<=', now())
+            ->where('b.diskon_berakhir', '>=', now())
             ->having('jarak_km', '<=', 50)
             ->orderBy('jarak_km', 'ASC')
             ->limit(10)

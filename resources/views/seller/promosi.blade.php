@@ -92,15 +92,30 @@
                     @forelse($products as $p)
                         @php
                             $hasPromo = !empty($p->nilai_diskon) && $p->nilai_diskon > 0;
-                            $now = time();
-                            $start = strtotime($p->diskon_mulai);
-                            $end = strtotime($p->diskon_berakhir);
+                            $now = \Carbon\Carbon::now();
+                            $start = $p->diskon_mulai ? \Carbon\Carbon::parse($p->diskon_mulai) : null;
+                            $end = $p->diskon_berakhir ? \Carbon\Carbon::parse($p->diskon_berakhir) : null;
 
-                            $statusClass = 'bg-slate-100 text-slate-600 border-slate-200'; $statusText = 'Tidak Aktif';
+                            $statusClass = 'bg-slate-100 text-slate-600 border-slate-200'; 
+                            $statusText = 'Tidak Aktif';
+                            
                             if ($hasPromo) {
-                                if ($now >= $start && $now <= $end) { $statusClass = 'bg-emerald-50 text-emerald-600 border-emerald-200'; $statusText = 'Aktif'; }
-                                elseif ($now < $start) { $statusClass = 'bg-amber-50 text-amber-600 border-amber-200'; $statusText = 'Mendatang'; }
-                                else { $statusClass = 'bg-slate-100 text-slate-600 border-slate-200'; $statusText = 'Berakhir'; }
+                                if ($start && $end) {
+                                    if ($now->between($start, $end)) { 
+                                        $statusClass = 'bg-emerald-50 text-emerald-600 border-emerald-200'; 
+                                        $statusText = 'Aktif'; 
+                                    } elseif ($now->lt($start)) { 
+                                        $statusClass = 'bg-amber-50 text-amber-600 border-amber-200'; 
+                                        $statusText = 'Mendatang'; 
+                                    } else { 
+                                        $statusClass = 'bg-slate-100 text-slate-600 border-slate-200'; 
+                                        $statusText = 'Berakhir'; 
+                                    }
+                                } else {
+                                    // Jika tgl tidak diatur, anggap aktif terus (atau sesuaikan kebijakan)
+                                    $statusClass = 'bg-emerald-50 text-emerald-600 border-emerald-200'; 
+                                    $statusText = 'Aktif'; 
+                                }
                             }
 
                             $hargaAkhir = $p->harga;

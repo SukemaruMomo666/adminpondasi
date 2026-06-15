@@ -557,21 +557,25 @@ class SellerController extends Controller
         $stats = [
             'semua' => DB::table('tb_barang')
                 ->where('toko_id', $toko->id)
-                ->whereNotNull('nilai_diskon')
                 ->where('nilai_diskon', '>', 0)
                 ->count(),
 
             'aktif' => DB::table('tb_barang')
                 ->where('toko_id', $toko->id)
-                ->whereNotNull('nilai_diskon')
                 ->where('nilai_diskon', '>', 0)
-                ->where('diskon_mulai', '<=', $now)
-                ->where('diskon_berakhir', '>=', $now)
+                ->where(function($q) use ($now) {
+                    $q->where(function($sq) use ($now) {
+                        $sq->where('diskon_mulai', '<=', $now)
+                           ->where('diskon_berakhir', '>=', $now);
+                    })->orWhere(function($sq) {
+                        $sq->whereNull('diskon_mulai')
+                           ->whereNull('diskon_berakhir');
+                    });
+                })
                 ->count(),
 
             'akan_datang' => DB::table('tb_barang')
                 ->where('toko_id', $toko->id)
-                ->whereNotNull('nilai_diskon')
                 ->where('nilai_diskon', '>', 0)
                 ->where('diskon_mulai', '>', $now)
                 ->count(),
@@ -585,7 +589,10 @@ class SellerController extends Controller
                 })->count(),
         ];
 
-        $query = DB::table('tb_barang')->where('toko_id', $toko->id);
+        $query = DB::table('tb_barang')
+            ->where('toko_id', $toko->id)
+            ->whereNotNull('nilai_diskon')
+            ->where('nilai_diskon', '>', 0);
 
         if($request->has('search') && $request->search != '') {
             $query->where('nama_barang', 'like', '%'.$request->search.'%');
@@ -594,16 +601,20 @@ class SellerController extends Controller
         $currentTab = $request->query('tab', 'semua');
 
         if ($currentTab == 'aktif') {
-            $query->whereNotNull('nilai_diskon')->where('nilai_diskon', '>', 0)
-                  ->where('diskon_mulai', '<=', $now)->where('diskon_berakhir', '>=', $now);
+            $query->where(function($q) use ($now) {
+                $q->where(function($sq) use ($now) {
+                    $sq->where('diskon_mulai', '<=', $now)
+                       ->where('diskon_berakhir', '>=', $now);
+                })->orWhere(function($sq) {
+                    $sq->whereNull('diskon_mulai')
+                       ->whereNull('diskon_berakhir');
+                });
+            });
         } elseif ($currentTab == 'akan_datang') {
-            $query->whereNotNull('nilai_diskon')->where('nilai_diskon', '>', 0)
-                  ->where('diskon_mulai', '>', $now);
+            $query->where('diskon_mulai', '>', $now);
         } elseif ($currentTab == 'tidak_aktif') {
             $query->where(function($q) use ($now) {
-                $q->whereNull('nilai_diskon')
-                  ->orWhere('nilai_diskon', 0)
-                  ->orWhere('diskon_berakhir', '<', $now);
+                $q->where('diskon_berakhir', '<', $now);
             });
         }
 
