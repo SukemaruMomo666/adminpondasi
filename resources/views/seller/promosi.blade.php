@@ -119,7 +119,9 @@
                             }
 
                             $hargaAkhir = $p->harga;
-                            if ($hasPromo && $statusText == 'Aktif') {
+                            $isPromoActive = ($hasPromo && $statusText == 'Aktif');
+                            
+                            if ($isPromoActive) {
                                 if ($p->tipe_diskon == 'PERSEN') {
                                     $potongan = ($p->harga * $p->nilai_diskon) / 100;
                                     $hargaAkhir = $p->harga - $potongan;
@@ -135,7 +137,7 @@
                                     <img src="{{ asset('assets/uploads/products/' . ($p->gambar_utama ?? 'default.jpg')) }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200 flex-shrink-0">
                                     <div>
                                         <h6 class="text-sm font-bold text-slate-900 leading-snug mb-1 line-clamp-2">{{ $p->nama_barang }}</h6>
-                                        @if($hasPromo)
+                                        @if($isPromoActive)
                                             <span class="text-xs font-bold text-slate-400 line-through">Rp {{ number_format($p->harga, 0, ',', '.') }}</span>
                                         @else
                                             <span class="text-xs font-bold text-slate-600">Rp {{ number_format($p->harga, 0, ',', '.') }}</span>
@@ -146,7 +148,7 @@
 
                             <td class="py-4 px-6 whitespace-nowrap">
                                 @if($hasPromo)
-                                    <div class="inline-flex items-center justify-center bg-red-50 text-red-600 border border-red-200 font-black text-xs px-2.5 py-1 rounded-lg">
+                                    <div class="inline-flex items-center justify-center font-black text-xs px-2.5 py-1 rounded-lg {{ $isPromoActive ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-500 border border-slate-200 opacity-70' }}">
                                         {{ $p->tipe_diskon == 'PERSEN' ? $p->nilai_diskon.'%' : 'Rp '.number_format($p->nilai_diskon, 0, ',', '.') }}
                                     </div>
                                 @else
@@ -155,8 +157,10 @@
                             </td>
 
                             <td class="py-4 px-6 whitespace-nowrap">
-                                @if($hasPromo)
+                                @if($isPromoActive)
                                     <div class="text-base font-black text-red-500">Rp {{ number_format($hargaAkhir, 0, ',', '.') }}</div>
+                                @elseif($hasPromo)
+                                    <div class="text-base font-black text-slate-600">Rp {{ number_format($p->harga, 0, ',', '.') }}</div>
                                 @else
                                     <span class="text-slate-400 font-black">-</span>
                                 @endif

@@ -276,6 +276,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num);
 
+    function getEffectivePrice(p) {
+        if (!p.nilai_diskon || p.nilai_diskon <= 0) return p.harga;
+        
+        const now = new Date();
+        if (p.diskon_mulai && p.diskon_berakhir) {
+            const start = new Date(p.diskon_mulai.replace(' ', 'T'));
+            const end = new Date(p.diskon_berakhir.replace(' ', 'T'));
+            if (now < start || now > end) return p.harga;
+        }
+
+        if (p.tipe_diskon === 'PERSEN') {
+            return p.harga - (p.harga * (p.nilai_diskon / 100));
+        } else {
+            return p.harga - p.nilai_diskon;
+        }
+    }
+
     function loadProducts() {
         fetch("{{ route('seller.pos.api.products') }}")
             .then(res => res.json())
@@ -309,15 +326,26 @@ document.addEventListener('DOMContentLoaded', function() {
                    <div class="fallback-icon" style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><i class="fas fa-box"></i></div>`
                 : `<i class="fas fa-box"></i>`;
 
+            const effectivePrice = getEffectivePrice(p);
+            const hasPromo = effectivePrice < p.harga;
+
+            let priceHtml = hasPromo 
+                ? `<div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 10px; text-decoration: line-through; color: var(--pos-text-muted);">Rp ${formatRp(p.harga)}</span>
+                    <span class="card-price font-digital">Rp ${formatRp(effectivePrice)}</span>
+                   </div>`
+                : `<span class="card-price font-digital">Rp ${formatRp(p.harga)}</span>`;
+
             let html = `
                 <div class="product-card" onclick="addToCart(${p.id})">
                     <div class="product-image-container">
                         ${imgHtml}
+                        ${hasPromo ? `<div style="position: absolute; top: 5px; right: 5px; bg: var(--pos-primary); color: white; font-size: 8px; font-weight: 900; padding: 2px 5px; border-radius: 5px; background: #ef4444;">PROMO</div>` : ''}
                     </div>
                     <span class="card-sku font-digital">${sku}</span>
                     <h3 class="card-name">${p.nama_barang}</h3>
                     <div class="card-footer">
-                        <span class="card-price font-digital">Rp ${formatRp(p.harga)}</span>
+                        ${priceHtml}
                         <span class="card-stock ${stockClass}">Stok: ${p.stok}</span>
                     </div>
                 </div>`;
@@ -343,12 +371,15 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addToCart = function(productId) {
         let product = allProducts.find(p => p.id === productId);
         if(!product) return;
+        
+        const effectivePrice = getEffectivePrice(product);
+        
         let existing = cart.find(item => item.id === productId);
         if(existing) {
             if(existing.qty < product.stok) existing.qty++;
             else Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'Stok Terbatas!', showConfirmButton: false, timer: 1500});
         } else {
-            cart.push({ id: product.id, nama_barang: product.nama_barang, harga: product.harga, qty: 1, stok: product.stok });
+            cart.push({ id: product.id, nama_barang: product.nama_barang, harga: effectivePrice, qty: 1, stok: product.stok });
         }
         updateCartDisplay();
     };

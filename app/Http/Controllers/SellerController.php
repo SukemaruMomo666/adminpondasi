@@ -969,7 +969,7 @@ class SellerController extends Controller
 
         $products = DB::table('tb_barang')
             ->where('toko_id', $toko->id)
-            ->select('id', 'kode_barang', 'nama_barang', 'harga', 'stok', 'kategori_id', 'gambar_utama')
+            ->select('id', 'kode_barang', 'nama_barang', 'harga', 'stok', 'kategori_id', 'gambar_utama', 'tipe_diskon', 'nilai_diskon', 'diskon_mulai', 'diskon_berakhir')
             ->where('stok', '>', 0)
             ->orderBy('nama_barang', 'asc')
             ->get();

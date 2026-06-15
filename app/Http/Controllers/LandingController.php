@@ -520,7 +520,7 @@ class LandingController extends Controller
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
-                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
+                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon', 'b.diskon_mulai', 'b.diskon_berakhir',
                 // FIX: Mengambil kolom kota secara langsung
                 't.nama_toko', 't.slug as slug_toko', 't.kota as kota_toko'
             )

@@ -702,7 +702,16 @@
                     @php
                         $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg';
                         $harga_tampil = $p->harga; $ada_diskon = false; $badge_diskon = '';
-                        if(isset($p->nilai_diskon) && $p->nilai_diskon > 0) {
+                        
+                        $now = \Carbon\Carbon::now();
+                        $is_promo_active = isset($p->nilai_diskon) && $p->nilai_diskon > 0;
+                        if ($is_promo_active && $p->diskon_mulai && $p->diskon_berakhir) {
+                            $start = \Carbon\Carbon::parse($p->diskon_mulai);
+                            $end = \Carbon\Carbon::parse($p->diskon_berakhir);
+                            if (!$now->between($start, $end)) { $is_promo_active = false; }
+                        }
+
+                        if($is_promo_active) {
                             $ada_diskon = true;
                             if($p->tipe_diskon == 'PERSEN') { $harga_tampil = $p->harga - ($p->harga * ($p->nilai_diskon / 100)); $badge_diskon = round($p->nilai_diskon) . '% OFF'; }
                             else { $harga_tampil = $p->harga - $p->nilai_diskon; $badge_diskon = 'Diskon ' . number_format($p->nilai_diskon/1000, 0) . 'RB'; }
@@ -763,7 +772,16 @@
                     @php
                         $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg';
                         $harga_tampil = $p->harga; $ada_diskon = false; $badge_diskon = '';
-                        if(isset($p->nilai_diskon) && $p->nilai_diskon > 0) {
+                        
+                        $now = \Carbon\Carbon::now();
+                        $is_promo_active = isset($p->nilai_diskon) && $p->nilai_diskon > 0;
+                        if ($is_promo_active && $p->diskon_mulai && $p->diskon_berakhir) {
+                            $start = \Carbon\Carbon::parse($p->diskon_mulai);
+                            $end = \Carbon\Carbon::parse($p->diskon_berakhir);
+                            if (!$now->between($start, $end)) { $is_promo_active = false; }
+                        }
+
+                        if($is_promo_active) {
                             $ada_diskon = true;
                             if($p->tipe_diskon == 'PERSEN') { $harga_tampil = $p->harga - ($p->harga * ($p->nilai_diskon / 100)); $badge_diskon = round($p->nilai_diskon) . '% OFF'; }
                             else { $harga_tampil = $p->harga - $p->nilai_diskon; $badge_diskon = 'Diskon ' . number_format($p->nilai_diskon/1000, 0) . 'RB'; }
