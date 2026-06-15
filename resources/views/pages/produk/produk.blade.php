@@ -237,7 +237,35 @@
                         {{-- Detail --}}
                         <div class="p-4 sm:p-5 flex flex-col flex-1">
                             <h3 class="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-2 mb-2 leading-snug group-hover:text-blue-600 transition-colors">{{ $b->nama_barang }}</h3>
-                            <div class="text-base sm:text-lg font-black text-zinc-900 tracking-tight mt-auto mb-3">Rp{{ number_format($b->harga, 0, ',', '.') }}</div>
+                            
+                            @php
+                                $now = \Carbon\Carbon::now();
+                                $isPromo = !empty($b->nilai_diskon) && $b->nilai_diskon > 0;
+                                if ($isPromo && $b->diskon_mulai && $b->diskon_berakhir) {
+                                    $start = \Carbon\Carbon::parse($b->diskon_mulai);
+                                    $end = \Carbon\Carbon::parse($b->diskon_berakhir);
+                                    if (!$now->between($start, $end)) { $isPromo = false; }
+                                }
+
+                                $hargaTampil = $b->harga;
+                                if($isPromo) {
+                                    if($b->tipe_diskon == 'PERSEN') {
+                                        $hargaTampil = $b->harga - ($b->harga * ($b->nilai_diskon / 100));
+                                    } else {
+                                        $hargaTampil = $b->harga - $b->nilai_diskon;
+                                    }
+                                }
+                            @endphp
+
+                            <div class="mt-auto mb-3">
+                                @if($isPromo)
+                                    <div class="flex items-center gap-2 mb-0.5">
+                                        <span class="text-[9px] font-black bg-red-100 text-red-600 px-1 py-0.5 rounded">{{ $b->tipe_diskon == 'PERSEN' ? $b->nilai_diskon.'%' : 'PROMO' }}</span>
+                                        <span class="text-[10px] text-zinc-400 line-through font-bold">Rp{{ number_format($b->harga, 0, ',', '.') }}</span>
+                                    </div>
+                                @endif
+                                <div class="text-base sm:text-lg font-black text-zinc-900 tracking-tight">Rp{{ number_format($hargaTampil, 0, ',', '.') }}</div>
+                            </div>
                             
                             <div class="pt-3 border-t border-zinc-50 space-y-1.5">
                                 <div class="text-[10px] sm:text-xs font-semibold text-zinc-500 truncate flex items-center gap-1.5">

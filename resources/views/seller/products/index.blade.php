@@ -116,7 +116,18 @@
                             {{-- 2. Harga & Indikator Diskon --}}
                             <td class="py-4 px-6 whitespace-nowrap">
                                 @php
+                                    $now = \Carbon\Carbon::now();
                                     $isPromo = !empty($produk->nilai_diskon) && $produk->nilai_diskon > 0;
+                                    
+                                    // Validasi Jangka Waktu Promo
+                                    if ($isPromo && $produk->diskon_mulai && $produk->diskon_berakhir) {
+                                        $start = \Carbon\Carbon::parse($produk->diskon_mulai);
+                                        $end = \Carbon\Carbon::parse($produk->diskon_berakhir);
+                                        if (!$now->between($start, $end)) {
+                                            $isPromo = false;
+                                        }
+                                    }
+
                                     $hargaTampil = $produk->harga;
                                     if($isPromo && $produk->tipe_diskon == 'PERSEN') {
                                         $hargaTampil = $produk->harga - ($produk->harga * ($produk->nilai_diskon / 100));

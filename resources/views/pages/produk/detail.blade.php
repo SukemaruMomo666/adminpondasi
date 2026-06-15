@@ -108,6 +108,39 @@
                         <div class="w-1.5 h-1.5 rounded-full bg-zinc-300"></div>
                         <div class="text-sm font-bold text-zinc-500 italic">Terjual <span class="text-zinc-900 font-black not-italic">{{ number_format($product->stok_terjual ?? 0) }}</span></div>
                     </div>
+
+                    {{-- Harga Produk & Diskon --}}
+                    @php
+                        $now = \Carbon\Carbon::now();
+                        $isPromo = !empty($product->nilai_diskon) && $product->nilai_diskon > 0;
+                        if ($isPromo && $product->diskon_mulai && $product->diskon_berakhir) {
+                            $start = \Carbon\Carbon::parse($product->diskon_mulai);
+                            $end = \Carbon\Carbon::parse($product->diskon_berakhir);
+                            if (!$now->between($start, $end)) { $isPromo = false; }
+                        }
+
+                        $hargaFinal = $product->harga;
+                        if($isPromo) {
+                            if($product->tipe_diskon == 'PERSEN') {
+                                $hargaFinal = $product->harga - ($product->harga * ($product->nilai_diskon / 100));
+                            } else {
+                                $hargaFinal = $product->harga - $product->nilai_diskon;
+                            }
+                        }
+                    @endphp
+
+                    <div class="space-y-1">
+                        @if($isPromo)
+                            <div class="flex items-center gap-3">
+                                <span class="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-black rounded-md">{{ $product->tipe_diskon == 'PERSEN' ? $product->nilai_diskon.'%' : 'DISKON' }}</span>
+                                <span class="text-zinc-400 text-lg line-through font-bold tracking-tight">Rp{{ number_format($product->harga, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
+                        <div class="text-4xl lg:text-5xl font-black text-blue-600 tracking-tighter">
+                            Rp{{ number_format($hargaFinal, 0, ',', '.') }}
+                            <span class="text-sm text-zinc-400 font-bold tracking-normal">/ {{ $product->satuan_unit ?? 'Unit' }}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Specs Grid --}}
@@ -243,7 +276,7 @@
                         <div class="py-5 border-t border-zinc-100">
                             <span class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-1">Subtotal Harga</span>
                             <div class="text-3xl font-black text-blue-600 tracking-tighter price-transition" id="subtotalDisplay">
-                                Rp{{ number_format($product->harga, 0, ',', '.') }}
+                                Rp{{ number_format($hargaFinal, 0, ',', '.') }}
                             </div>
                         </div>
 
@@ -326,7 +359,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // 1. Variabel Core
-        const basePrice = {{ $product->harga ?? 0 }};
+        const basePrice = {{ $hargaFinal ?? $product->harga ?? 0 }};
         const maxStock = {{ $product->stok ?? 1 }};
         const inputQty = document.getElementById('inputQty');
         const subtotalDisplay = document.getElementById('subtotalDisplay');
