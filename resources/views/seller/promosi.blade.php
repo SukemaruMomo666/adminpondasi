@@ -165,7 +165,7 @@
                             <td class="py-4 px-6 whitespace-nowrap">
                                 @if($hasPromo)
                                     <div class="text-[11px] font-bold text-slate-500 mb-1.5">
-                                        {{ date('d M Y', $start) }} - {{ date('d M Y', $end) }}
+                                        {{ $start ? $start->format('d M Y') : '-' }} - {{ $end ? $end->format('d M Y') : '-' }}
                                     </div>
                                     <span class="inline-flex px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest {{ $statusClass }}">
                                         {{ $statusText }}
