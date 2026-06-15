@@ -315,6 +315,9 @@ class ProductController extends Controller
 
     public function downloadTemplate()
     {
+        if (ob_get_length() > 0) {
+            ob_end_clean();
+        }
         return Excel::download(new ProductTemplateExport, 'template_material_pondasikita.xlsx');
     }
 }

@@ -248,9 +248,9 @@
 
             <form action="{{ route('seller.products.import') }}" method="POST" enctype="multipart/form-data" id="formImportExcel">
                 @csrf
-                <div class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group" onclick="document.getElementById('fileExcel').click()">
+                <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group" onclick="document.getElementById('fileExcel').click()">
                     <i class="mdi mdi-cloud-upload-outline text-5xl text-slate-300 group-hover:text-blue-500 transition-colors mb-2 block"></i>
-                    <h5 class="text-sm font-bold text-slate-700 mb-1">Klik untuk upload file</h5>
+                    <h5 class="text-sm font-bold text-slate-700 mb-1">Klik atau seret file ke sini</h5>
                     <p class="text-[11px] font-medium text-slate-400 uppercase tracking-widest">HANYA FILE .XLS ATAU .XLSX</p>
 
                     <input type="file" id="fileExcel" name="file_excel" class="hidden" accept=".xls,.xlsx" required onchange="updateFileName(this)">
@@ -314,6 +314,36 @@
         btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Memproses...';
         btn.classList.add('opacity-70', 'cursor-not-allowed');
         btn.disabled = true;
+    });
+
+    // DRAG & DROP LOGIC
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileExcel');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileName(fileInput);
     });
 
     document.addEventListener('DOMContentLoaded', function() {
