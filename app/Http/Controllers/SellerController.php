@@ -958,7 +958,7 @@ class SellerController extends Controller
 
         $products = DB::table('tb_barang')
             ->where('toko_id', $toko->id)
-            ->select('id', 'kode_barang', 'nama_barang', 'harga', 'stok', 'kategori_id')
+            ->select('id', 'kode_barang', 'nama_barang', 'harga', 'stok', 'kategori_id', 'gambar_utama')
             ->where('stok', '>', 0)
             ->orderBy('nama_barang', 'asc')
             ->get();
@@ -990,6 +990,8 @@ class SellerController extends Controller
                 'user_id'               => $userId, 
                 'total_harga_produk'    => $request->total,
                 'total_final'           => $request->total,
+                'bayar'                 => $request->amount_paid,
+                'kembali'               => $request->amount_paid - $request->total,
                 'metode_pembayaran'     => $request->payment_method,
                 'status_pembayaran'     => 'paid',
                 'status_pesanan_global' => 'selesai',

@@ -88,18 +88,44 @@
         overflow-y: auto;
         padding-bottom: 20px;
         flex: 1;
+        align-content: start;
     }
 
     .product-card {
         background: var(--pos-panel); border: 1px solid var(--pos-border);
-        border-radius: 15px; padding: 12px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex; flex-direction: column; gap: 8px; position: relative;
+        border-radius: 15px; padding: 10px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; gap: 6px; position: relative;
+        min-height: 220px;
+    }
+
+    .product-image-container {
+        width: 100%;
+        height: 120px;
+        background: var(--pos-panel-light);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .product-image-container i {
+        font-size: 30px;
+        color: var(--pos-text-muted);
+        opacity: 0.3;
     }
 
     .product-card:hover { transform: translateY(-3px); border-color: var(--pos-primary); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
 
     .card-sku { font-size: 9px; color: var(--pos-text-muted); background: var(--pos-panel-light); padding: 1px 6px; border-radius: 4px; width: fit-content; }
-    .card-name { font-weight: 700; font-size: 13px; color: var(--pos-text); min-height: 36px; line-height: 1.3; margin: 0; }
+    .card-name { font-weight: 700; font-size: 13px; color: var(--pos-text); min-height: 34px; line-height: 1.2; margin: 2px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 5px; }
     .card-price { font-weight: 800; color: var(--pos-primary); font-size: 13px; }
     .card-stock { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px; }
@@ -278,8 +304,16 @@ document.addEventListener('DOMContentLoaded', function() {
         products.forEach(p => {
             let sku = p.kode_barang ? p.kode_barang : 'SKU-'+String(p.id).padStart(4, '0');
             let stockClass = p.stok <= 5 ? 'stock-warning' : 'stock-ok';
+            let imgHtml = (p.gambar_utama && p.gambar_utama !== 'default.jpg') 
+                ? `<img src="/assets/uploads/products/${p.gambar_utama}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                   <div class="fallback-icon" style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><i class="fas fa-box"></i></div>`
+                : `<i class="fas fa-box"></i>`;
+
             let html = `
                 <div class="product-card" onclick="addToCart(${p.id})">
+                    <div class="product-image-container">
+                        ${imgHtml}
+                    </div>
                     <span class="card-sku font-digital">${sku}</span>
                     <h3 class="card-name">${p.nama_barang}</h3>
                     <div class="card-footer">
