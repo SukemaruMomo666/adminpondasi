@@ -428,7 +428,9 @@
                         <i class="fas fa-bolt animate-flash-pulse"></i>
                     </div>
                     <div>
-                        <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none">KAGET DISKON LOKAL</h2>
+                        <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none">
+                            {{ isset($fsEvent) ? 'FLASH SALE NASIONAL' : 'KAGET DISKON LOKAL' }}
+                        </h2>
                         <p class="text-red-100 text-xs sm:text-sm font-medium mt-1 flex items-center gap-1.5">
                             <i class="fas fa-location-dot"></i> Promo spesial material pilihan berakhir dalam:
                         </p>
