@@ -300,16 +300,15 @@ class ProductController extends Controller
     public function importExcel(Request $request)
     {
         $request->validate([
-            'file_excel' => 'required|mimes:xls,xlsx|max:5120' // Max 5MB
+            'file_excel' => 'required|mimes:xls,xlsx,csv|max:10240' // Max 10MB
         ]);
 
         try {
-            // Eksekusi file ProductImport
             Excel::import(new ProductImport, $request->file('file_excel'));
-
-            return redirect()->back()->with('success', 'Material berhasil di-import! Barang otomatis masuk gudang POS (Off Etalase).');
+            return redirect()->back()->with('success', 'Berhasil! Data material telah di-import dan masuk ke gudang (Off Etalase).');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal import Excel. Pastikan format kolom sesuai template! Error: ' . $e->getMessage());
+            \Log::error('Import Excel Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal import! Pastikan file mengikuti format template dan nama kolom tidak diubah.');
         }
     }
 

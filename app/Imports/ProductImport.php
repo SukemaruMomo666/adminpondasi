@@ -18,28 +18,33 @@ class ProductImport implements ToCollection, WithHeadingRow
     {
         $toko = DB::table('tb_toko')->where('user_id', Auth::id())->first();
 
+        if (!$toko) {
+            throw new \Exception('Toko tidak ditemukan untuk user ini.');
+        }
+
         foreach ($rows as $row) {
-            if (!isset($row['nama_barang']) || empty(trim($row['nama_barang']))) {
+            // Pembersihan data dasar
+            $namaBarang = trim($row['nama_barang'] ?? '');
+            if (empty($namaBarang)) {
                 continue;
             }
 
+            // Fallback Kategori (Cari kategori pertama jika tidak ada ID)
+            $kategoriId = $row['kategori_id'] ?? DB::table('tb_kategori')->value('id') ?? 1;
+
             DB::table('tb_barang')->insert([
                 'toko_id'         => $toko->id,
-                'kategori_id'     => $row['kategori_id'] ?? 1,
-                'nama_barang'     => $row['nama_barang'],
-                'kode_barang'     => $row['kode_barang'] ?? Str::random(8),
-                'harga'           => $row['harga'] ?? 0,
-                'stok'            => $row['stok'] ?? 0,
-                'berat_kg'        => $row['berat_kg'] ?? 0,
-
-                // --- INI PERBAIKANNYA BOS! (Tidak pakai null lagi) ---
-                'satuan_unit'     => !empty($row['satuan_unit']) ? $row['satuan_unit'] : 'pcs',
-                'deskripsi'       => !empty($row['deskripsi']) ? $row['deskripsi'] : 'Deskripsi belum tersedia.',
-                // -----------------------------------------------------
-
+                'kategori_id'     => $kategoriId,
+                'nama_barang'     => $namaBarang,
+                'kode_barang'     => $row['kode_barang'] ?? 'SKU-'.strtoupper(Str::random(6)),
+                'harga'           => (float)($row['harga'] ?? 0),
+                'stok'            => (int)($row['stok'] ?? 0),
+                'berat_kg'        => (float)($row['berat_kg'] ?? 0.1),
+                'satuan_unit'     => !empty($row['satuan_unit']) ? trim($row['satuan_unit']) : 'pcs',
+                'deskripsi'       => !empty($row['deskripsi']) ? trim($row['deskripsi']) : 'Deskripsi material belum diisi.',
                 'gambar_utama'    => 'default.jpg',
-                'is_active'       => 0,
-                'status_moderasi' => 'pending',
+                'is_active'       => 0, // Off etalase secara default
+                'status_moderasi' => 'approved', // Langsung approve untuk stok gudang/POS
                 'created_at'      => now(),
                 'updated_at'      => now(),
             ]);
