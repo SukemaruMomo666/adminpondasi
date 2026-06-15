@@ -12,27 +12,26 @@
 
 <style>
     /* =========================================================
-       POS UI PRO MAX - OLED EDITION
+       POS UI PRO MAX - OLED EDITION (FULL & STABLE)
        ========================================================= */
     :root {
-        --pos-bg: #020617; /* Deep Navy/Black */
-        --pos-panel: #0f172a; /* Slate 900 */
-        --pos-panel-light: #1e293b; /* Slate 800 */
-        --pos-primary: #3b82f6; /* Blue 500 */
+        --pos-bg: #020617; 
+        --pos-panel: #0f172a; 
+        --pos-panel-light: #1e293b; 
+        --pos-primary: #3b82f6; 
         --pos-primary-glow: rgba(59, 130, 246, 0.5);
-        --pos-success: #22c55e; /* Green 500 */
-        --pos-danger: #ef4444; /* Red 500 */
+        --pos-success: #22c55e; 
+        --pos-danger: #ef4444; 
         --pos-text: #f8fafc;
         --pos-text-muted: #94a3b8;
         --pos-border: rgba(255, 255, 255, 0.1);
-        
         --pos-radius: 20px;
         --pos-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
 
     body { 
         background-color: var(--pos-bg) !important;
-        overflow-x: hidden;
+        overflow: hidden;
     }
 
     .pos-container {
@@ -41,18 +40,12 @@
         grid-template-columns: 1fr 400px;
         gap: 20px;
         padding: 20px;
-        height: calc(100vh - 100px); /* Responsive adjustment */
+        height: calc(100vh - 80px);
         max-width: 100%;
         box-sizing: border-box;
     }
 
-    h1, h2, h3, h4, .font-heading {
-        font-family: 'Rubik', sans-serif;
-    }
-
-    .font-digital {
-        font-family: 'JetBrains Mono', monospace;
-    }
+    .font-digital { font-family: 'JetBrains Mono', monospace; }
 
     /* LEFT SIDE: CATALOG */
     .pos-catalog {
@@ -64,7 +57,7 @@
 
     .catalog-toolbar {
         background: var(--pos-panel);
-        padding: 20px;
+        padding: 15px 20px;
         border-radius: var(--pos-radius);
         border: 1px solid var(--pos-border);
         display: flex;
@@ -73,43 +66,17 @@
         box-shadow: var(--pos-shadow);
     }
 
-    .search-group {
-        position: relative;
-        flex: 1;
-    }
-
-    .search-group i {
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--pos-text-muted);
-    }
-
+    .search-group { position: relative; flex: 1; }
+    .search-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--pos-text-muted); }
     .search-group input {
-        width: 100%;
-        background: var(--pos-panel-light);
-        border: 1px solid var(--pos-border);
-        border-radius: 12px;
-        padding: 12px 15px 12px 45px;
-        color: white;
-        outline: none;
-        transition: all 0.3s ease;
+        width: 100%; background: var(--pos-panel-light); border: 1px solid var(--pos-border);
+        border-radius: 12px; padding: 12px 15px 12px 45px; color: white; outline: none; transition: 0.3s;
     }
-
-    .search-group input:focus {
-        border-color: var(--pos-primary);
-        box-shadow: 0 0 15px var(--pos-primary-glow);
-    }
+    .search-group input:focus { border-color: var(--pos-primary); box-shadow: 0 0 15px var(--pos-primary-glow); }
 
     .filter-group select {
-        background: var(--pos-panel-light);
-        border: 1px solid var(--pos-border);
-        border-radius: 12px;
-        padding: 12px 20px;
-        color: white;
-        outline: none;
-        cursor: pointer;
+        background: var(--pos-panel-light); border: 1px solid var(--pos-border);
+        border-radius: 12px; padding: 12px 20px; color: white; outline: none; cursor: pointer;
     }
 
     .catalog-grid {
@@ -117,260 +84,88 @@
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         gap: 15px;
         overflow-y: auto;
-        padding-right: 5px;
+        padding-bottom: 20px;
     }
 
     .product-card {
-        background: var(--pos-panel);
-        border: 1px solid var(--pos-border);
-        border-radius: 15px;
-        padding: 15px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        position: relative;
-        overflow: hidden;
+        background: var(--pos-panel); border: 1px solid var(--pos-border);
+        border-radius: 15px; padding: 15px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; gap: 10px; position: relative;
     }
 
-    .product-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--pos-primary);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
+    .product-card:hover { transform: translateY(-5px); border-color: var(--pos-primary); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-    .product-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: linear-gradient(135deg, transparent, rgba(255,255,255,0.05));
-        pointer-events: none;
-    }
-
-    .card-sku {
-        font-size: 10px;
-        color: var(--pos-text-muted);
-        background: var(--pos-panel-light);
-        padding: 2px 8px;
-        border-radius: 4px;
-        width: fit-content;
-    }
-
-    .card-name {
-        font-weight: 700;
-        font-size: 14px;
-        color: var(--pos-text);
-        min-height: 40px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .card-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: auto;
-    }
-
-    .card-price {
-        font-weight: 800;
-        color: var(--pos-primary);
-        font-size: 14px;
-    }
-
-    .card-stock {
-        font-size: 11px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 20px;
-    }
-
+    .card-sku { font-size: 10px; color: var(--pos-text-muted); background: var(--pos-panel-light); padding: 2px 8px; border-radius: 4px; width: fit-content; }
+    .card-name { font-weight: 700; font-size: 14px; color: var(--pos-text); min-height: 40px; line-height: 1.4; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .card-price { font-weight: 800; color: var(--pos-primary); font-size: 14px; }
+    .card-stock { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
     .stock-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
     .stock-warning { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
     /* RIGHT SIDE: CART */
     .pos-sidebar {
-        background: var(--pos-panel);
-        border-radius: var(--pos-radius);
-        border: 1px solid var(--pos-border);
-        display: flex;
-        flex-direction: column;
-        box-shadow: var(--pos-shadow);
-        overflow: hidden;
-        height: 100%;
+        background: var(--pos-panel); border-radius: var(--pos-radius);
+        border: 1px solid var(--pos-border); display: flex; flex-direction: column;
+        box-shadow: var(--pos-shadow); overflow: hidden; height: 100%;
     }
 
-    .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid var(--pos-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .status-badge {
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 800;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
+    .sidebar-header { padding: 20px; border-bottom: 1px solid var(--pos-border); display: flex; justify-content: space-between; align-items: center; }
+    .status-badge { font-size: 10px; text-transform: uppercase; font-weight: 800; display: flex; align-items: center; gap: 5px; color: white; }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pos-success); box-shadow: 0 0 10px var(--pos-success); }
 
-    .cart-items {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .cart-item {
-        background: var(--pos-panel-light);
-        border-radius: 12px;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        border: 1px solid transparent;
-        transition: 0.2s;
-    }
-
-    .cart-item:hover { border-color: rgba(255,255,255,0.1); }
-
+    .cart-items { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .cart-item { background: var(--pos-panel-light); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
     .item-top { display: flex; justify-content: space-between; gap: 10px; }
-    .item-title { font-weight: 700; font-size: 13px; color: var(--pos-text); flex: 1; }
-    .btn-del { color: var(--pos-text-muted); cursor: pointer; transition: 0.2s; }
+    .item-title { font-weight: 700; font-size: 13px; color: white; flex: 1; }
+    .btn-del { color: var(--pos-text-muted); cursor: pointer; }
     .btn-del:hover { color: var(--pos-danger); }
 
     .item-bottom { display: flex; justify-content: space-between; align-items: center; }
-    .qty-box {
-        display: flex;
-        align-items: center;
-        background: #000;
-        border-radius: 8px;
-        padding: 2px;
-    }
-
-    .qty-btn {
-        width: 24px; height: 24px;
-        display: flex; align-items: center; justify-content: center;
-        background: transparent; border: none; color: var(--pos-text);
-        cursor: pointer; font-size: 14px;
-    }
-
-    .qty-input {
-        width: 30px; background: transparent; border: none; color: white;
-        text-align: center; font-size: 12px; font-weight: 700;
-    }
-
+    .qty-box { display: flex; align-items: center; background: #000; border-radius: 8px; padding: 2px; }
+    .qty-btn { width: 24px; height: 24px; background: transparent; border: none; color: white; cursor: pointer; }
+    .qty-input { width: 30px; background: transparent; border: none; color: white; text-align: center; font-size: 12px; font-weight: 700; }
     .item-subtotal { font-weight: 800; color: white; font-size: 14px; }
 
-    .sidebar-footer {
-        padding: 20px;
-        background: var(--pos-panel-light);
-        border-top: 1px solid var(--pos-border);
-    }
-
-    .total-display {
-        background: rgba(0,0,0,0.3);
-        padding: 15px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-
+    .sidebar-footer { padding: 20px; background: var(--pos-panel-light); border-top: 1px solid var(--pos-border); }
+    .total-display { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
     .total-label { font-size: 11px; font-weight: 700; color: var(--pos-text-muted); text-transform: uppercase; letter-spacing: 1px; }
     .total-amount { font-size: 32px; font-weight: 900; color: var(--pos-primary); margin: 5px 0; }
 
-    .payment-area { display: flex; flex-direction: column; gap: 10px; }
-    .input-cash {
-        background: #000;
-        border: 1px solid var(--pos-border);
-        border-radius: 12px;
-        padding: 15px;
-        color: white;
-        font-size: 20px;
-        font-weight: 800;
-        text-align: right;
-        outline: none;
-    }
-
+    .input-cash { width: 100%; background: #000; border: 1px solid var(--pos-border); border-radius: 12px; padding: 12px; color: white; font-size: 20px; font-weight: 800; text-align: right; outline: none; }
     .input-cash:focus { border-color: var(--pos-primary); }
 
     .cash-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
-    .btn-cash {
-        background: var(--pos-panel);
-        border: 1px solid var(--pos-border);
-        padding: 8px;
-        border-radius: 8px;
-        color: white;
-        font-size: 11px;
-        font-weight: 700;
-        cursor: pointer;
-    }
+    .btn-cash { background: var(--pos-panel); border: 1px solid var(--pos-border); padding: 8px; border-radius: 8px; color: white; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn-cash:hover { background: var(--pos-panel-light); border-color: var(--pos-primary); }
 
     .btn-pay {
-        width: 100%;
-        background: var(--pos-primary);
-        color: white;
-        padding: 16px;
-        border-radius: 12px;
-        border: none;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 4px 15px var(--pos-primary-glow);
+        width: 100%; background: var(--pos-primary); color: white; padding: 16px; border-radius: 12px; border: none;
+        font-weight: 800; text-transform: uppercase; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px var(--pos-primary-glow);
     }
+    .btn-pay:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+    .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-pay:hover { transform: translateY(-2px); filter: brightness(1.1); }
-    .btn-pay:disabled { background: #334155; opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-
-    /* RESPONSIVE BREAKPOINTS */
-    @media (max-width: 1200px) {
-        .pos-container { grid-template-columns: 1fr 350px; }
-    }
-
-    @media (max-width: 992px) {
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
         .pos-container { grid-template-columns: 1fr; height: auto; overflow: visible; }
-        .pos-sidebar { position: sticky; bottom: 20px; height: 600px; }
-        .pos-catalog { height: 600px; }
+        body { overflow-y: auto; }
+        .pos-sidebar { height: 600px; margin-top: 20px; }
     }
 
-    @media (max-width: 600px) {
-        .pos-container { padding: 10px; gap: 10px; }
+    @media (max-width: 640px) {
         .catalog-grid { grid-template-columns: 1fr 1fr; }
         .catalog-toolbar { flex-direction: column; align-items: stretch; }
-        .filter-group select { width: 100%; }
     }
-
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-    /* ANIMATIONS */
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 </style>
 
 <div class="pos-container">
-
     {{-- CATALOG --}}
     <div class="pos-catalog">
         <div class="catalog-toolbar">
             <div class="search-group">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Cari Material / Scan Barcode (F2)..." autocomplete="off" autofocus>
+                <i class="fas fa-barcode"></i>
+                <input type="text" id="search-input" placeholder="Cari Nama / Scan Barcode (F2)..." autocomplete="off" autofocus>
             </div>
             <div class="filter-group">
                 <select id="category-filter">
@@ -378,12 +173,10 @@
                 </select>
             </div>
         </div>
-
         <div class="catalog-grid" id="product-grid">
-            {{-- Skeleton Loading --}}
             <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: var(--pos-text-muted);">
                 <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p style="margin-top: 15px; font-weight: 600;">Sinkronisasi Persediaan...</p>
+                <p style="margin-top: 15px; font-weight: 600;">Menghubungkan ke Gudang...</p>
             </div>
         </div>
     </div>
@@ -394,19 +187,18 @@
             <div>
                 <h2 style="font-size: 18px; font-weight: 900; color: white; margin: 0;">TERMINAL POS</h2>
                 <div class="status-badge" style="margin-top: 4px;">
-                    <div class="dot"></div> Online • {{ $tokoPos->nama_toko ?? 'Pondasikita' }}
+                    <div class="dot"></div> Online • {{ $tokoPos->nama_toko ?? 'Kasir Pondasikita' }}
                 </div>
             </div>
-            <button id="clear-cart-btn" style="background: transparent; border: 1px solid var(--pos-border); color: var(--pos-text-muted); padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 12px;">
-                <i class="fas fa-undo"></i> Reset
+            <button id="clear-cart-btn" title="Reset Keranjang" style="background: transparent; border: 1px solid var(--pos-border); color: var(--pos-text-muted); padding: 5px 10px; border-radius: 8px; cursor: pointer;">
+                <i class="fas fa-rotate"></i>
             </button>
         </div>
 
         <div class="cart-items" id="cart-items">
-            {{-- Empty State --}}
             <div id="empty-cart-message" style="margin: auto; text-align: center; color: var(--pos-text-muted);">
-                <i class="fas fa-shopping-basket fa-3x" style="margin-bottom: 15px; opacity: 0.3;"></i>
-                <p style="font-weight: 700; font-size: 13px;">Belum ada item terpilih</p>
+                <i class="fas fa-shopping-basket fa-3x" style="margin-bottom: 15px; opacity: 0.2;"></i>
+                <p style="font-weight: 700; font-size: 13px;">Belum ada material terpilih</p>
             </div>
         </div>
 
@@ -414,7 +206,7 @@
             <div class="total-display">
                 <span class="total-label">Total Tagihan</span>
                 <div class="total-amount font-digital">
-                    <span style="font-size: 16px; font-weight: 700;">Rp</span> <span id="total-price">0</span>
+                    <span style="font-size: 16px;">Rp</span> <span id="total-price">0</span>
                 </div>
             </div>
 
@@ -435,12 +227,11 @@
                 <input type="hidden" id="kasir-name" value="{{ auth()->user()->nama ?? auth()->user()->username }}">
 
                 <button id="process-payment-btn" class="btn-pay" disabled>
-                    <i class="fas fa-bolt"></i> Proses Pembayaran (F9)
+                    <i class="fas fa-bolt"></i> Bayar & Cetak (F9)
                 </button>
             </div>
         </div>
     </div>
-
 </div>
 
 @endsection
@@ -476,34 +267,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderProducts(products) {
         const grid = document.getElementById('product-grid');
         grid.innerHTML = '';
-
         if(products.length === 0) {
-            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 100px; color: var(--pos-text-muted);">
-                <i class="fas fa-search fa-2x" style="opacity: 0.3;"></i>
-                <p style="margin-top: 15px; font-weight: 600;">Produk tidak ditemukan</p>
-            </div>`;
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 100px; color: var(--pos-text-muted);"><i class="fas fa-search fa-2x" style="opacity: 0.2;"></i><p style="margin-top: 15px; font-weight: 600;">Material tidak ditemukan</p></div>`;
             return;
         }
-
         products.forEach(p => {
             let sku = p.kode_barang ? p.kode_barang : 'SKU-'+String(p.id).padStart(4, '0');
             let stockClass = p.stok <= 5 ? 'stock-warning' : 'stock-ok';
-
             let html = `
                 <div class="product-card" onclick="addToCart(${p.id})">
                     <span class="card-sku font-digital">${sku}</span>
                     <h3 class="card-name">${p.nama_barang}</h3>
                     <div class="card-footer">
                         <span class="card-price font-digital">Rp ${formatRp(p.harga)}</span>
-                        <span class="card-stock ${stockClass}">${p.stok}</span>
+                        <span class="card-stock ${stockClass}">Stok: ${p.stok}</span>
                     </div>
-                </div>
-            `;
+                </div>`;
             grid.insertAdjacentHTML('beforeend', html);
         });
     }
 
-    // Search and Filter
     const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', filterProducts);
     document.getElementById('category-filter').addEventListener('change', filterProducts);
@@ -511,21 +294,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function filterProducts() {
         let keyword = searchInput.value.toLowerCase();
         let categoryId = document.getElementById('category-filter').value;
-
         let filtered = allProducts.filter(p => {
             let matchCat = categoryId === 'all' || p.kategori_id == categoryId;
             let kode = p.kode_barang ? p.kode_barang.toLowerCase() : '';
-            let matchKey = p.nama_barang.toLowerCase().includes(keyword) || kode.includes(keyword);
-            return matchCat && matchKey;
+            return matchCat && (p.nama_barang.toLowerCase().includes(keyword) || kode.includes(keyword));
         });
         renderProducts(filtered);
     }
 
-    // Cart Logic
     window.addToCart = function(productId) {
         let product = allProducts.find(p => p.id === productId);
         if(!product) return;
-
         let existing = cart.find(item => item.id === productId);
         if(existing) {
             if(existing.qty < product.stok) existing.qty++;
@@ -550,14 +329,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const emptyMsg = document.getElementById('empty-cart-message');
         document.querySelectorAll('.cart-item').forEach(e => e.remove());
         currentTotal = 0;
-
         if(cart.length === 0) {
             emptyMsg.style.display = 'block';
             document.getElementById('process-payment-btn').disabled = true;
         } else {
             emptyMsg.style.display = 'none';
             document.getElementById('process-payment-btn').disabled = false;
-
             cart.forEach(item => {
                 currentTotal += (item.harga * item.qty);
                 let html = `
@@ -574,20 +351,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <span class="item-subtotal font-digital">Rp ${formatRp(item.harga * item.qty)}</span>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 container.insertAdjacentHTML('beforeend', html);
             });
         }
-
         document.getElementById('total-price').innerText = formatRp(currentTotal);
         calculateChange();
     }
 
-    // Payment Logic
     const amountInput = document.getElementById('amount-paid');
     const changeDisplay = document.getElementById('change-due');
-
     amountInput.addEventListener('input', calculateChange);
     document.querySelectorAll('.btn-cash').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -605,7 +378,6 @@ document.addEventListener('DOMContentLoaded', function() {
             changeDisplay.style.color = 'var(--pos-text-muted)';
             return;
         }
-
         if(change < 0) {
             changeDisplay.innerText = "Uang Kurang!";
             changeDisplay.style.color = 'var(--pos-danger)';
@@ -615,24 +387,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Checkout
     document.getElementById('process-payment-btn').addEventListener('click', function() {
         let paid = parseInt(amountInput.value) || 0;
         if(paid < currentTotal) { 
-            Swal.fire({icon: 'error', title: 'Pembayaran Gagal', text: 'Jumlah uang tunai tidak mencukupi.'}); 
+            Swal.fire({icon: 'error', title: 'Ups!', text: 'Uang tunai kurang.'}); 
             return; 
         }
-
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
         this.disabled = true;
-
         fetch("{{ route('seller.pos.api.checkout') }}", {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
             body: JSON.stringify({
                 user_id: document.getElementById('pos-user-id').value,
                 kasir_name: document.getElementById('kasir-name').value || 'Kasir',
@@ -647,8 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if(data.status === 'success') {
                 Swal.fire({
                     title: 'TRANSAKSI BERHASIL',
-                    html: `<div style="color: #64748b; font-weight: 700; margin-bottom: 10px;">Kembalian Anda:</div>
-                           <div style="font-size: 36px; font-weight: 900; color: #3b82f6; font-family: 'JetBrains Mono';">Rp ${formatRp(paid - currentTotal)}</div>`,
+                    html: `<div style="color: #94a3b8; font-weight: 700; margin-bottom: 10px;">Kembalian:</div><div style="font-size: 32px; font-weight: 900; color: #3b82f6; font-family: 'JetBrains Mono';">Rp ${formatRp(paid - currentTotal)}</div>`,
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: '<i class="fas fa-print"></i> Cetak Struk',
@@ -656,44 +420,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonColor: '#3b82f6',
                     cancelButtonColor: '#1e293b'
                 }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.open("{{ url('seller/pos/print') }}/" + data.invoice, '_blank');
-                    }
-                    cart = []; 
-                    amountInput.value = ''; 
-                    updateCartDisplay(); 
-                    loadProducts(); 
-                    resetBtn();
+                    if (result.isConfirmed) window.open("{{ url('seller/pos/print') }}/" + data.invoice, '_blank');
+                    cart = []; amountInput.value = ''; updateCartDisplay(); loadProducts(); resetBtn();
                 });
             } else { 
-                Swal.fire('Gagal', data.message, 'error'); 
-                resetBtn(); 
+                Swal.fire('Gagal', data.message, 'error'); resetBtn(); 
             }
         })
-        .catch(err => { 
-            Swal.fire('System Error', 'Koneksi bermasalah atau sesi berakhir.', 'error'); 
-            resetBtn(); 
-        });
-
-        function resetBtn() {
-            const btn = document.getElementById('process-payment-btn');
-            btn.innerHTML = '<i class="fas fa-bolt"></i> Proses Pembayaran (F9)';
-            btn.disabled = false;
-        }
+        .catch(err => { Swal.fire('Error', 'Kesalahan koneksi.', 'error'); resetBtn(); });
     });
 
-    // Reset Button
+    function resetBtn() {
+        const btn = document.getElementById('process-payment-btn');
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Bayar & Cetak (F9)';
+        btn.disabled = false;
+    }
+
     document.getElementById('clear-cart-btn').addEventListener('click', () => {
         cart = []; updateCartDisplay(); amountInput.value = ''; calculateChange();
     });
 
-    // Keyboard Shortcuts
     document.addEventListener('keydown', function(e) {
         if(e.key === 'F2') { e.preventDefault(); searchInput.focus(); }
         if(e.key === 'F9') { e.preventDefault(); document.getElementById('process-payment-btn').click(); }
     });
 
-    loadProducts(); loadCategories();
+    loadProducts(); 
+    loadCategories();
 });
 </script>
 @endpush
