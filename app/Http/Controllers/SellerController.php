@@ -1516,4 +1516,47 @@ class SellerController extends Controller
 
         return view('seller.detail_pesanan', compact('transaksi', 'detailItems', 'totalBelanjaToko', 'totalOngkirToko', 'grandTotalToko'));
     }
+
+    // =========================================================================
+    // EXPORT PDF PERFORMA TOKO
+    // =========================================================================
+    public function exportPerformancePdf()
+    {
+        $user = Auth::user();
+        $toko = DB::table('tb_toko')->where('user_id', $user->id)->first();
+
+        if (!$toko) {
+            return redirect()->route('seller.dashboard')->with('error', 'Data toko tidak ditemukan.');
+        }
+
+        $tokoId = $toko->id;
+
+        $totalPenjualan = DB::table('tb_detail_transaksi')
+            ->where('toko_id', $tokoId)
+            ->whereIn('status_pesanan_item', ['selesai', 'sampai_tujuan'])
+            ->sum('subtotal');
+
+        $totalPesanan = DB::table('tb_detail_transaksi')
+            ->where('toko_id', $tokoId)
+            ->whereIn('status_pesanan_item', ['selesai', 'sampai_tujuan'])
+            ->distinct('transaksi_id')
+            ->count('transaksi_id');
+
+        $totalPembeli = DB::table('tb_detail_transaksi as d')
+            ->join('tb_transaksi as t', 'd.transaksi_id', '=', 't.id')
+            ->where('d.toko_id', $tokoId)
+            ->whereIn('d.status_pesanan_item', ['selesai', 'sampai_tujuan'])
+            ->distinct('t.user_id')
+            ->count('t.user_id');
+
+        $kriteria = [
+            'penjualan' => $totalPenjualan,
+            'pesanan' => $totalPesanan,
+            'tingkat_konversi' => ($totalPembeli > 0) ? round(($totalPesanan / $totalPembeli) * 100, 2) : 0,
+            'pengunjung' => $totalPembeli
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.performance_pdf', compact('toko', 'kriteria'));
+        return $pdf->download('Laporan_Performa_' . str_replace(' ', '_', $toko->nama_toko) . '_' . date('Ymd') . '.pdf');
+    }
 }

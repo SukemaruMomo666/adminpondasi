@@ -188,6 +188,7 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     // Data Analytics
     Route::prefix('data')->name('data.')->group(function() {
         Route::get('/performance', [SellerController::class, 'performance'])->name('performance');
+        Route::get('/performance/export-pdf', [SellerController::class, 'exportPerformancePdf'])->name('performance.export');
         Route::get('/health', [SellerController::class, 'health'])->name('health');
     });
 
