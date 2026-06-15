@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ProductImport;
+use App\Exports\ProductTemplateExport;
 
 class ProductController extends Controller
 {
@@ -314,13 +315,6 @@ class ProductController extends Controller
 
     public function downloadTemplate()
     {
-        // Pastikan file ini ada di folder public/assets/templates/
-        $filePath = public_path('assets/templates/template_material.xlsx');
-
-        if(File::exists($filePath)) {
-            return response()->download($filePath);
-        }
-
-        return back()->with('error', 'File template Excel belum di-upload oleh Admin ke server.');
+        return Excel::download(new ProductTemplateExport, 'template_material_pondasikita.xlsx');
     }
 }
