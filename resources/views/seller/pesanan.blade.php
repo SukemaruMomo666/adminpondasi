@@ -44,14 +44,23 @@
     </div>
 
     {{-- TOOLBAR (Search & Mass Action) --}}
-    <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-center gap-4">
 
-        {{-- Search Box --}}
-        <div class="relative w-full md:max-w-md group">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <i class="mdi mdi-magnify text-slate-400 group-focus-within:text-blue-500 transition-colors text-lg"></i>
+        <div class="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
+            {{-- Search Box --}}
+            <div class="relative w-full md:w-80 group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="mdi mdi-magnify text-slate-400 group-focus-within:text-blue-500 transition-colors text-lg"></i>
+                </div>
+                <input type="text" id="orderSearchInput" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all" placeholder="Cari Invoice / Nama...">
             </div>
-            <input type="text" id="orderSearchInput" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all" placeholder="Cari No. Invoice atau Nama Pembeli...">
+
+            {{-- Source Filter --}}
+            <div class="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+                <button class="source-tab flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm" data-source="all">Semua</button>
+                <button class="source-tab flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700" data-source="online">Online</button>
+                <button class="source-tab flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700" data-source="pos">POS</button>
+            </div>
         </div>
 
         {{-- Mass Action --}}
@@ -93,15 +102,29 @@
             </div>
 
             @foreach($groupedOrders as $invoice => $items)
+                @php
+                    $sumber = $items[0]->sumber_transaksi ?? 'ONLINE';
+                    $isPos = ($sumber === 'OFFLINE' || str_starts_with($invoice, 'POS-'));
+                    $sourceTag = $isPos ? 'pos' : 'online';
+                    
+                    $headerBg = $isPos ? 'bg-orange-50/50' : 'bg-slate-50/50';
+                    $accentColor = $isPos ? 'text-orange-600' : 'text-blue-600';
+                    $badgeStyle = $isPos ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                @endphp
                 {{-- KARTU ORDER (GROUP PER INVOICE) --}}
-                <div class="order-group bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden" data-invoice="{{ $invoice }}">
+                <div class="order-group bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 overflow-hidden" 
+                     data-invoice="{{ $invoice }}" 
+                     data-source="{{ $sourceTag }}">
 
                     {{-- Header Invoice --}}
-                    <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div class="{{ $headerBg }} px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div class="flex flex-wrap items-center gap-4">
-                            <div class="font-mono text-base font-black text-blue-600 flex items-center gap-2">
-                                <i class="mdi mdi-receipt-text text-lg"></i> {{ $invoice }}
+                            <div class="font-mono text-base font-black {{ $accentColor }} flex items-center gap-2">
+                                <i class="mdi {{ $isPos ? 'mdi-cash-register' : 'mdi-receipt-text' }} text-lg"></i> {{ $invoice }}
                             </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter border {{ $badgeStyle }}">
+                                {{ $isPos ? 'POS / Offline' : 'Online Store' }}
+                            </span>
                             <div class="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></div>
                             <div class="text-sm font-bold text-slate-700 flex items-center gap-2">
                                 <i class="mdi mdi-account-hard-hat text-slate-400 text-lg"></i> {{ $items[0]->nama_pelanggan }}
@@ -204,13 +227,97 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- 1. FILTER TABS LOGIC ---
-    const tabs = document.querySelectorAll('.f-tab');
+    // --- 1. FILTER LOGIC (STATUS & SOURCE) ---
+    const statusTabs = document.querySelectorAll('.f-tab');
+    const sourceTabs = document.querySelectorAll('.source-tab');
     const orderGroups = document.querySelectorAll('.order-group');
     const emptyState = document.getElementById('dynamic-empty-state');
     const emptyText = document.getElementById('empty-state-text');
     const selectAllCb = document.getElementById('select-all-orders');
     const checkboxes = document.querySelectorAll('.order-checkbox');
+
+    let currentFilterStatus = '';
+    let currentFilterSource = 'all';
+
+    function applyFilters() {
+        let visibleCount = 0;
+
+        orderGroups.forEach(group => {
+            let groupSource = group.getAttribute('data-source');
+            let items = group.querySelectorAll('.order-item-row');
+            let groupHasVisibleItem = false;
+
+            // Check Source first
+            let sourceMatch = (currentFilterSource === 'all' || groupSource === currentFilterSource);
+
+            items.forEach(item => {
+                let itemStatus = item.getAttribute('data-status');
+                
+                // Item is visible if source matches AND (status is all OR status matches)
+                if (sourceMatch && (currentFilterStatus === '' || itemStatus === currentFilterStatus)) {
+                    item.classList.remove('hidden');
+                    groupHasVisibleItem = true;
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            if (groupHasVisibleItem) {
+                group.classList.remove('hidden');
+            } else {
+                group.classList.add('hidden');
+            }
+        });
+
+        // Update UI Empty State
+        if (emptyState) {
+            if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+                let statusName = document.querySelector(`.f-tab[data-status="${currentFilterStatus}"]`)?.innerText || 'Semua';
+                let sourceName = document.querySelector(`.source-tab[data-source="${currentFilterSource}"]`)?.innerText || 'Semua';
+                emptyText.innerHTML = `Tidak ada pesanan <strong>${sourceName}</strong> dengan status <strong>${statusName}</strong>.`;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        // Reset Selection
+        if(selectAllCb) selectAllCb.checked = false;
+        checkboxes.forEach(cb => cb.checked = false);
+        updateMassBtn();
+    }
+
+    // Status Tabs Click
+    statusTabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            statusTabs.forEach(t => {
+                t.classList.remove('bg-slate-900', 'text-white', 'shadow-md', 'shadow-slate-900/20');
+                t.classList.add('bg-transparent', 'text-slate-500', 'hover:bg-slate-200', 'hover:text-slate-900');
+            });
+            this.classList.remove('bg-transparent', 'text-slate-500', 'hover:bg-slate-200', 'hover:text-slate-900');
+            this.classList.add('bg-slate-900', 'text-white', 'shadow-md', 'shadow-slate-900/20');
+
+            currentFilterStatus = this.getAttribute('data-status');
+            applyFilters();
+        });
+    });
+
+    // Source Tabs Click
+    sourceTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            sourceTabs.forEach(t => {
+                t.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+                t.classList.add('text-slate-500', 'hover:text-slate-700');
+            });
+            this.classList.remove('text-slate-500', 'hover:text-slate-700');
+            this.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+
+            currentFilterSource = this.getAttribute('data-source');
+            applyFilters();
+        });
+    });
 
     // Auto-klik tab berdasarkan URL parameter (?status=...)
     const currentUrlParams = new URLSearchParams(window.location.search);
@@ -218,64 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if(activeStatus) {
         let targetTab = document.querySelector(`.f-tab[data-status="${activeStatus}"]`);
         if(targetTab) targetTab.click();
+    } else {
+        applyFilters();
     }
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Reset Style Semua Tab ke Inactive
-            tabs.forEach(t => {
-                t.classList.remove('bg-slate-900', 'text-white', 'shadow-md', 'shadow-slate-900/20');
-                t.classList.add('bg-transparent', 'text-slate-500', 'hover:bg-slate-200', 'hover:text-slate-900');
-            });
-
-            // Set Style Tab Aktif
-            this.classList.remove('bg-transparent', 'text-slate-500', 'hover:bg-slate-200', 'hover:text-slate-900');
-            this.classList.add('bg-slate-900', 'text-white', 'shadow-md', 'shadow-slate-900/20');
-
-            let filterStatus = this.getAttribute('data-status');
-            let visibleCount = 0;
-
-            // Reset Checkboxes
-            if(selectAllCb) selectAllCb.checked = false;
-            checkboxes.forEach(cb => cb.checked = false);
-            updateMassBtn();
-
-            orderGroups.forEach(group => {
-                let items = group.querySelectorAll('.order-item-row');
-                let groupHasVisibleItem = false;
-
-                items.forEach(item => {
-                    let itemStatus = item.getAttribute('data-status');
-                    if (filterStatus === '' || itemStatus === filterStatus) {
-                        item.classList.remove('hidden');
-                        groupHasVisibleItem = true;
-                        visibleCount++;
-                    } else {
-                        item.classList.add('hidden');
-                    }
-                });
-
-                // Sembunyikan Header Invoice jika semua item di dalamnya tersembunyi
-                if (groupHasVisibleItem) {
-                    group.classList.remove('hidden');
-                } else {
-                    group.classList.add('hidden');
-                }
-            });
-
-            // Tampilkan Empty State Jika Kosong
-            if (emptyState) {
-                if (visibleCount === 0) {
-                    emptyState.classList.remove('hidden');
-                    emptyText.innerHTML = `Tidak ada pesanan dengan status <strong>${this.innerText}</strong>.`;
-                } else {
-                    emptyState.classList.add('hidden');
-                }
-            }
-        });
-    });
 
     // --- 2. PENCARIAN (SEARCH) INVOICE/NAMA ---
     const searchInput = document.getElementById('orderSearchInput');

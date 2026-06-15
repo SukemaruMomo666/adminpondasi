@@ -219,7 +219,7 @@ class SellerController extends Controller
             ->where('d.toko_id', $toko->id)
             ->select(
                 'd.id as detail_id', 'd.jumlah', 'd.subtotal', 'd.status_pesanan_item',
-                't.kode_invoice', 't.tanggal_transaksi',
+                't.kode_invoice', 't.tanggal_transaksi', 't.sumber_transaksi',
                 'b.nama_barang', 'b.gambar_utama',
                 'u.nama as nama_pelanggan'
             )
@@ -986,6 +986,7 @@ class SellerController extends Controller
             
             $transaksiId = DB::table('tb_transaksi')->insertGetId([
                 'kode_invoice'          => $invoice,
+                'sumber_transaksi'      => 'OFFLINE',
                 'user_id'               => $userId, 
                 'total_harga_produk'    => $request->total,
                 'total_final'           => $request->total,

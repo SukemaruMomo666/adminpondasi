@@ -110,7 +110,11 @@
                         <p class="text-[10px] font-bold text-gray-400 uppercase">Nomor Telepon</p>
                         <p class="font-semibold text-gray-900 text-sm">{{ $transaksi->shipping_telepon_penerima ?? $transaksi->telp_akun ?? '-' }}</p>
                     </div>
-                    @if($transaksi->sumber_transaksi == 'ONLINE')
+                    @php
+                        $isPos = ($transaksi->sumber_transaksi === 'OFFLINE' || str_starts_with($transaksi->kode_invoice, 'POS-'));
+                    @endphp
+
+                    @if(!$isPos)
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase">Alamat Pengiriman</p>
                         <p class="font-medium text-gray-700 text-xs leading-relaxed mt-0.5">
@@ -124,7 +128,7 @@
                     @else
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase">Metode Transaksi</p>
-                        <span class="inline-flex mt-1 px-2 py-1 rounded bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-wider">
+                        <span class="inline-flex mt-1 px-2 py-1 rounded bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
                             POINT OF SALE (KASIR)
                         </span>
                     </div>
