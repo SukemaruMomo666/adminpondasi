@@ -39,7 +39,7 @@
         }
 
         .dark body {
-            background: radial-gradient(circle at top center, #111827 0%, #000000 40%);
+            background: radial-gradient(circle at top left, #2e1065 0%, #0f172a 40%, #020617 100%);
             background-attachment: fixed;
             @apply text-slate-300;
         }
@@ -54,7 +54,18 @@
             position: fixed;
             height: 100vh;
             z-index: 1040;
-            @apply bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/[0.03] shadow-[4px_0_24px_rgba(0,0,0,0.02)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.8)] transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.3) !important;
+            backdrop-filter: blur(60px) saturate(200%) !important;
+            -webkit-backdrop-filter: blur(60px) saturate(200%) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.4) !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+            transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dark .admin-sidebar {
+            background: rgba(15, 23, 42, 0.3) !important; /* deep slate with opacity */
+            border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+            box-shadow: 10px 0 50px rgba(0,0,0,0.2);
         }
 
         .admin-main-wrapper {
@@ -64,19 +75,33 @@
             flex-direction: column;
             min-height: 100vh;
             position: relative;
-            @apply transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) bg-slate-50 dark:bg-transparent;
+            background: transparent !important;
+            transition: all 500ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .admin-navbar {
-            height: 70px;
+            height: 65px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 1.5rem;
             position: sticky;
-            top: 0;
+            top: 15px;
+            margin: 0 1.5rem 1rem 1.5rem;
             z-index: 1030;
-            @apply bg-white/70 dark:bg-[#000000]/50 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/[0.03] shadow-sm dark:shadow-none transition-colors duration-500;
+            background: rgba(255, 255, 255, 0.3) !important;
+            backdrop-filter: blur(60px) saturate(200%) !important;
+            -webkit-backdrop-filter: blur(60px) saturate(200%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+            transition: all 500ms;
+        }
+
+        .dark .admin-navbar {
+            background: rgba(15, 23, 42, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
         }
 
         .admin-content {
@@ -88,10 +113,10 @@
 
         /* Glassmorphism Alerts Premium - Deep Neon Aesthetic */
         .alert {
-            @apply border border-white/20 dark:border-white/[0.05] rounded-2xl font-bold text-sm shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-xl transition-all;
+            @apply border border-white/20 dark:border-white/[0.1] rounded-2xl font-bold text-sm shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-xl transition-all;
         }
-        .alert-success { @apply bg-emerald-50/80 text-emerald-700 dark:bg-[#022c22]/50 dark:text-emerald-400 dark:shadow-[0_0_20px_rgba(16,185,129,0.1)]; }
-        .alert-danger { @apply bg-red-50/80 text-red-700 dark:bg-[#4c0519]/50 dark:text-rose-400 dark:shadow-[0_0_20px_rgba(244,63,94,0.1)]; }
+        .alert-success { @apply bg-emerald-50/80 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400; }
+        .alert-danger { @apply bg-red-50/80 text-red-700 dark:bg-rose-500/20 dark:text-rose-400; }
 
         /* Responsive Mobile */
         @media (max-width: 991px) {
@@ -102,10 +127,10 @@
         }
 
         /* Scrollbar ala macOS - Darkened */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { border: 2px solid rgba(0,0,0,0); background-clip: padding-box; @apply bg-slate-300 dark:bg-[#1f2937] rounded-full transition-colors; }
-        ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400 dark:bg-[#374151]; }
+        ::-webkit-scrollbar-thumb { border: 3px solid rgba(0,0,0,0); background-clip: padding-box; @apply bg-slate-400 dark:bg-slate-500 rounded-full transition-colors; }
+        ::-webkit-scrollbar-thumb:hover { @apply bg-slate-500 dark:bg-slate-400; }
     </style>
 
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
@@ -147,21 +172,14 @@
             @if(session('success'))
                 <div x-data="{ show: true }" x-show="show"
                      x-transition:enter="transition ease-out duration-300 transform"
-                     x-transition:enter-start="opacity-0 -translate-y-4 scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave="transition ease-in duration-200 transform"
-                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave-end="opacity-0 -translate-y-4 scale-95"
-                     class="alert alert-success flex items-center justify-between mb-6 px-5 py-4" role="alert">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 border dark:border-emerald-500/20 flex items-center justify-center shadow-inner">
-                            <i class="mdi mdi-check-circle text-xl text-emerald-600 dark:text-emerald-400"></i>
-                        </div>
-                        <span class="tracking-wide">{{ session('success') }}</span>
+                     x-transition:enter-start="opacity-0 -translate-y-4"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     class="alert alert-success d-flex align-items-center mb-4 p-4" role="alert">
+                    <i class="mdi mdi-check-circle-outline me-3 fs-4"></i>
+                    <div class="flex-grow-1">
+                        {{ session('success') }}
                     </div>
-                    <button type="button" @click="show = false" class="text-emerald-600 dark:text-emerald-400 opacity-60 hover:opacity-100 transition-opacity outline-none p-1">
-                        <i class="mdi mdi-close text-lg"></i>
-                    </button>
+                    <button type="button" @click="show = false" class="btn-close ms-auto outline-none shadow-none border-0"></button>
                 </div>
             @endif
 
@@ -169,51 +187,44 @@
             @if(session('error'))
                 <div x-data="{ show: true }" x-show="show"
                      x-transition:enter="transition ease-out duration-300 transform"
-                     x-transition:enter-start="opacity-0 -translate-y-4 scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave="transition ease-in duration-200 transform"
-                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave-end="opacity-0 -translate-y-4 scale-95"
-                     class="alert alert-danger flex items-center justify-between mb-6 px-5 py-4" role="alert">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 dark:bg-rose-500/10 border dark:border-rose-500/20 flex items-center justify-center shadow-inner">
-                            <i class="mdi mdi-alert-circle text-xl text-red-600 dark:text-rose-400"></i>
-                        </div>
-                        <span class="tracking-wide">{{ session('error') }}</span>
+                     x-transition:enter-start="opacity-0 -translate-y-4"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     class="alert alert-danger d-flex align-items-center mb-4 p-4" role="alert">
+                    <i class="mdi mdi-alert-circle-outline me-3 fs-4"></i>
+                    <div class="flex-grow-1">
+                        {{ session('error') }}
                     </div>
-                    <button type="button" @click="show = false" class="text-red-600 dark:text-rose-400 opacity-60 hover:opacity-100 transition-opacity outline-none p-1">
-                        <i class="mdi mdi-close text-lg"></i>
-                    </button>
+                    <button type="button" @click="show = false" class="btn-close ms-auto outline-none shadow-none border-0"></button>
                 </div>
             @endif
 
-            {{-- 3. KONTEN UTAMA --}}
-            <div class="animate-fade-in-up">
-                @yield('content')
-            </div>
-
-            {{-- Footer --}}
-            <footer class="mt-12 py-6 border-t border-slate-200/50 dark:border-white/[0.03] text-center text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-white/30 dark:bg-[#050505]/50 backdrop-blur-md rounded-2xl mb-2 transition-colors duration-500 shadow-sm dark:shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                &copy; {{ date('Y') }} Pondasikita Admin. Crafted with Excellence.
-            </footer>
+            @yield('content')
         </main>
+
+        <footer class="mt-auto py-6 px-8 text-center">
+            <p class="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.3em] m-0 transition-colors duration-500">
+                &copy; {{ date('Y') }} Pondasikita Platform &bull; Core Engine v2.0
+            </p>
+        </footer>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    {{-- Custom Script Tailwind Animation --}}
     <script>
-        tailwind.config.theme.extend.animation = {
-            'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards'
-        };
-        tailwind.config.theme.extend.keyframes = {
-            fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' }
-            }
-        };
+        // Global standard tooltips initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+
+        // Config Chart.js Global (Jika ada grafik di halaman)
+        if (window.Chart) {
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+            Chart.defaults.color = darkMode ? '#94a3b8' : '#64748b';
+        }
     </script>
 
     @stack('scripts')

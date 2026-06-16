@@ -155,6 +155,7 @@ class LandingController extends Controller
                 ->where('fsp.event_id', $fsEvent->id)
                 ->where('fsp.status_moderasi', 'approved')
                 ->where('b.is_active', 1)
+                ->where('t.status', 'active')
                 ->get();
             $flashSaleProducts = $flashSaleProducts->merge($fsItems);
         }
@@ -176,6 +177,7 @@ class LandingController extends Controller
             }, 'stok_terjual')
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
+            ->where('t.status', 'active')
             ->whereNotNull('t.latitude')
             ->where('b.nilai_diskon', '>', 0)
             ->where('b.diskon_mulai', '<=', now())
@@ -525,7 +527,8 @@ class LandingController extends Controller
                 't.nama_toko', 't.slug as slug_toko', 't.kota as kota_toko'
             )
             ->where('b.is_active', 1)
-            ->where('b.status_moderasi', 'approved');
+            ->where('b.status_moderasi', 'approved')
+            ->where('t.status', 'active');
 
         if ($userLat && $userLng) {
             // Filter jarak GPS Real-Time

@@ -27,7 +27,7 @@
             @if(session('error'))
                 <div class="alert alert-danger" style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                     <i class="mdi mdi-alert-circle-outline" style="font-size: 1.2rem;"></i>
-                    <span>{{ session('error') }}</span>
+                    <span>{!! session('error') !!}</span>
                 </div>
             @endif
 

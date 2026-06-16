@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class ShopController extends Controller
@@ -181,26 +181,6 @@ public function updateProfile(Request $request)
         $user = Auth::user();
         $toko = $this->getToko();
 
-        // TAB KEAMANAN: Ganti Password
-        if ($request->has('form_type') && $request->form_type == 'security') {
-            $request->validate([
-                'current_password' => 'required',
-                'new_password'     => 'required|min:8|confirmed',
-            ]);
-
-            // Cek Password Lama
-            if (!Hash::check($request->current_password, $user->password)) {
-                return redirect()->back()->with('error', 'Password saat ini salah!');
-            }
-
-            // Update Password Baru
-            DB::table('tb_user')
-                ->where('id', $user->id)
-                ->update(['password' => Hash::make($request->new_password)]);
-
-            return redirect()->back()->with('success', 'Password berhasil diperbarui!');
-        }
-
         // TAB PENGATURAN UMUM: Status Libur & Notifikasi
         if ($request->has('form_type') && $request->form_type == 'general') {
             $isVacation = $request->has('status_libur') ? 1 : 0;
@@ -222,6 +202,76 @@ public function updateProfile(Request $request)
         }
 
         return redirect()->back()->with('error', 'Permintaan tidak valid.');
+    }
+
+    /**
+     * ==========================================
+     * 2.5 KEAMANAN AKUN (OTP & RESET PASSWORD)
+     * ==========================================
+     */
+    public function securityIndex()
+    {
+        return view('seller.shop.security');
+    }
+
+    public function sendSecurityOtp(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Generate 6 digit OTP
+        $otp = rand(100000, 999999);
+        
+        // Simpan OTP di Cache selama 5 menit
+        \Illuminate\Support\Facades\Cache::put('security_otp_' . $user->id, $otp, now()->addMinutes(5));
+        
+        // Kirim Email
+        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\OtpSecurityMail($otp, $user->nama));
+        
+        return response()->json(['status' => 'success', 'message' => 'Kode OTP telah dikirim ke email Anda.']);
+    }
+
+    public function verifySecurityOtp(Request $request)
+    {
+        $request->validate([
+            'otp' => 'required|numeric|digits:6',
+        ]);
+
+        $user = Auth::user();
+        $savedOtp = \Illuminate\Support\Facades\Cache::get('security_otp_' . $user->id);
+
+        if ($savedOtp && $savedOtp == $request->otp) {
+            // Tandai sesi verifikasi sukses (berlaku 15 menit)
+            session(['security_verified_at' => now()]);
+            \Illuminate\Support\Facades\Cache::forget('security_otp_' . $user->id);
+            
+            return response()->json(['status' => 'success']);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Kode OTP salah atau telah kedaluwarsa.']);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        // Pastikan sudah diverifikasi via OTP sebelumnya
+        if (!session('security_verified_at') || now()->diffInMinutes(session('security_verified_at')) > 15) {
+            return redirect()->route('seller.shop.security')->with('error', 'Sesi verifikasi telah habis. Silakan ulangi proses.');
+        }
+
+        $request->validate([
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        $user = Auth::user();
+
+        // Update Password Baru
+        DB::table('tb_user')
+            ->where('id', $user->id)
+            ->update(['password' => Hash::make($request->new_password)]);
+
+        // Hapus sesi verifikasi
+        $request->session()->forget('security_verified_at');
+
+        return redirect()->route('seller.shop.security')->with('success', 'Kata sandi berhasil diperbarui dengan aman!');
     }
 
     /**

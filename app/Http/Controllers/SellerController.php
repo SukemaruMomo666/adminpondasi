@@ -1435,7 +1435,11 @@ class SellerController extends Controller
             ->where('status_moderasi', 'rejected')
             ->count();
 
-        $status_kesehatan = ($persentaseGagal > 10 || $produkDilarang > 0) ? "Perlu Perhatian" : "Sangat baik";
+        if ($user->is_banned) {
+            $status_kesehatan = "Akun Ditangguhkan";
+        } else {
+            $status_kesehatan = ($persentaseGagal > 10 || $produkDilarang > 0) ? "Perlu Perhatian" : "Sangat baik";
+        }
 
         $top_summary = [
             'pesanan_terselesaikan' => $pesananGagal, 
@@ -1558,5 +1562,142 @@ class SellerController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.performance_pdf', compact('toko', 'kriteria'));
         return $pdf->download('Laporan_Performa_' . str_replace(' ', '_', $toko->nama_toko) . '_' . date('Ymd') . '.pdf');
+    }
+
+    // =========================================================================
+    // EXPORT PDF KESEHATAN TOKO
+    // =========================================================================
+    public function exportHealthPdf()
+    {
+        $user = Auth::user();
+        $toko = DB::table('tb_toko')->where('user_id', $user->id)->first();
+
+        if (!$toko) {
+            return redirect()->route('seller.dashboard')->with('error', 'Data toko tidak ditemukan.');
+        }
+
+        $totalPesananAll = DB::table('tb_detail_transaksi')->where('toko_id', $toko->id)->count();
+
+        $pesananGagal = DB::table('tb_detail_transaksi')
+            ->where('toko_id', $toko->id)
+            ->whereIn('status_pesanan_item', ['dibatalkan', 'ditolak'])
+            ->count();
+
+        $persentaseGagal = ($totalPesananAll > 0) ? round(($pesananGagal / $totalPesananAll) * 100, 2) : 0;
+
+        $produkDilarang = DB::table('tb_barang')
+            ->where('toko_id', $toko->id)
+            ->where('status_moderasi', 'rejected')
+            ->count();
+
+        if ($user->is_banned) {
+            $status_kesehatan = "Akun Ditangguhkan";
+        } else {
+            $status_kesehatan = ($persentaseGagal > 10 || $produkDilarang > 0) ? "Perlu Perhatian" : "Sangat baik";
+        }
+        $poin_penalti_kuartal_ini = ($persentaseGagal > 10) ? 1 : 0;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.health_pdf', compact('toko', 'pesananGagal', 'persentaseGagal', 'produkDilarang', 'status_kesehatan', 'poin_penalti_kuartal_ini'));
+        return $pdf->download('Laporan_Kesehatan_' . str_replace(' ', '_', $toko->nama_toko) . '_' . date('Ymd') . '.pdf');
+    }
+
+    public function submitAppeal(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->is_banned) {
+            return back()->with('error', 'Akun Anda tidak dalam status ditangguhkan.');
+        }
+
+        // Cek apakah sudah ada banding yang pending
+        $existing = DB::table('tb_banding_akun')
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existing) {
+            return back()->with('error', 'Anda sudah mengajukan banding. Harap tunggu proses peninjauan oleh Admin.');
+        }
+
+        $request->validate([
+            'alasan_banding'   => 'required|string|min:20',
+            'bukti_pendukung' => 'nullable|image|max:2048'
+        ]);
+
+        $buktiPath = null;
+        if ($request->hasFile('bukti_pendukung')) {
+            $file = $request->file('bukti_pendukung');
+            $filename = 'appeal_' . time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+            
+            $destPath = public_path('assets/uploads/appeals');
+            if (!File::exists($destPath)) {
+                File::makeDirectory($destPath, 0775, true);
+            }
+            
+            $file->move($destPath, $filename);
+            $buktiPath = $filename;
+        }
+
+        DB::table('tb_banding_akun')->insert([
+            'user_id'          => $user->id,
+            'alasan_banding'   => $request->alasan_banding,
+            'bukti_pendukung' => $buktiPath,
+            'status'           => 'pending',
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
+
+        return back()->with('success', 'Banding Anda berhasil dikirim. Admin akan segera meninjau permohonan Anda.');
+    }
+
+    // =========================================================================
+    // NOTIFICATIONS API
+    // =========================================================================
+    public function fetchNotifications()
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['success' => false], 401);
+
+        $notifications = $user->unreadNotifications()->take(10)->get()->map(function($notif) {
+            return [
+                'id' => $notif->id,
+                'title' => $notif->data['title'] ?? 'Pemberitahuan',
+                'message' => $notif->data['message'] ?? '',
+                'url' => $notif->data['url'] ?? '#',
+                'icon' => $notif->data['icon'] ?? 'mdi-bell',
+                'color' => $notif->data['color'] ?? 'blue',
+                'created_at' => $notif->created_at->diffForHumans()
+            ];
+        });
+
+        $unreadCount = $user->unreadNotifications()->count();
+
+        return response()->json([
+            'success' => true,
+            'unread_count' => $unreadCount,
+            'notifications' => $notifications
+        ]);
+    }
+
+    public function markAsRead($id)
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['success' => false], 401);
+
+        $notification = $user->notifications()->where('id', $id)->first();
+        if ($notification) {
+            $notification->markAsRead();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function markAllAsRead()
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['success' => false], 401);
+
+        $user->unreadNotifications->markAsRead();
+
+        return response()->json(['success' => true]);
     }
 }

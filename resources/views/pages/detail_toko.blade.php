@@ -245,10 +245,95 @@
 
                     {{-- Banner --}}
                     @if($item->type === 'banner')
-                        @php $aspectClass = isset($config->ratio) && $config->ratio == '16:9' ? 'aspect-video' : 'aspect-[4/1]'; @endphp
-                        <div class="w-full rounded-2xl overflow-hidden relative shadow-sm {{ $aspectClass }} bg-slate-900">
-                            @if(!empty($config->images) && count($config->images) > 0)
-                                <img src="{{ $config->images[0] }}" class="w-full h-full object-cover">
+                        @php 
+                            $aspectClass = 'aspect-[4/1]';
+                            if(isset($config->ratio)) {
+                                if($config->ratio == '16:9') $aspectClass = 'aspect-video';
+                                elseif($config->ratio == '3:1') $aspectClass = 'aspect-[3/1]';
+                            }
+                            $bannerId = 'banner-' . $item->uid;
+                        @endphp
+                        <div class="w-full rounded-2xl overflow-hidden relative shadow-sm {{ $aspectClass }} bg-slate-900 flex items-center justify-center group">
+                            <div class="flex h-full w-full transition-transform duration-700 ease-in-out" id="{{ $bannerId }}">
+                                @if(!empty($config->images) && count($config->images) > 0)
+                                    @foreach($config->images as $img)
+                                        <img src="{{ $img }}" class="w-full h-full object-cover shrink-0">
+                                    @endforeach
+                                @else
+                                    <div class="w-full h-full bg-slate-800 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-image text-slate-700 text-6xl"></i>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="absolute inset-0 bg-black/20 pointer-events-none"></div>
+                            @if(!empty($config->title))
+                                <h3 class="absolute z-10 font-black text-center px-10 italic drop-shadow-2xl text-white pointer-events-none" 
+                                    style="color: {{ $config->textColor ?? '#ffffff' }}; font-size: clamp(1.2rem, 4vw, 2.5rem);">
+                                    {{ $config->title }}
+                                </h3>
+                            @endif
+
+                            {{-- Navigation --}}
+                            @if(!empty($config->images) && count($config->images) > 1)
+                                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                                    @foreach($config->images as $index => $img)
+                                        <button class="w-2 h-2 rounded-full bg-white/40 border border-white/20 transition-all hover:bg-white" onclick="moveSlider('{{ $bannerId }}', {{ $index }})"></button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                    {{-- Grid Foto (Frameless Aesthetic) --}}
+                    @elseif($item->type === 'carousel')
+                        @php
+                            $actualImages = array_filter($config->images ?? []);
+                            $imgCount = count($actualImages);
+                        @endphp
+                        
+                        @if($imgCount > 0)
+                            <div class="w-full overflow-hidden rounded-2xl shadow-sm border border-gray-100 bg-white">
+                                @php
+                                    // Logika Grid Pintar: Jika user set 5 grid tapi gambar cuma 3, pakai 3.
+                                    $requestedCols = isset($config->gridType) ? (int)$config->gridType : 3;
+                                    $finalCols = min($imgCount, $requestedCols);
+                                    
+                                    $gridClass = 'grid-cols-3';
+                                    if($finalCols == 1) $gridClass = 'grid-cols-1';
+                                    elseif($finalCols == 2) $gridClass = 'grid-cols-2';
+                                    elseif($finalCols == 4) $gridClass = 'grid-cols-4';
+                                    elseif($finalCols >= 5) $gridClass = 'grid-cols-5';
+                                @endphp
+
+                                <div class="grid {{ $gridClass }} gap-0.5 w-full bg-gray-200">
+                                    @foreach($actualImages as $img)
+                                        <div class="aspect-square bg-slate-100 overflow-hidden group/img relative">
+                                            <img src="{{ $img }}" class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110">
+                                            {{-- Overlay halus saat hover --}}
+                                            <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors duration-300"></div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                    {{-- Video --}}
+                    @elseif($item->type === 'video')
+                        <div class="w-full bg-black rounded-2xl overflow-hidden shadow-lg aspect-video">
+                            @if($config->videoSource === 'youtube' && !empty($config->videoUrl))
+                                @php
+                                    $videoId = "";
+                                    $regExp = '/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/';
+                                    if(preg_match($regExp, $config->videoUrl, $match) && strlen($match[2]) == 11) {
+                                        $videoId = $match[2];
+                                    }
+                                @endphp
+                                @if($videoId)
+                                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/{{ $videoId }}?autoplay=0&mute=0&controls=1" frameborder="0" allowfullscreen></iframe>
+                                @endif
+                            @elseif($config->videoSource === 'local' && !empty($config->videoFile))
+                                <video class="w-full h-full object-contain" controls>
+                                    <source src="{{ $config->videoFile }}" type="video/mp4">
+                                </video>
                             @endif
                         </div>
 
@@ -256,11 +341,17 @@
                     @elseif($item->type === 'kategori')
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             @if(!empty($config->title))
-                                <h4 class="text-lg font-black mb-6 border-l-4 border-toko-500 pl-3" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
+                                <h4 class="text-lg font-black mb-6 border-l-4 border-toko-500 pl-3 uppercase tracking-tight" style="color: {{ $config->textColor ?? '#1e293b' }}">{{ $config->title }}</h4>
                             @endif
-                            <div class="grid grid-cols-4 md:grid-cols-8 gap-4">
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-14 h-14 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm"><i class="fas fa-tshirt text-xl"></i></div><span class="text-xs font-bold text-gray-600">Pakaian</span></div>
-                                <div class="flex flex-col items-center gap-2 cursor-pointer group"><div class="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-all shadow-sm"><i class="fas fa-shoe-prints text-xl"></i></div><span class="text-xs font-bold text-gray-600">Sepatu</span></div>
+                            <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 sm:gap-6">
+                                @foreach($kategoriToko as $kt)
+                                    <a href="{{ request()->fullUrlWithQuery(['kategori' => $kt->id]) }}#area-produk" class="flex flex-col items-center gap-3 cursor-pointer group">
+                                        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-toko-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-toko-500/20 transition-all duration-300 border border-slate-100 group-hover:border-toko-500">
+                                            <i class="fas fa-layer-group text-xl sm:text-2xl"></i>
+                                        </div>
+                                        <span class="text-[10px] sm:text-xs font-black text-slate-600 group-hover:text-toko-600 text-center leading-tight transition-colors">{{ $kt->nama_kategori }}</span>
+                                    </a>
+                                @endforeach
                             </div>
                         </div>
 
@@ -404,8 +495,15 @@
 
     <script src="{{ asset('assets/js/navbar.js') }}"></script>
 
-    {{-- SCRIPT LOGIKA FOLLOW, CHAT, DAN SCROLL SPY TABS --}}
     <script>
+        // FUNGSI SLIDER DEKORASI
+        function moveSlider(id, index) {
+            const slider = document.getElementById(id);
+            if(slider) {
+                slider.style.transform = `translateX(-${index * 100}%)`;
+            }
+        }
+        
         // 1. SCROLL SPY TABS (Ganti Tab Otomatis saat di-scroll)
         document.addEventListener("DOMContentLoaded", function() {
             const tabUtama = document.getElementById('tab-utama');

@@ -215,7 +215,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Akses Ditolak',
-                text: "{{ session('error') }}",
+                html: "{!! session('error') !!}",
                 confirmButtonColor: '#09090b',
                 customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl px-8 py-3 font-bold' }
             });

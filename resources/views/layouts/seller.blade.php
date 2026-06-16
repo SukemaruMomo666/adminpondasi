@@ -38,6 +38,7 @@
         /* Cegah scroll horizontal yang tidak sengaja */
         body { overflow-x: hidden; }
     </style>
+    @stack('styles')
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-500 selection:text-white">
 

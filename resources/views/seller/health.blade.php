@@ -33,9 +33,9 @@
             </div>
 
             <div class="flex items-center justify-end px-1 w-full md:w-auto">
-                <button class="flex items-center justify-center gap-1.5 px-5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black transition-colors shadow-sm shadow-slate-900/20 w-full md:w-auto">
+                <a href="{{ route('seller.data.health.export') }}" target="_blank" class="flex items-center justify-center gap-1.5 px-5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black transition-colors shadow-sm shadow-slate-900/20 w-full md:w-auto">
                     <i class="mdi mdi-download text-base"></i> Unduh Laporan
-                </button>
+                </a>
             </div>
         </div>
     </div>
@@ -54,11 +54,20 @@
                 <div class="absolute -left-20 -top-20 w-64 h-64 bg-emerald-50 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="flex-1 min-w-0 relative z-10">
-                    <div class="inline-flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-full text-sm font-black uppercase tracking-widest mb-4 shadow-sm shadow-slate-900/20">
-                        <i class="mdi mdi-thumb-up-outline text-lg leading-none"></i> {{ $status_kesehatan }}
+                    <div class="inline-flex items-center gap-2 px-5 py-2 {{ Auth::user()->is_banned ? (Auth::user()->ban_type == 'berat' ? 'bg-red-600' : 'bg-amber-500') : 'bg-slate-900' }} text-white rounded-full text-sm font-black uppercase tracking-widest mb-4 shadow-sm shadow-slate-900/20">
+                        <i class="mdi {{ Auth::user()->is_banned ? 'mdi-alert-octagon-outline' : 'mdi-thumb-up-outline' }} text-lg leading-none"></i> {{ Auth::user()->is_banned ? 'Status: ' . strtoupper(Auth::user()->ban_type) . ' BAN' : $status_kesehatan }}
                     </div>
+                    @if(Auth::user()->is_banned)
+                        <div class="bg-red-50 border border-red-100 rounded-2xl p-4 mb-4">
+                            <h6 class="text-xs font-black text-red-800 uppercase mb-1">Alasan Penangguhan:</h6>
+                            <p class="text-xs font-bold text-red-600 m-0">{{ Auth::user()->ban_reason }}</p>
+                            @if(Auth::user()->banned_until)
+                                <p class="text-[10px] font-black text-red-500 mt-2 uppercase tracking-widest">Berlaku Hingga: {{ Auth::user()->banned_until->format('d M Y H:i') }}</p>
+                            @endif
+                        </div>
+                    @endif
                     <p class="text-sm font-medium text-slate-500 leading-relaxed mb-6 max-w-lg">
-                        Toko Anda berada pada kondisi prima. Terus pertahankan kecepatan pengiriman dan kualitas produk untuk menarik lebih banyak pembeli!
+                        {{ Auth::user()->is_banned ? 'Akun Anda sedang dalam pembatasan. Harap ajukan banding dengan melampirkan bukti perbaikan atau penjelasan yang valid.' : 'Toko Anda berada pada kondisi prima. Terus pertahankan kecepatan pengiriman dan kualitas produk untuk menarik lebih banyak pembeli!' }}
                     </p>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -214,6 +223,70 @@
                 </div>
             </div>
 
+            {{-- SECTION BANDING AKUN (HANYA MUNCUL JIKA BANNED) --}}
+            @if(Auth::user()->is_banned)
+                <div class="bg-white border-2 border-red-100 rounded-3xl p-6 shadow-xl shadow-red-500/5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-5">
+                        <i class="mdi mdi-gavel text-8xl text-red-600"></i>
+                    </div>
+
+                    <div class="relative z-10">
+                        <h5 class="text-sm font-black text-red-600 flex items-center gap-2 mb-4 uppercase tracking-widest">
+                            <i class="mdi mdi-file-document-edit-outline text-lg"></i> Pengajuan Banding
+                        </h5>
+
+                        @php
+                            $appeal = DB::table('tb_banding_akun')->where('user_id', Auth::id())->orderByDesc('created_at')->first();
+                        @endphp
+
+                        @if($appeal && $appeal->status === 'pending')
+                            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+                                <i class="mdi mdi-clock-fast text-3xl text-amber-500 mb-2"></i>
+                                <h6 class="text-sm font-black text-amber-800 mb-1">Banding Sedang Ditinjau</h6>
+                                <p class="text-[11px] font-bold text-amber-600">Admin sedang memverifikasi klarifikasi Anda. Harap tunggu 1-3 hari kerja.</p>
+                            </div>
+                        @elseif($appeal && $appeal->status === 'ditolak')
+                             <div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-4">
+                                <h6 class="text-xs font-black text-red-800 flex items-center gap-2 mb-2 uppercase">
+                                    <i class="mdi mdi-close-circle"></i> Banding Sebelumnya Ditolak
+                                </h6>
+                                <p class="text-[11px] font-bold text-red-600 mb-0">Catatan Admin: {{ $appeal->catatan_admin }}</p>
+                            </div>
+                            {{-- Form kirim ulang banding --}}
+                            <form action="{{ route('account.appeal') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Klarifikasi Perbaikan</label>
+                                    <textarea name="alasan_banding" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Jelaskan bukti perbaikan yang telah Anda lakukan..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bukti Pendukung (Opsional)</label>
+                                    <input type="file" name="bukti_pendukung" class="w-full text-xs font-bold text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-200">
+                                    Kirim Ulang Banding
+                                </button>
+                            </form>
+                        @else
+                            <form action="{{ route('account.appeal') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alasan & Klarifikasi</label>
+                                    <textarea name="alasan_banding" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Jelaskan alasan mengapa penangguhan ini harus ditinjau kembali..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bukti Pendukung (Foto/Dokumen)</label>
+                                    <input type="file" name="bukti_pendukung" class="w-full text-xs font-bold text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-slate-200">
+                                    Ajukan Banding
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
         </div>
     </div>
 
@@ -221,9 +294,26 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    @if(session('success'))
+        Swal.fire({ icon: 'success', title: 'Berhasil!', text: "{{ session('success') }}", confirmButtonColor: '#10b981' });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({ icon: 'error', title: 'Gagal!', text: "{{ session('error') }}", confirmButtonColor: '#ef4444' });
+    @endif
+
+    @if($errors->any())
+        Swal.fire({
+            icon: 'error',
+            title: 'Validasi Gagal',
+            html: '<ul class="text-left text-xs font-bold text-red-600 list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>',
+            confirmButtonColor: '#ef4444'
+        });
+    @endif
 
     // Konfigurasi Radar Chart Tingkat Dewa
     const ctx = document.getElementById('healthRadarChart').getContext('2d');

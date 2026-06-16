@@ -43,9 +43,6 @@
             <p class="text-sm font-medium text-slate-500 mt-2 pl-14">Rancang tampilan toko yang profesional untuk meningkatkan kepercayaan dan rasio konversi pembeli.</p>
         </div>
         <div class="hidden md:flex gap-3">
-            <button type="button" @click="isMediaModalOpen = true" class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm font-bold rounded-xl transition-all shadow-sm outline-none">
-                <i class="mdi mdi-folder-image"></i> Ruang Media
-            </button>
             <button type="button" @click="isGuideModalOpen = true" class="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-black text-white text-sm font-bold rounded-xl transition-all shadow-sm shadow-slate-900/20 outline-none">
                 <i class="mdi mdi-book-open-page-variant"></i> Panduan
             </button>
@@ -140,7 +137,14 @@
                 <div class="lg:col-span-7 order-1 lg:order-2 flex justify-center lg:justify-end pointer-events-none relative h-[600px] w-full">
 
                     {{-- Preview Aplikasi --}}
-                    <div x-show="subTab === 'aplikasi'" x-transition.opacity.duration.400ms class="relative w-full max-w-[280px]">
+                    <div x-show="subTab === 'aplikasi'" 
+                         x-transition:enter="transition ease-out duration-500" 
+                         x-transition:enter-start="opacity-0 scale-95 -translate-x-4" 
+                         x-transition:enter-end="opacity-100 scale-100 translate-x-0" 
+                         x-transition:leave="transition ease-in duration-300 absolute top-0" 
+                         x-transition:leave-start="opacity-100 scale-100 translate-x-0" 
+                         x-transition:leave-end="opacity-0 scale-95 -translate-x-4" 
+                         class="w-full max-w-[280px]">
                         <div class="w-full h-[580px] bg-slate-900 rounded-[3rem] p-2.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)] border-[6px] border-slate-800 relative z-10">
                             <div class="w-full h-full bg-slate-50 rounded-[2rem] overflow-hidden flex flex-col relative border border-slate-200">
                                 <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-slate-900 rounded-b-xl z-50"></div>
@@ -176,7 +180,14 @@
                     </div>
 
                     {{-- Preview Situs --}}
-                    <div x-show="subTab === 'situs'" x-transition.opacity.duration.400ms class="relative w-full max-w-[600px] mt-10">
+                    <div x-show="subTab === 'situs'" 
+                         x-transition:enter="transition ease-out duration-500" 
+                         x-transition:enter-start="opacity-0 scale-95 translate-x-4" 
+                         x-transition:enter-end="opacity-100 scale-100 translate-x-0" 
+                         x-transition:leave="transition ease-in duration-300 absolute top-0" 
+                         x-transition:leave-start="opacity-100 scale-100 translate-x-0" 
+                         x-transition:leave-end="opacity-0 scale-95 translate-x-4" 
+                         class="w-full max-w-[600px] mt-10">
                         <div class="w-full aspect-[16/10] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden relative z-10">
                             <div class="h-8 bg-slate-100 border-b border-slate-200 flex items-center px-3 gap-1.5 flex-shrink-0">
                                 <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div><div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
@@ -213,24 +224,25 @@
                 <div class="lg:col-span-8 bg-white border border-slate-200 rounded-[2rem] shadow-sm p-6 md:p-8 flex flex-col">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                         <div>
-                            <h3 class="text-xl font-black text-slate-900">Kategori Toko Saya</h3>
-                            <p class="text-xs font-bold text-slate-500 mt-1">Kelompokkan produk agar mudah dicari.</p>
+                            <h3 class="text-xl font-black text-slate-900">Kategori Toko Pintar</h3>
+                            <p class="text-xs font-bold text-slate-500 mt-1">Pengelompokan produk secara otomatis.</p>
                         </div>
-                        <button type="button" @click.prevent="simulasiProses('addCategory')" class="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-sm outline-none disabled:opacity-70">
-                            <i class="mdi" :class="loadingBtn === 'addCategory' ? 'mdi-loading mdi-spin' : 'mdi-plus-thick'"></i> Tambah Kategori
-                        </button>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                            <i class="mdi mdi-auto-fix"></i> Sistem Otomatis Aktif
+                        </div>
                     </div>
 
-                    <div class="flex-1 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-200 rounded-3xl p-10 bg-slate-50">
-                        <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6 border border-slate-100">
-                            <i class="mdi mdi-shape-plus text-5xl text-blue-500"></i>
+                    <div class="flex-1 flex flex-col items-center justify-center text-center border-2 border-dashed border-blue-200 rounded-3xl p-10 bg-blue-50/50">
+                        <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6 border border-blue-100">
+                            <i class="mdi mdi-robot-outline text-5xl text-blue-500"></i>
                         </div>
-                        <h5 class="text-lg font-black text-slate-900 mb-2">Belum Ada Kategori Kustom</h5>
+                        <h5 class="text-lg font-black text-slate-900 mb-2">Kategori Dikelola Oleh AI</h5>
                         <p class="text-sm font-medium text-slate-500 max-w-md mb-8 leading-relaxed">
-                            Halaman Tokomu akan otomatis menampilkan kategori sistem ke Pembeli. Kamu juga dapat mengimpor kategori sistem atau membuat kategori baru secara manual.
+                            Sistem Pondasikita secara pintar memindai dan mengelompokkan produk jualan Anda berdasarkan <b>Kategori Master</b> (Semen, Besi, Cat, dll). 
+                            <br><br>Pembeli dapat langsung memfilter produk di halaman profil toko Anda tanpa perlu pengaturan manual.
                         </p>
-                        <button type="button" @click.prevent="simulasiProses('importCategory')" class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 hover:border-slate-900 text-slate-700 hover:bg-slate-50 text-sm font-bold rounded-xl transition-all shadow-sm outline-none disabled:opacity-70">
-                            <i class="mdi" :class="loadingBtn === 'importCategory' ? 'mdi-loading mdi-spin' : 'mdi-cloud-download-outline'"></i> Impor Kategori Sistem
+                        <button type="button" class="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-sm outline-none cursor-default">
+                            <i class="mdi mdi-check-circle"></i> Sinkronisasi Kategori Berjalan
                         </button>
                     </div>
                 </div>
@@ -304,17 +316,17 @@
 
                 <div class="order-1 lg:order-2 max-w-md text-center lg:text-left">
                     <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-widest mb-4">
-                        <i class="mdi mdi-star"></i> Fitur Andalan
+                        <i class="mdi mdi-star"></i> Terlaris Otomatis
                     </div>
                     <h2 class="text-3xl lg:text-4xl font-black text-slate-900 leading-tight mb-4">
                         Sorot produk jagoan di etalase utama!
                     </h2>
                     <p class="text-sm font-medium text-slate-600 mb-8 leading-relaxed">
-                        Sistem secara pintar merekomendasikan produk terlaris Anda. Namun, Anda memegang kendali penuh untuk memilih produk spesifik yang ingin dipromosikan.
+                        Anda tidak perlu memilih satu per satu. Sistem kami secara <i>real-time</i> melacak data transaksi Anda dan otomatis menyematkan produk paling laris di posisi paling atas halaman toko Anda sebagai <b>Top Picks</b>.
                     </p>
-                    <button type="button" @click.prevent="simulasiProses('topPicks')" class="group relative flex items-center justify-center lg:justify-start gap-3 w-full lg:w-auto px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl shadow-lg shadow-amber-500/30 transition-all outline-none disabled:opacity-70">
-                        <i class="mdi" :class="loadingBtn === 'topPicks' ? 'mdi-loading mdi-spin' : 'mdi-star-shooting'"></i>
-                        <span x-text="loadingBtn === 'topPicks' ? 'Memproses...' : 'Pilih Produk Andalan Saya'"></span>
+                    <button type="button" class="group relative flex items-center justify-center lg:justify-start gap-3 w-full lg:w-auto px-8 py-4 bg-slate-100 text-slate-500 font-black rounded-2xl border border-slate-200 cursor-default outline-none">
+                        <i class="mdi mdi-check-decagram text-xl text-emerald-500"></i>
+                        <span>Auto-Kurasi Telah Aktif</span>
                     </button>
                 </div>
             </div>
@@ -323,46 +335,10 @@
     </div>
 
     {{-- ============================================================== --}}
-    {{-- MODAL AREA (RUANG MEDIA & PANDUAN)                             --}}
+    {{-- MODAL PANDUAN DEKORASI                                         --}}
     {{-- ============================================================== --}}
 
-    {{-- 1. Modal Ruang Media --}}
-    <div x-show="isMediaModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" x-cloak>
-        <div x-show="isMediaModalOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMediaModalOpen = false"></div>
-        <div x-show="isMediaModalOpen"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 scale-90 translate-y-4"
-             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-             class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden z-10">
-
-            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center"><i class="mdi mdi-folder-multiple-image text-xl"></i></div>
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900">Ruang Media Toko</h2>
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pusat Penyimpanan Aset Visual</p>
-                    </div>
-                </div>
-                <button type="button" @click="isMediaModalOpen = false" class="w-10 h-10 bg-white border border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl flex items-center justify-center transition-colors outline-none">
-                    <i class="mdi mdi-close text-xl"></i>
-                </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="border-2 border-dashed border-slate-300 rounded-[2rem] h-64 sm:h-80 flex flex-col items-center justify-center bg-slate-50 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer group">
-                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 mb-4 group-hover:scale-110 transition-transform">
-                        <i class="mdi mdi-cloud-upload text-4xl text-blue-500"></i>
-                    </div>
-                    <h3 class="text-base font-black text-slate-800">Tarik & Lepas file ke sini</h3>
-                    <p class="text-sm font-medium text-slate-500 mt-1 mb-4">atau klik tombol di bawah untuk menelusuri</p>
-                    <button type="button" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-sm shadow-blue-600/20">Pilih File Komputer</button>
-                </div>
-                <p class="text-center text-xs font-bold text-slate-400 mt-4">Belum ada media yang diunggah. Ruang penyimpanan: 0 MB / 500 MB</p>
-            </div>
-        </div>
-    </div>
-
-    {{-- 2. Modal Panduan Dekorasi --}}
+    {{-- Modal Panduan Dekorasi --}}
     <div x-show="isGuideModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" x-cloak>
         <div x-show="isGuideModalOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isGuideModalOpen = false"></div>
         <div x-show="isGuideModalOpen"
@@ -423,20 +399,7 @@
             activeTab: 'halaman_toko',
             subTab: 'aplikasi',
             loadingBtn: null,
-            isMediaModalOpen: false,
             isGuideModalOpen: false,
-
-            simulasiProses(aksi) {
-                this.loadingBtn = aksi;
-                setTimeout(() => {
-                    this.loadingBtn = null;
-                    if(aksi === 'addCategory' || aksi === 'importCategory') {
-                        Swal.fire({ title: 'Segera Hadir', text: 'Fitur manajemen kategori kustom sedang dalam pengembangan.', icon: 'info', customClass: { popup: 'rounded-3xl' } });
-                    } else if(aksi === 'topPicks') {
-                        Swal.fire({ title: 'Memuat Produk...', icon: 'success', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-3xl' } });
-                    }
-                }, 800);
-            },
 
             // KUNCI LOGIKA: Mengarahkan flow Mobile ke Template, Desktop ke Kosong
             goToDecoration() {

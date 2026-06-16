@@ -29,8 +29,19 @@ class AuthController extends Controller
 
         // Coba login
         if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+
+            // CEK STATUS BAN
+            if ($user->is_banned) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                $appealLink = '<a href="https://wa.me/6285156677227" class="underline font-bold" target="_blank">Hubungi Super Admin</a>';
+                return back()->with('error', "Akses ditolak. Akun administrator Anda telah ditangguhkan. Silakan {$appealLink} untuk informasi lebih lanjut.");
+            }
+
             // Cek apakah yang login BENAR-BENAR admin
-            if (Auth::user()->level === 'admin') {
+            if ($user->level === 'admin') {
                 $request->session()->regenerate();
                 return redirect()->route('admin.dashboard')->with('success', 'Selamat datang kembali, Komandan.');
             } else {

@@ -72,7 +72,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
         {{-- Task 1: Verifikasi Toko --}}
-        <a href="{{ route('admin.stores.index', ['status' => 'pending']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/50 rounded-2xl p-5 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-amber-500/10 text-decoration-none relative overflow-hidden">
+        <a href="{{ route('admin.stores.index', ['status' => 'pending']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/50 rounded-[2rem] p-6 flex items-center gap-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-amber-500/10 text-decoration-none relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity hidden dark:block"></div>
             <div class="w-14 h-14 rounded-xl bg-amber-50 dark:bg-amber-500/10 border dark:border-amber-500/20 text-amber-500 dark:text-amber-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform relative z-10">
                 <i class="mdi mdi-store-alert"></i>
@@ -84,7 +84,7 @@
         </a>
 
         {{-- Task 2: Moderasi Material --}}
-        <a href="{{ route('admin.products.index', ['status' => 'pending']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 rounded-2xl p-5 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/10 text-decoration-none relative overflow-hidden">
+        <a href="{{ route('admin.products.index', ['status' => 'pending']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 rounded-[2rem] p-6 flex items-center gap-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/10 text-decoration-none relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity hidden dark:block"></div>
             <div class="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-900/40 border dark:border-blue-500/20 text-blue-500 dark:text-blue-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform relative z-10">
                 <i class="mdi mdi-cube-send"></i>
@@ -96,7 +96,7 @@
         </a>
 
         {{-- Task 3: Pencairan Dana --}}
-        <a href="{{ route('admin.payouts.index') }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10 text-decoration-none relative overflow-hidden">
+        <a href="{{ route('admin.payouts.index') }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-500/50 rounded-[2rem] p-6 flex items-center gap-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10 text-decoration-none relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity hidden dark:block"></div>
             <div class="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border dark:border-emerald-500/20 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform relative z-10">
                 <i class="mdi mdi-cash-sync"></i>
@@ -108,7 +108,7 @@
         </a>
 
         {{-- Task 4: Komplain --}}
-        <a href="{{ route('admin.disputes.index', ['status' => 'aktif']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-500/50 rounded-2xl p-5 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-rose-500/10 text-decoration-none relative overflow-hidden">
+        <a href="{{ route('admin.disputes.index', ['status' => 'aktif']) }}" class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-500/50 rounded-[2rem] p-6 flex items-center gap-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-rose-500/10 text-decoration-none relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity hidden dark:block"></div>
             <div class="w-14 h-14 rounded-xl bg-rose-50 dark:bg-rose-500/10 border dark:border-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform relative z-10">
                 <i class="mdi mdi-alert-decagram"></i>
@@ -187,7 +187,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
 
         {{-- GRAFIK --}}
-        <div class="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm relative overflow-hidden transition-colors duration-500">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm relative overflow-hidden transition-colors duration-500">
             <div class="flex justify-between items-center mb-6 relative z-10">
                 <h4 class="text-sm font-black text-slate-800 dark:text-white tracking-wide transition-colors duration-500">Pertumbuhan Pengguna (7 Hari)</h4>
             </div>
@@ -197,7 +197,7 @@
         </div>
 
         {{-- LOGISTIK WIDGET --}}
-        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm flex flex-col transition-colors duration-500">
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm flex flex-col transition-colors duration-500">
             <h4 class="text-sm font-black text-slate-800 dark:text-white tracking-wide mb-6 transition-colors duration-500">Logistik & Armada Global</h4>
 
             <div class="flex-1 flex flex-col gap-4 justify-center">
@@ -230,7 +230,7 @@
     </div>
 
     {{-- TOP PERFORMANCE TABLE --}}
-    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-sm overflow-hidden mb-8 transition-colors duration-500">
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] shadow-sm overflow-hidden mb-8 transition-colors duration-500">
         <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800 transition-colors duration-500">
             <h3 class="text-sm font-black text-slate-800 dark:text-white transition-colors duration-500">Top Performance Toko Bangunan</h3>
             <a href="{{ route('admin.dashboard.top_stores') }}" class="text-xs font-bold text-blue-600 dark:text-white hover:text-blue-800 dark:hover:text-blue-400 transition-colors outline-none bg-blue-50 dark:bg-slate-700 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg border-0 no-underline">Lihat Semua</a>
@@ -239,12 +239,12 @@
         <div class="overflow-x-auto table-container">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 transition-colors duration-500">
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Peringkat</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Informasi Toko</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">GMV (Penjualan)</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Transaksi</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Rating</th>
+                    <tr class="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 transition-colors duration-500">
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Peringkat</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Informasi Toko</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">GMV (Penjualan)</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Transaksi</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Rating</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -297,6 +297,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const canvas = document.getElementById('mainChart');

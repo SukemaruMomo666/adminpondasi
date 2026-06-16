@@ -72,7 +72,7 @@
          ========================================== --}}
     <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 flex-shrink-0 z-30 shadow-sm transition-all duration-300">
         <div class="flex items-center gap-4">
-            <a x-show="!isPreviewMode" href="#" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors outline-none">
+            <a x-show="!isPreviewMode" href="{{ route('seller.shop.decoration') }}" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors outline-none">
                 <i class="mdi mdi-arrow-left text-xl"></i>
             </a>
             <button x-show="isPreviewMode" @click="togglePreview()" class="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors outline-none">
@@ -253,7 +253,7 @@
                                     </button>
 
                                     {{-- 1. RENDER BANNER TOKO (Slider Up to 3 Images) --}}
-                                    <div x-show="item.type === 'banner'" style="display: none;" class="w-full flex flex-col items-center justify-center relative overflow-hidden rounded-xl bg-cover bg-center"
+                                    <div x-show="item.type === 'banner'" class="w-full flex flex-col items-center justify-center relative overflow-hidden rounded-xl bg-cover bg-center"
                                          :class="[item.config.images.length === 0 ? templateAccentColor : '', item.config.ratio === '16:9' ? 'aspect-[16/9]' : (item.config.ratio === '3:1' ? 'aspect-[3/1]' : 'aspect-[4/1]')]"
                                          :style="item.config.images.length > 0 ? `background-image: url('${item.config.images[0]}')` : ''">
 
@@ -276,27 +276,33 @@
                                     </div>
 
                                     {{-- 2. RENDER BANYAK FOTO (GRID MURNI DESKTOP) --}}
-                                    <div x-show="item.type === 'carousel'" style="display: none;" class="w-full flex flex-col p-6 bg-white rounded-xl">
-                                        <h4 class="text-lg font-black mb-5 px-2 truncate w-full border-l-4 border-blue-500 pl-3"
-                                            :style="`color: ${item.config.textColor}`"
-                                            x-text="item.config.title" x-show="item.config.title"></h4>
+                                    <div x-show="item.type === 'carousel'" class="w-full flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                        @php
+                                            // Di editor kita pakai simulasi Alpine untuk membuang slot kosong
+                                        @endphp
+                                        <div class="grid gap-0.5 w-full bg-slate-200" 
+                                             :class="Math.min(item.config.images.length || 1, parseInt(item.config.gridType || 3)) === 2 ? 'grid-cols-2' : 
+                                                     (Math.min(item.config.images.length || 1, parseInt(item.config.gridType || 3)) === 1 ? 'grid-cols-1' :
+                                                     (Math.min(item.config.images.length || 1, parseInt(item.config.gridType || 3)) === 4 ? 'grid-cols-4' : 
+                                                     (Math.min(item.config.images.length || 1, parseInt(item.config.gridType || 3)) >= 5 ? 'grid-cols-5' : 'grid-cols-3')))">
+                                            
+                                            <template x-for="(img, idx) in item.config.images" :key="idx">
+                                                <div class="aspect-square bg-slate-50 overflow-hidden relative group/img">
+                                                    <img :src="img" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110">
+                                                </div>
+                                            </template>
 
-                                        <div class="grid gap-4 w-full" :class="item.config.gridType === '2' ? 'grid-cols-2' : (item.config.gridType === '3' ? 'grid-cols-3' : (item.config.gridType === '4' ? 'grid-cols-4' : 'grid-cols-5'))">
-                                            <template x-for="n in parseInt(item.config.gridType || 3)">
-                                                <div class="aspect-[4/3] bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative w-full group/img">
-                                                    <template x-if="item.config.images && item.config.images[n-1]">
-                                                        <img :src="item.config.images[n-1]" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105">
-                                                    </template>
-                                                    <template x-if="!item.config.images || !item.config.images[n-1]">
-                                                        <i class="mdi mdi-image-outline text-slate-300 text-5xl"></i>
-                                                    </template>
+                                            <template x-if="item.config.images.length === 0">
+                                                <div class="aspect-[21/9] bg-slate-50 flex flex-col items-center justify-center text-slate-300">
+                                                    <i class="mdi mdi-view-grid-plus text-5xl mb-2"></i>
+                                                    <span class="text-xs font-bold">Grid Foto Kosong - Tambahkan Foto di Sidebar</span>
                                                 </div>
                                             </template>
                                         </div>
                                     </div>
 
                                     {{-- 3. RENDER VIDEO DESKTOP --}}
-                                    <div x-show="item.type === 'video'" style="display: none;" class="w-full flex flex-col bg-white rounded-xl p-6">
+                                    <div x-show="item.type === 'video'" class="w-full flex flex-col bg-white rounded-xl p-6">
                                         <h4 class="text-lg font-black mb-5 px-2 truncate w-full border-l-4 border-blue-500 pl-3"
                                             :style="`color: ${item.config.textColor}`"
                                             x-text="item.config.title" x-show="item.config.title"></h4>
@@ -897,7 +903,7 @@
 
             getInitialConfig(type) {
                 if(type === 'banner') return { title: 'Promo Spesial', textColor: '#ffffff', images: [], maxImages: 3, ratio: '4:1' };
-                if(type === 'carousel') return { title: 'Banyak Foto Grid', textColor: '#1e293b', images: [], maxImages: 5, gridType: '5' };
+                if(type === 'carousel') return { title: '', textColor: '#1e293b', images: [], maxImages: 10, gridType: '3' };
                 if(type === 'video') return { title: 'Video Edukasi', textColor: '#1e293b', videoSource: 'youtube', videoUrl: '', videoFile: null };
                 if(type === 'kategori') return { title: 'Kategori Belanja', textColor: '#1e293b' };
                 if(type === 'produk') return { title: 'Produk Rekomendasi', textColor: '#1e293b', productSource: 'auto', layout: 'horizontal', selectedProducts: [] };
@@ -905,7 +911,7 @@
 
             getSettingTitle(type) {
                 if(type === 'banner') return 'Pengaturan Banner';
-                if(type === 'carousel') return 'Pengaturan Grid Foto';
+                if(type === 'carousel') return 'Pengaturan Grid Foto Estetik';
                 if(type === 'video') return 'Pengaturan Video';
                 if(type === 'kategori') return 'Pengaturan Kategori';
                 return 'Pengaturan Produk';
@@ -938,10 +944,6 @@
             changeGridType(type) {
                 if(this.activeItem && this.activeItem.type === 'carousel') {
                     this.activeItem.config.gridType = type;
-                    this.activeItem.config.maxImages = parseInt(type);
-                    if(this.activeItem.config.images.length > parseInt(type)) {
-                        this.activeItem.config.images = this.activeItem.config.images.slice(0, parseInt(type));
-                    }
                     this.updateItemConfig();
                 }
             },

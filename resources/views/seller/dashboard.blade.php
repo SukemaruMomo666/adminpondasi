@@ -5,6 +5,37 @@
 @section('content')
 <div class="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8 font-sans text-slate-900 space-y-6">
 
+    {{-- BAN ALERT (DITINGKATKAN) --}}
+    @if(Auth::user()->is_banned)
+        @if(Auth::user()->ban_type === 'berat')
+            <div class="bg-red-900 border-2 border-red-700 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 animate-pulse text-white shadow-2xl">
+                <div class="w-16 h-16 bg-red-800 rounded-2xl flex items-center justify-center text-red-200 shadow-inner">
+                    <i class="mdi mdi-shield-off text-3xl"></i>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h4 class="text-xl font-black mb-1 text-white">AKUN DITANGGUHKAN PERMANEN!</h4>
+                    <p class="text-sm font-bold text-red-200">Seluruh produk dan toko Anda disembunyikan dari publik. Akses Anda terbatas hingga peninjauan selesai.</p>
+                </div>
+                <a href="{{ route('seller.data.health') }}" class="px-6 py-3 bg-white text-red-900 font-black rounded-xl transition-all shadow-lg no-underline hover:scale-105 active:scale-95">
+                    Cek Detail Pelanggaran
+                </a>
+            </div>
+        @else
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm border-dashed">
+                <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shadow-inner">
+                    <i class="mdi mdi-alert-decagram text-3xl"></i>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h4 class="text-xl font-black text-amber-800 mb-1">Peringatan Pembatasan Akun!</h4>
+                    <p class="text-sm font-bold text-amber-600/80">Akun Anda dalam status penangguhan RINGAN karena: <b>{{ Auth::user()->ban_reason }}</b>. Anda masih bisa login, namun performa toko akan dibatasi.</p>
+                </div>
+                <a href="{{ route('seller.data.health') }}" class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all shadow-lg shadow-amber-200 no-underline hover:scale-105 active:scale-95">
+                    Ajukan Banding
+                </a>
+            </div>
+        @endif
+    @endif
+
     {{-- 1. HERO SECTION (Clean White Premium) --}}
     <div class="relative bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 overflow-hidden">
         {{-- Efek Glow Halus di Pojok Kanan Atas --}}

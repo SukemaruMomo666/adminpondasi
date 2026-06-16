@@ -177,7 +177,7 @@
                         <h2 class="font-bold text-slate-800">Manajemen Harga & Stok</h2>
                     </div>
                     <div class="p-6 space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Harga Satuan <span class="text-red-500">*</span></label>
                                 <div class="flex">
@@ -187,7 +187,11 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">Stok Fisik Tersedia <span class="text-red-500">*</span></label>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Minimal Pesanan <span class="text-red-500">*</span></label>
+                                <input type="number" name="min_order" value="{{ old('min_order', $product->min_order ?? '1') }}" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-slate-400" placeholder="1" required min="1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Stok Tersedia <span class="text-red-500">*</span></label>
                                 <input type="number" name="stok" value="{{ old('stok', $product->stok ?? '') }}" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-slate-400" placeholder="0" required min="0">
                             </div>
                         </div>
@@ -213,7 +217,7 @@
 
                             <div id="boxDiskon" class="{{ $hasDiscount ? 'block' : 'hidden' }} mt-4 pt-4 border-t border-blue-200/50 space-y-4">
                                 <div class="flex flex-col sm:flex-row gap-4">
-                                    <select id="typeDiskon" name="tipe_diskon" class="w-full sm:w-1/3 bg-white border border-blue-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer shadow-sm">
+                                    <select id="typeDiskon" name="tipe_diskon" class="w-full sm:w-1/3 bg-white border border-blue-200 text-slate-900 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer shadow-sm" {{ !$hasDiscount ? 'disabled' : '' }}>
                                         <option value="PERSEN" {{ old('tipe_diskon', $product->tipe_diskon ?? '') == 'PERSEN' ? 'selected' : '' }}>Diskon (%)</option>
                                         <option value="NOMINAL" {{ old('tipe_diskon', $product->tipe_diskon ?? '') == 'NOMINAL' ? 'selected' : '' }}>Potongan (Rp)</option>
                                     </select>
@@ -364,6 +368,7 @@
                                 <h3 class="text-xs font-black text-slate-900 mb-3 pb-2 border-b border-slate-100">Spesifikasi Material</h3>
                                 <div class="text-[11px] font-medium text-slate-500 space-y-1.5 mb-4" id="hpSpec">
                                     <div class="grid grid-cols-3"><span class="text-slate-400">Merek</span><span class="col-span-2 text-slate-800 font-bold">-</span></div>
+                                    <div class="grid grid-cols-3"><span class="text-slate-400">Min. Pesan</span><span class="col-span-2 text-slate-800 font-bold">-</span></div>
                                     <div class="grid grid-cols-3"><span class="text-slate-400">Satuan</span><span class="col-span-2 text-slate-800 font-bold uppercase">-</span></div>
                                     <div class="grid grid-cols-3"><span class="text-slate-400">Berat</span><span class="col-span-2 text-slate-800 font-bold">0 gr</span></div>
                                     <div class="grid grid-cols-3"><span class="text-slate-400">Dimensi</span><span class="col-span-2 text-slate-800 font-bold">0 x 0 x 0 cm</span></div>
@@ -512,6 +517,7 @@
 
         function updateSpecs() {
             let m = $('#inputMerk').val() || '-';
+            let mo = $('input[name="min_order"]').val() || '1';
             let su = $('#inputSatuan').val() || '-';
             let b = $('#inputBerat').val() || '0';
 
@@ -522,6 +528,7 @@
 
             let specHtml = `
                 <div class="grid grid-cols-3"><span class="text-slate-400">Merek</span><span class="col-span-2 text-slate-800 font-bold">${m}</span></div>
+                <div class="grid grid-cols-3"><span class="text-slate-400">Min. Pesan</span><span class="col-span-2 text-slate-800 font-bold">${mo} ${su}</span></div>
                 <div class="grid grid-cols-3"><span class="text-slate-400">Satuan</span><span class="col-span-2 text-slate-800 font-bold uppercase">${su}</span></div>
                 <div class="grid grid-cols-3"><span class="text-slate-400">Berat Aktual</span><span class="col-span-2 text-slate-800 font-bold">${b} gr</span></div>
                 <div class="grid grid-cols-3"><span class="text-slate-400">Dimensi PxLxT</span><span class="col-span-2 text-slate-800 font-bold">${p} x ${l} x ${t} cm</span></div>
@@ -533,7 +540,7 @@
         }
 
         // Panggil fungsi ketika form info berubah
-        $('#inputMerk, #inputSatuan, #inputBerat, #inputP, #inputL, #inputT').on('input change', updateSpecs);
+        $('#inputMerk, input[name="min_order"], #inputSatuan, #inputBerat, #inputP, #inputL, #inputT').on('input change', updateSpecs);
 
         // 3. LOGIKA HARGA & DISKON
         const viewHarga = $('#viewHarga');
@@ -549,8 +556,10 @@
         $('#checkDiskon').on('change', function() {
             if(this.checked) {
                 $('#boxDiskon').slideDown(200);
+                $('#typeDiskon').prop('disabled', false);
             } else {
                 $('#boxDiskon').slideUp(200);
+                $('#typeDiskon').prop('disabled', true);
                 // Reset nilai jika dimatikan
                 $('#valDiskon').val('');
             }

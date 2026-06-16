@@ -57,6 +57,24 @@
         </div>
     </div>
 
+    {{-- BAN ALERT UNTUK CUSTOMER (RINGAN) --}}
+    @if(Auth::user()->is_banned && Auth::user()->ban_type === 'ringan')
+    <div class="max-w-[1100px] mx-auto px-4 sm:px-6 mt-6">
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-[2rem] p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm border-dashed animate-fade-in">
+            <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shadow-inner shrink-0">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+            <div class="flex-1 text-center md:text-left">
+                <h4 class="text-xl font-black text-amber-800 mb-1">Akses Akun Dibatasi!</h4>
+                <p class="text-sm font-bold text-amber-600/80">Akun Anda dalam status penangguhan RINGAN karena: <b>{{ Auth::user()->ban_reason }}</b>. Anda tidak dapat melakukan transaksi hingga banding disetujui.</p>
+            </div>
+            <a href="#section-banding" class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all shadow-lg shadow-amber-200 no-underline whitespace-nowrap">
+                Ajukan Banding Sekarang
+            </a>
+        </div>
+    </div>
+    @endif
+
     {{-- FIX 2: Tambahkan flex-grow dan w-full agar main content mendorong footer ke bawah --}}
     <main class="flex-grow w-full max-w-[1100px] mx-auto px-4 sm:px-6 py-8 lg:py-12">
 
@@ -203,39 +221,65 @@
                     </div>
                 </div>
 
-                {{-- ALAMAT PENGIRIMAN UTAMA --}}
-                <div class="bg-white rounded-[2rem] shadow-soft border border-zinc-200 p-6 sm:p-8">
+                {{-- SEKSI BANDING AKUN (KHUSUS CUSTOMER BANNED RINGAN) --}}
+                @if(Auth::user()->is_banned && Auth::user()->ban_type === 'ringan')
+                <div id="section-banding" class="bg-white rounded-[2rem] shadow-soft border-2 border-amber-100 p-6 sm:p-8">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100">
                         <h3 class="text-lg font-black text-black flex items-center gap-2">
-                            <i class="fas fa-map-marked-alt text-blue-600"></i> Alamat Pengiriman
+                            <i class="fas fa-gavel text-amber-500"></i> Pengajuan Banding Akun
                         </h3>
-                        <a href="{{ route('profil.edit') }}#titik-lokasi"
-                           class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                            Ubah Alamat
-                        </a>
                     </div>
 
-                    @if(strip_tags($alamatLengkapFormatted) !== '')
-                        <div class="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 flex gap-4">
-                            <div class="w-10 h-10 rounded-full bg-white border border-zinc-200 shadow-sm flex items-center justify-center shrink-0">
-                                <i class="fas fa-building text-blue-600"></i>
+                    @php
+                        $appeal = DB::table('tb_banding_akun')->where('user_id', Auth::id())->orderByDesc('created_at')->first();
+                    @endphp
+
+                    @if($appeal && $appeal->status === 'pending')
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+                            <i class="fas fa-hourglass-half text-4xl text-amber-500 mb-4"></i>
+                            <h4 class="text-base font-black text-amber-900 mb-1">Banding Sedang Diproses</h4>
+                            <p class="text-sm font-medium text-amber-700">Admin Pondasikita sedang meninjau alasan dan bukti Anda. Mohon tunggu dalam 1x24 jam.</p>
+                        </div>
+                    @elseif($appeal && $appeal->status === 'ditolak')
+                        <div class="bg-red-50 border border-red-100 rounded-2xl p-5 mb-6">
+                            <h5 class="text-sm font-black text-red-800 flex items-center gap-2 mb-2 uppercase">
+                                <i class="fas fa-times-circle"></i> Banding Sebelumnya Ditolak
+                            </h5>
+                            <p class="text-xs font-bold text-red-600 mb-0">Catatan Admin: {{ $appeal->catatan_admin }}</p>
+                        </div>
+                        <form action="{{ route('account.appeal') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+                            @csrf
+                            <div>
+                                <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Penjelasan Tambahan / Perbaikan</label>
+                                <textarea name="alasan_banding" rows="4" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Tuliskan klarifikasi terbaru Anda di sini..."></textarea>
                             </div>
                             <div>
-                                <h4 class="text-sm font-bold text-black mb-1">Alamat Utama</h4>
-                                <p class="text-sm font-medium text-zinc-600 leading-relaxed">
-                                    {!! $alamatLengkapFormatted !!}
-                                </p>
+                                <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Dokumen/Foto Pendukung Baru (Opsional)</label>
+                                <input type="file" name="bukti_pendukung" class="w-full text-xs font-bold text-zinc-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
                             </div>
-                        </div>
+                            <button type="submit" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-red-200">
+                                Kirim Ulang Banding Sekarang
+                            </button>
+                        </form>
                     @else
-                        <div class="text-center py-8 bg-zinc-50 rounded-2xl border border-dashed border-zinc-300">
-                            <i class="fas fa-map-pin text-3xl text-zinc-300 mb-3"></i>
-                            <p class="text-sm font-semibold text-zinc-500">Anda belum mengatur alamat pengiriman.</p>
-                            <a href="{{ route('profil.edit') }}#titik-lokasi" class="inline-block mt-3 text-xs font-bold bg-white border border-zinc-200 text-black px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-100 transition-colors">Tambah Alamat Sekarang</a>
-                        </div>
+                        <form action="{{ route('account.appeal') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+                            @csrf
+                            <p class="text-xs font-semibold text-zinc-500 leading-relaxed mb-4 italic">*Gunakan formulir ini jika Anda merasa pembatasan akun Anda adalah kekeliruan atau Anda sudah memperbaiki kesalahan yang ada.</p>
+                            <div>
+                                <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Alasan & Klarifikasi Banding</label>
+                                <textarea name="alasan_banding" rows="4" class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Tuliskan alasan mengapa akun Anda harus dipulihkan..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Unggah Bukti Pendukung (Opsional)</label>
+                                <input type="file" name="bukti_pendukung" class="w-full text-xs font-bold text-zinc-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-zinc-900 file:text-white hover:file:bg-black cursor-pointer">
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-200">
+                                Ajukan Banding Sekarang
+                            </button>
+                        </form>
                     @endif
                 </div>
-
+                @endif
             </div>
         </div>
     </main>
@@ -255,6 +299,26 @@
                 showConfirmButton: false,
                 timer: 3000,
                 customClass: { popup: 'rounded-2xl shadow-float border border-zinc-100' }
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: "{{ session('error') }}",
+                confirmButtonColor: '#3b82f6',
+                customClass: { popup: 'rounded-[2rem]' }
+            });
+        @endif
+
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Validasi Gagal',
+                html: '<ul class="text-left text-xs font-bold text-red-600 list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>',
+                confirmButtonColor: '#3b82f6',
+                customClass: { popup: 'rounded-[2rem]' }
             });
         @endif
     </script>

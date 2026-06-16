@@ -94,19 +94,21 @@ Route::controller(PageController::class)->group(function () {
     // =========================================================================
     // FITUR ENTERPRISE: Status Pesanan, Lacak, & Siklus Aksi Transaksi
     // =========================================================================
-    // FIX: Mengubah /pesanan-saya menjadi /pesanan agar Midtrans tidak 404
-    Route::get('/pesanan', 'pesanan')->name('pesanan.index'); 
+    Route::get('/pesanan', 'pesanan')->name('pesanan.index');
     Route::get('/pesanan/{kode_invoice}', 'lacakPesanan')->name('pesanan.lacak');
-    
+
     // Aksi Interaktif Customer
     Route::post('/pesanan/batalkan', 'batalkanPesanan')->name('pesanan.batalkan');
     Route::post('/pesanan/terima', 'terimaPesanan')->name('pesanan.terima');
     Route::post('/pesanan/komplain', 'ajukanPengembalian')->name('pesanan.komplain');
-    
+
     // Sinyal Realtime Midtrans (Auto-Update Status)
     Route::post('/payment/update-status', 'updatePaymentStatus')->name('payment.update_status');
     // =========================================================================
 });
+
+// Pengajuan Banding Akun (Global untuk Seller & Customer)
+Route::post('/account/appeal', [App\Http\Controllers\SellerController::class, 'submitAppeal'])->name('account.appeal')->middleware('auth');
 
 // 3. AUTHENTICATION SYSTEM
 Route::controller(AuthController::class)->group(function () {
@@ -190,6 +192,15 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::get('/performance', [SellerController::class, 'performance'])->name('performance');
         Route::get('/performance/export-pdf', [SellerController::class, 'exportPerformancePdf'])->name('performance.export');
         Route::get('/health', [SellerController::class, 'health'])->name('health');
+        Route::post('/health/appeal', [SellerController::class, 'submitAppeal'])->name('health.appeal');
+        Route::get('/health/export-pdf', [SellerController::class, 'exportHealthPdf'])->name('health.export');
+    });
+
+    // Notifications
+    Route::prefix('notifications')->name('notifications.')->group(function() {
+        Route::get('/fetch', [SellerController::class, 'fetchNotifications'])->name('fetch');
+        Route::post('/read/{id}', [SellerController::class, 'markAsRead'])->name('read');
+        Route::post('/read-all', [SellerController::class, 'markAllAsRead'])->name('readAll');
     });
 
     // Shop Management
@@ -206,6 +217,11 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
 
         Route::get('/settings', [ShopController::class, 'settings'])->name('settings');
         Route::put('/settings/update', [ShopController::class, 'updateSettings'])->name('settings.update');
+
+        Route::get('/security', [ShopController::class, 'securityIndex'])->name('security');
+        Route::post('/security/send-otp', [ShopController::class, 'sendSecurityOtp'])->name('security.sendOtp');
+        Route::post('/security/verify-otp', [ShopController::class, 'verifySecurityOtp'])->name('security.verifyOtp');
+        Route::put('/security/reset-password', [ShopController::class, 'resetPassword'])->name('security.resetPassword');
     });
 
     // Point of Sale (POS)
@@ -236,6 +252,8 @@ Route::prefix('portal-rahasia-pks')->name('admin.')->middleware(['admin'])->grou
     // Customer Service & Store Management
     Route::middleware(['admin.role:super,cs'])->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/users/appeals', [AdminUserController::class, 'appeals'])->name('users.appeals');
+        Route::post('/users/appeals/{id}/process', [AdminUserController::class, 'processAppeal'])->name('users.processAppeal');
         Route::get('/users/export', [AdminUserController::class, 'exportCsv'])->name('users.export');
         Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
         Route::post('/users/{id}/update', [AdminUserController::class, 'update'])->name('users.update');

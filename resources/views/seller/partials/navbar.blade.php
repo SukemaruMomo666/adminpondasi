@@ -17,17 +17,35 @@
     {{-- KANAN: Ikon Aksi & Profil --}}
     <div class="flex items-center gap-2 sm:gap-3">
 
-        {{-- Ikon Notifikasi (Lonceng) --}}
-        <button class="relative p-2.5 text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-all group focus:outline-none">
-            <i class="mdi mdi-bell-outline text-xl group-hover:scale-110 transition-transform"></i>
-            {{-- Badge Titik Merah (Indikator ada notifikasi baru) --}}
-            <span class="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-slate-900"></span>
-        </button>
+        {{-- Dropdown Notifikasi --}}
+        <div class="relative" id="notifDropdownContainer">
+            {{-- Ikon Notifikasi (Lonceng) --}}
+            <button onclick="toggleNotifMenu()" class="relative p-2.5 text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-all group focus:outline-none">
+                <i class="mdi mdi-bell-outline text-xl group-hover:scale-110 transition-transform"></i>
+                {{-- Badge Titik Merah --}}
+                <span id="notifBadge" class="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-slate-900 hidden"></span>
+            </button>
 
-        <!-- {{-- Ikon Pesan (Email) --}}
-        <button class="relative p-2.5 text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-all group focus:outline-none">
-            <i class="mdi mdi-email-outline text-xl group-hover:scale-110 transition-transform"></i>
-        </button> -->
+            {{-- Isi Menu Notifikasi --}}
+            <div id="notifMenu" class="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-black/10 opacity-0 invisible transform scale-95 transition-all duration-200 origin-top-right z-50 flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-sm font-black text-slate-900">Notifikasi</h3>
+                    <button onclick="markAllNotifAsRead()" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors focus:outline-none">
+                        Tandai Semua Dibaca
+                    </button>
+                </div>
+                <div id="notifList" class="flex-1 overflow-y-auto max-h-[350px] p-2 flex flex-col custom-scrollbar">
+                    {{-- Diisi via AJAX --}}
+                    <div class="flex flex-col items-center justify-center p-8 text-center">
+                        <i class="mdi mdi-loading mdi-spin text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-xs font-bold text-slate-500">Memuat...</p>
+                    </div>
+                </div>
+                <div class="p-3 border-t border-slate-100 bg-slate-50 text-center hidden">
+                    <a href="#" class="text-xs font-bold text-blue-600 hover:text-blue-800">Lihat Semua Notifikasi</a>
+                </div>
+            </div>
+        </div>
 
         {{-- Garis Pemisah --}}
         <div class="w-px h-6 bg-slate-800 mx-1 sm:mx-2"></div>
@@ -99,14 +117,125 @@
 
     // Klik di luar untuk menutup Dropdown (Fitur wajib UI Modern)
     document.addEventListener('click', function(event) {
-        const container = document.getElementById('profileDropdownContainer');
-        if (!container.contains(event.target)) {
+        // Profil Dropdown
+        const profileContainer = document.getElementById('profileDropdownContainer');
+        if (profileContainer && !profileContainer.contains(event.target)) {
             const menu = document.getElementById('profileMenu');
             const chevron = document.getElementById('profileChevron');
+            if(menu) {
+                menu.classList.add('opacity-0', 'invisible', 'scale-95');
+                menu.classList.remove('opacity-100', 'visible', 'scale-100');
+            }
+            if(chevron) chevron.classList.remove('rotate-180');
+        }
 
+        // Notif Dropdown
+        const notifContainer = document.getElementById('notifDropdownContainer');
+        if (notifContainer && !notifContainer.contains(event.target)) {
+            const menu = document.getElementById('notifMenu');
+            if(menu) {
+                menu.classList.add('opacity-0', 'invisible', 'scale-95');
+                menu.classList.remove('opacity-100', 'visible', 'scale-100');
+            }
+        }
+    });
+
+    // ==============================================================
+    // LOGIKA NOTIFIKASI
+    // ==============================================================
+    function toggleNotifMenu() {
+        const menu = document.getElementById('notifMenu');
+        if (menu.classList.contains('opacity-0')) {
+            menu.classList.remove('opacity-0', 'invisible', 'scale-95');
+            menu.classList.add('opacity-100', 'visible', 'scale-100');
+            fetchNotifications();
+        } else {
             menu.classList.add('opacity-0', 'invisible', 'scale-95');
             menu.classList.remove('opacity-100', 'visible', 'scale-100');
-            chevron.classList.remove('rotate-180');
         }
+    }
+
+    function fetchNotifications() {
+        fetch('{{ route("seller.notifications.fetch") }}')
+            .then(res => res.json())
+            .then(data => {
+                const badge = document.getElementById('notifBadge');
+                const list = document.getElementById('notifList');
+                
+                if (data.unread_count > 0) {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                if (data.notifications.length === 0) {
+                    list.innerHTML = `
+                        <div class="flex flex-col items-center justify-center p-8 text-center">
+                            <i class="mdi mdi-bell-sleep text-4xl text-slate-200 mb-2"></i>
+                            <p class="text-xs font-bold text-slate-500">Belum ada notifikasi baru.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                data.notifications.forEach(notif => {
+                    html += `
+                        <div onclick="markNotifAsRead('${notif.id}', '${notif.url}')" class="flex gap-3 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors border-b border-slate-50 last:border-0 relative group">
+                            <div class="w-10 h-10 rounded-full bg-${notif.color}-50 text-${notif.color}-500 flex items-center justify-center shrink-0 border border-${notif.color}-100">
+                                <i class="mdi ${notif.icon} text-lg"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-xs font-black text-slate-900 truncate pr-4">${notif.title}</h4>
+                                <p class="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-snug">${notif.message}</p>
+                                <span class="text-[9px] font-bold text-slate-400 mt-1.5 block">${notif.created_at}</span>
+                            </div>
+                            <div class="w-2 h-2 rounded-full bg-blue-500 absolute right-3 top-4 shadow-sm shadow-blue-500/50"></div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+            })
+            .catch(err => console.error(err));
+    }
+
+    function markNotifAsRead(id, url) {
+        fetch(`{{ url('seller/notifications/read') }}/${id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json'
+            }
+        }).then(() => {
+            if (url && url !== '#') {
+                window.location.href = url;
+            } else {
+                fetchNotifications();
+            }
+        });
+    }
+
+    function markAllNotifAsRead() {
+        const btn = event.target;
+        btn.innerHTML = 'Memproses...';
+        fetch('{{ route("seller.notifications.readAll") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json'
+            }
+        }).then(() => {
+            btn.innerHTML = 'Tandai Semua Dibaca';
+            fetchNotifications();
+        });
+    }
+
+    // Auto-fetch unread count on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch('{{ route("seller.notifications.fetch") }}')
+            .then(res => res.json())
+            .then(data => {
+                if(data.unread_count > 0) document.getElementById('notifBadge').classList.remove('hidden');
+            });
     });
 </script>

@@ -95,7 +95,7 @@
                     <div>
                         <h4 class="text-sm font-bold text-red-800">Akses Ditolak</h4>
                         <p class="text-xs text-red-600 mt-1 font-medium">
-                            {{ session('error') }}
+                            {!! session('error') !!}
                             @if(isset($sisaDetik) && $sisaDetik > 0)
                                 Silakan coba lagi dalam <span id="timer" class="font-black underline">{{ $sisaDetik }}</span> detik.
                             @endif

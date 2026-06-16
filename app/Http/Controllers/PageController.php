@@ -239,6 +239,7 @@ class PageController extends Controller
             ->where('p.id', $id)
             ->where('p.is_active', 1)
             ->where('p.status_moderasi', 'approved')
+            ->where('t.status', 'active')
             ->first();
 
         if (!$produk) {
@@ -260,6 +261,7 @@ class PageController extends Controller
             ->where('b.id', '!=', $id)
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
+            ->where('t.status', 'active')
             ->limit(4)
             ->get();
 
@@ -479,6 +481,11 @@ class PageController extends Controller
             return redirect()->route('login')->with('error', 'Silakan masuk untuk melanjutkan checkout.');
         }
 
+        // PROTEKSI SOFT BAN: Customer diblokir tidak bisa checkout
+        if (Auth::user()->is_banned) {
+            return redirect()->route('home')->with('error', 'Akun Anda sedang ditangguhkan. Anda tidak dapat melakukan transaksi belanja.');
+        }
+
         $userId = Auth::id();
         $userEmail = Auth::user()->email ?? 'customer@example.com';
 
@@ -595,6 +602,12 @@ class PageController extends Controller
             DB::beginTransaction();
 
             $user = Auth::user();
+
+            // PROTEKSI SOFT BAN
+            if ($user->is_banned) {
+                return response()->json(['success' => false, 'error' => 'Akun Anda sedang ditangguhkan. Tidak dapat memproses pesanan.'], 403);
+            }
+
             $orderId = 'INV-' . time() . '-' . rand(100, 999);
 
             $totalProdukReal = 0;
@@ -1267,9 +1280,14 @@ class PageController extends Controller
     public function ajukanPengembalian(Request $request)
     {
         $request->validate([
-            'alasan' => 'required|string', 
+            'alasan' => 'required|string',
             'bukti_foto' => 'required|image'
         ]);
+
+        // PROTEKSI SOFT BAN
+        if (Auth::user()->is_banned) {
+            return back()->with('error', 'Akun Anda sedang ditangguhkan. Anda tidak dapat mengajukan komplain atau ulasan.');
+        }
 
         try {
             DB::beginTransaction();

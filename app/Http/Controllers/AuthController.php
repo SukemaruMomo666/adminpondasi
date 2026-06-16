@@ -74,6 +74,27 @@ class AuthController extends Controller
         $remember = $request->has('remember');
 
         if (Auth::attempt($credentials, $remember)) {
+            $user = Auth::user();
+
+            // CEK STATUS BAN
+            if ($user->is_banned) {
+                if ($user->banned_until && $user->banned_until->isPast()) {
+                    // MASA BAN SUDAH HABIS - AKTIFKAN OTOMATIS
+                    $user->is_banned = false;
+                    $user->ban_type = 'none';
+                    $user->ban_reason = null;
+                    $user->banned_until = null;
+                    $user->save();
+                } elseif ($user->ban_type === 'berat') {
+                    Auth::logout();
+                    $reason = $user->ban_reason ?? 'Pelanggaran ketentuan layanan.';
+                    $until = $user->banned_until ? " hingga " . $user->banned_until->format('d M Y H:i') : " permanen";
+                    $appealLink = '<a href="https://wa.me/6285156677227" class="underline font-bold" target="_blank">Hubungi Super Admin</a>';
+                    return back()->with('error', "AKUN DIBLOKIR PERMANEN! Akun Anda ditangguhkan{$until}. Alasan: {$reason} - {$appealLink}")->withInput();
+                }
+                // Jika ban_type == 'ringan', biarkan login tapi nanti tampilkan alert di dashboard
+            }
+
             $request->session()->regenerate();
             return redirect()->intended('/admin/dashboard');
         }
@@ -110,11 +131,35 @@ class AuthController extends Controller
         ];
 
         if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+
+            // CEK STATUS BAN
+            if ($user->is_banned) {
+                if ($user->banned_until && $user->banned_until->isPast()) {
+                    // MASA BAN SUDAH HABIS - AKTIFKAN OTOMATIS
+                    $user->is_banned = false;
+                    $user->ban_type = 'none';
+                    $user->ban_reason = null;
+                    $user->banned_until = null;
+                    $user->save();
+                    
+                    // Jika seller, aktifkan tokonya juga
+                    if ($user->level === 'seller') {
+                        DB::table('tb_toko')->where('user_id', $user->id)->update(['status' => 'active']);
+                    }
+                } elseif ($user->ban_type === 'berat') {
+                    Auth::logout();
+                    $reason = $user->ban_reason ?? 'Pelanggaran ketentuan layanan.';
+                    $until = $user->banned_until ? " hingga " . $user->banned_until->format('d M Y H:i') : " (Permanen)";
+                    $appealLink = '<a href="https://wa.me/6285156677227" class="underline font-bold" target="_blank">Hubungi CS Pondasikita</a>';
+                    return back()->with('error', "AKUN DIBLOKIR BERAT! {$until}. Alasan: {$reason} - Ajukan Banding: {$appealLink}")->withInput();
+                }
+                // Jika ringan, izinkan login
+            }
+
             $request->session()->regenerate();
             RateLimiter::clear($throttleKey); 
 
-            $user = Auth::user();
-            
             if ($user->level === 'admin') {
                 return redirect()->intended('/admin/dashboard');
             } elseif ($user->level === 'seller') {
@@ -153,6 +198,28 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+
+            // CEK STATUS BAN
+            if ($user->is_banned) {
+                if ($user->banned_until && $user->banned_until->isPast()) {
+                    // MASA BAN SUDAH HABIS - AKTIFKAN OTOMATIS
+                    $user->is_banned = false;
+                    $user->ban_type = 'none';
+                    $user->ban_reason = null;
+                    $user->banned_until = null;
+                    $user->save();
+                    
+                    // Aktifkan tokonya juga
+                    DB::table('tb_toko')->where('user_id', $user->id)->update(['status' => 'active']);
+                } elseif ($user->ban_type === 'berat') {
+                    Auth::logout();
+                    $reason = $user->ban_reason ?? 'Pelanggaran kebijakan seller.';
+                    $until = $user->banned_until ? " hingga " . $user->banned_until->format('d M Y H:i') : " (Permanen)";
+                    $appealLink = '<a href="https://wa.me/6285156677227" class="underline font-bold" target="_blank">Hubungi CS Pondasikita</a>';
+                    return redirect()->route('seller.login')->with('error', "AKUN SELLER DIBLOKIR BERAT! {$until}. Alasan: {$reason} - Ajukan Banding: {$appealLink}")->withInput();
+                }
+                // Jika ringan, izinkan login
+            }
 
             // Pastikan yang login benar-benar seller
             if ($user->level === 'seller') {

@@ -195,25 +195,25 @@
     <div class="overflow-x-auto table-wrapper">
         <table class="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-                <tr class="bg-slate-50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
-                    <th class="px-6 py-4 w-12 text-center">
+                <tr class="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                    <th class="px-6 py-4 w-12 text-center align-middle">
                         <input type="checkbox" class="w-4 h-4 text-blue-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500">
                     </th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Identitas Pengguna</th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Kontak & Info</th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Kasta Akun</th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Bergabung</th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Status</th>
-                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Aksi</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Identitas Pengguna</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Kontak & Info</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Kasta Akun</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Bergabung</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest align-middle">Status</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest text-right align-middle">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800/50">
                 @forelse($users as $user)
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors duration-200">
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center align-middle">
                         <input type="checkbox" class="w-4 h-4 text-blue-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500">
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 align-middle">
                         <div class="flex items-center gap-4">
                             <div class="relative w-11 h-11 flex-shrink-0">
                                 <img src="{{ $user->profile_picture_url ?? 'https://ui-avatars.com/api/?name='.urlencode($user->nama).'&background=random&color=fff' }}" class="w-full h-full rounded-xl object-cover shadow-sm border border-slate-100 dark:border-slate-700">
@@ -227,13 +227,13 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 align-middle">
                         <div class="flex flex-col gap-1">
                             <div class="text-[11px] font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><i class="mdi mdi-email-outline text-slate-400 dark:text-slate-500 text-sm"></i> {{ $user->email }}</div>
                             <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i class="mdi mdi-phone-outline text-sm"></i> {{ $user->no_telepon ?? 'Tidak ada nomor' }}</div>
                         </div>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 align-middle">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black tracking-widest border
                             @if($user->level == 'admin') bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20
                             @elseif($user->level == 'seller') bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20
@@ -245,24 +245,29 @@
                             @endif
                         </span>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 align-middle">
                         <div class="text-xs font-black text-slate-700 dark:text-slate-300">{{ \Carbon\Carbon::parse($user->created_at)->format('d M Y') }}</div>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 align-middle">
                         @if($user->is_banned)
-                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 line-through">
-                                <i class="mdi mdi-cancel"></i> Diblokir
-                            </span>
+                            <div class="flex flex-col gap-1">
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 line-through">
+                                    <i class="mdi mdi-cancel"></i> Diblokir ({{ strtoupper($user->ban_type) }})
+                                </span>
+                                @if($user->banned_until)
+                                    <span class="text-[9px] font-bold text-rose-500">Hingga: {{ $user->banned_until->format('d/m/Y') }}</span>
+                                @endif
+                            </div>
                         @else
                             <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm dark:shadow-none">
                                 <i class="mdi mdi-check-decagram"></i> Aktif
                             </span>
                         @endif
                     </td>
-                    <td class="px-6 py-4 text-right">
+                    <td class="px-6 py-4 text-right align-middle">
                         <div class="flex items-center justify-end gap-2">
                             {{-- Btn Detail --}}
-                            <button type="button" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all shadow-sm dark:shadow-none outline-none btn-detail"
+                            <button type="button" class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 transition-all shadow-sm outline-none btn-detail"
                                     data-nama="{{ $user->nama }}"
                                     data-username="{{ $user->username }}"
                                     data-email="{{ $user->email }}"
@@ -275,7 +280,7 @@
                             </button>
 
                             {{-- Btn Edit --}}
-                            <button type="button" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-200 dark:hover:border-amber-500/30 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all shadow-sm dark:shadow-none outline-none btn-edit"
+                            <button type="button" class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white dark:hover:bg-amber-500 transition-all shadow-sm outline-none btn-edit"
                                     data-url="{{ route('admin.users.update', $user->id) }}"
                                     data-nama="{{ $user->nama }}"
                                     data-email="{{ $user->email }}"
@@ -288,10 +293,15 @@
 
                             {{-- Btn Block --}}
                             @if ($user->id !== auth()->id())
-                                <form action="{{ route('admin.users.toggleBan', $user->id) }}" method="POST" class="m-0">
+                                <form id="form-ban-{{ $user->id }}" action="{{ route('admin.users.toggleBan', $user->id) }}" method="POST" class="m-0">
                                     @csrf
-                                    <button type="submit" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all shadow-sm dark:shadow-none outline-none {{ $user->is_banned ? 'text-emerald-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:border-emerald-500/30 dark:hover:bg-emerald-500/10' : 'text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10' }}"
-                                            onclick="return confirm('Apakah Anda yakin ingin mengubah status pemblokiran pengguna ini?')"
+                                    <input type="hidden" name="ban_type" id="ban-type-{{ $user->id }}">
+                                    <input type="hidden" name="ban_reason" id="ban-reason-{{ $user->id }}">
+                                    <input type="hidden" name="banned_until" id="ban-until-{{ $user->id }}">
+                                    
+                                    <button type="button" 
+                                            class="w-8 h-8 rounded-lg border flex items-center justify-center transition-all shadow-sm outline-none {{ $user->is_banned ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500' : 'bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-500' }}"
+                                            onclick="handleBanToggle('{{ $user->id }}', '{{ $user->nama }}', {{ $user->is_banned ? 'true' : 'false' }})"
                                             title="{{ $user->is_banned ? 'Aktifkan Akun' : 'Blokir Akun' }}">
                                         <i class="mdi {{ $user->is_banned ? 'mdi-account-check-outline' : 'mdi-account-cancel-outline' }} text-base"></i>
                                     </button>
@@ -477,7 +487,71 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function handleBanToggle(userId, userName, isCurrentlyBanned) {
+        if (isCurrentlyBanned) {
+            Swal.fire({
+                title: 'Aktifkan Akun?',
+                text: `Apakah Anda yakin ingin mengaktifkan kembali akun ${userName}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Aktifkan!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById(`form-ban-${userId}`).submit();
+                }
+            });
+        } else {
+            Swal.fire({
+                title: `<span class="text-xl font-black uppercase tracking-tight">Blokir ${userName}</span>`,
+                html: `
+                    <div class="text-left mt-4">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tipe Pemblokiran</label>
+                        <select id="swal-ban-type" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500/20 mb-4">
+                            <option value="ringan">BAN RINGAN (Peringatan/Pelanggaran Ringan)</option>
+                            <option value="berat">BAN BERAT (Pelanggaran Serius/Permanen)</option>
+                        </select>
+
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alasan Pemblokiran</label>
+                        <textarea id="swal-ban-reason" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500/20 mb-4" placeholder="Tulis alasan detail..."></textarea>
+
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Blokir Hingga (Opsional)</label>
+                        <input type="datetime-local" id="swal-ban-until" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500/20">
+                        <p class="text-[10px] text-slate-400 mt-1 italic font-bold">*Kosongkan jika ingin blokir selamanya/permanen</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'BLOKIR SEKARANG',
+                cancelButtonText: 'BATAL',
+                preConfirm: () => {
+                    const type = document.getElementById('swal-ban-type').value;
+                    const reason = document.getElementById('swal-ban-reason').value;
+                    const until = document.getElementById('swal-ban-until').value;
+
+                    if (!reason) {
+                        Swal.showValidationMessage('Alasan pemblokiran wajib diisi!');
+                        return false;
+                    }
+
+                    return { type, reason, until };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById(`ban-type-${userId}`).value = result.value.type;
+                    document.getElementById(`ban-reason-${userId}`).value = result.value.reason;
+                    document.getElementById(`ban-until-${userId}`).value = result.value.until;
+                    document.getElementById(`form-ban-${userId}`).submit();
+                }
+            });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         
         // PERBAIKAN BUG MODAL TERKUNCI / DI BELAKANG BACKDROP

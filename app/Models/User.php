@@ -32,6 +32,9 @@ class User extends Authenticatable
         'status_online',        // Sesuai dengan DB Pondasikita
         'is_verified',
         'is_banned',
+        'ban_type',
+        'ban_reason',
+        'banned_until',
         'last_activity_at',
         'google_id'
     ];
@@ -51,6 +54,7 @@ class User extends Authenticatable
         'password'               => 'hashed',
         'is_verified'            => 'boolean',
         'is_banned'              => 'boolean',
+        'banned_until'           => 'datetime',
         'last_activity_at'       => 'datetime', 
         'tanggal_lahir'          => 'date',
         'reset_token_expires_at' => 'datetime',

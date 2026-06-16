@@ -124,8 +124,8 @@ class UserController extends Controller
         return back()->with('success', "Sempurna! Data profil pengguna {$user->nama} berhasil diperbarui.");
     }
 
-    // 4. BLOKIR ATAU AKTIFKAN AKUN PENGGUNA
-    public function toggleBan($id)
+    // 4. BLOKIR ATAU AKTIFKAN AKUN PENGGUNA (DITINGKATKAN)
+    public function toggleBan(Request $request, $id)
     {
         $user = User::findOrFail($id);
         
@@ -133,11 +133,136 @@ class UserController extends Controller
             return back()->with('error', 'Keamanan Sistem: Anda tidak diizinkan memblokir akun Anda sendiri!');
         }
 
-        $user->is_banned = !$user->is_banned;
+        // Jika user saat ini sudah banned, maka aksinya adalah UNBAN (Aktifkan Kembali)
+        if ($user->is_banned) {
+            $user->is_banned = false;
+            $user->ban_type = 'none';
+            $user->ban_reason = null;
+            $user->banned_until = null;
+            $user->save();
+
+            if ($user->level === 'seller') {
+                \Illuminate\Support\Facades\DB::table('tb_toko')
+                    ->where('user_id', $user->id)
+                    ->update(['status' => 'active']);
+            }
+
+            $user->notify(new \App\Notifications\UserStatusNotification([
+                'title'   => "Akun Anda DIAKTIFKAN KEMBALI",
+                'message' => "Selamat! Akun Anda telah diaktifkan kembali. Anda dapat melanjutkan aktivitas Anda di Pondasikita.",
+                'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
+                'icon'    => 'mdi-account-check',
+                'color'   => 'emerald'
+            ]));
+
+            return back()->with('success', "Status Diperbarui: Pengguna {$user->nama} telah diaktifkan kembali.");
+        }
+
+        // Jika user belum banned, maka proses BAN (Blokir)
+        $request->validate([
+            'ban_type' => 'required|in:ringan,berat',
+            'ban_reason' => 'required|string|max:500',
+            'banned_until' => 'nullable|date|after:now',
+        ]);
+
+        $user->is_banned = true;
+        $user->ban_type = $request->ban_type;
+        $user->ban_reason = $request->ban_reason;
+        $user->banned_until = $request->banned_until;
         $user->save();
 
-        $statusText = $user->is_banned ? 'telah diblokir dari sistem' : 'telah diaktifkan kembali';
-        return back()->with('success', "Status Diperbarui: Pengguna {$user->nama} {$statusText}.");
+        // JIKA USER ADALAH SELLER, UPDATE JUGA STATUS TOKONYA
+        if ($user->level === 'seller') {
+            $tokoStatus = 'suspended'; // Default suspended for both types of ban for now
+            \Illuminate\Support\Facades\DB::table('tb_toko')
+                ->where('user_id', $user->id)
+                ->update(['status' => $tokoStatus]);
+        }
+
+        // KIRIM NOTIFIKASI KE USER
+        $banTypeText = $request->ban_type === 'berat' ? 'PERMANEN/BERAT' : 'RINGAN (PELANGGARAN)';
+        $durationText = $request->banned_until 
+            ? "sampai tanggal " . \Carbon\Carbon::parse($request->banned_until)->format('d M Y H:i')
+            : "selamanya (permanen)";
+
+        $statusMessage = "Akun Anda telah ditangguhkan ({$banTypeText}) {$durationText} dengan alasan: {$request->ban_reason}. Harap hubungi Customer Service jika merasa ini adalah kesalahan.";
+        
+        $user->notify(new \App\Notifications\UserStatusNotification([
+            'title'   => "Akun Anda DIBLOKIR ({$banTypeText})",
+            'message' => $statusMessage,
+            'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
+            'icon'    => 'mdi-account-off',
+            'color'   => 'red'
+        ]));
+
+        return back()->with('success', "Status Diperbarui: Pengguna {$user->nama} telah diblokir ({$request->ban_type}).");
+    }
+
+    // 4B. LIHAT DAFTAR BANDING AKUN
+    public function appeals(Request $request)
+    {
+        $appeals = \Illuminate\Support\Facades\DB::table('tb_banding_akun as b')
+            ->join('tb_user as u', 'b.user_id', '=', 'u.id')
+            ->select('b.*', 'u.nama', 'u.email', 'u.level')
+            ->orderByRaw("FIELD(b.status, 'pending', 'disetujui', 'ditolak')")
+            ->orderByDesc('b.created_at')
+            ->paginate(15);
+
+        return view('admin.users.appeals', compact('appeals'));
+    }
+
+    // 4C. PROSES BANDING AKUN
+    public function processAppeal(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:disetujui,ditolak',
+            'catatan_admin' => 'required|string'
+        ]);
+
+        $appeal = \Illuminate\Support\Facades\DB::table('tb_banding_akun')->where('id', $id)->first();
+        if (!$appeal) return back()->with('error', 'Data banding tidak ditemukan.');
+
+        $user = User::findOrFail($appeal->user_id);
+
+        if ($request->status === 'disetujui') {
+            $user->is_banned = 0;
+            $user->ban_type = 'none';
+            $user->ban_reason = null;
+            $user->banned_until = null;
+            $user->save();
+
+            if ($user->level === 'seller') {
+                \Illuminate\Support\Facades\DB::table('tb_toko')
+                    ->where('user_id', $user->id)
+                    ->update(['status' => 'active']);
+            }
+
+            $user->notify(new \App\Notifications\UserStatusNotification([
+                'title'   => 'Banding Akun Disetujui',
+                'message' => "Selamat! Permohonan banding Anda disetujui. " . $request->catatan_admin,
+                'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
+                'icon'    => 'mdi-check-decagram',
+                'color'   => 'emerald'
+            ]));
+        } else {
+            $user->notify(new \App\Notifications\UserStatusNotification([
+                'title'   => 'Banding Akun Ditolak',
+                'message' => "Mohon maaf, permohonan banding Anda ditolak. " . $request->catatan_admin,
+                'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
+                'icon'    => 'mdi-alert-circle',
+                'color'   => 'red'
+            ]));
+        }
+
+        \Illuminate\Support\Facades\DB::table('tb_banding_akun')
+            ->where('id', $id)
+            ->update([
+                'status' => $request->status,
+                'catatan_admin' => $request->catatan_admin,
+                'updated_at' => now()
+            ]);
+
+        return back()->with('success', 'Keputusan banding berhasil diproses.');
     }
 
     // 5. EXPORT DATA KE CSV
