@@ -110,7 +110,7 @@ class ProductController extends Controller
     // =========================================================================
     // 2. HALAMAN DETAIL PRODUK
     // =========================================================================
-    public function detail($id)
+    public function detail($slug)
     {
         // 1. Ambil Data Produk + Kategori + Toko (TIDAK ADA TABEL CITIES)
         $product = DB::table('tb_barang as p')
@@ -124,7 +124,7 @@ class ProductController extends Controller
                 // FITUR DEWA: Menghitung jumlah terjual real-time dari tabel detail_transaksi
                 DB::raw("(SELECT COALESCE(SUM(jumlah), 0) FROM tb_detail_transaksi WHERE barang_id = p.id AND status_pesanan_item NOT IN ('dibatalkan', 'pengembalian_disetujui')) as stok_terjual")
             )
-            ->where('p.id', $id)
+            ->where('p.slug', $slug)
             ->where('p.is_active', 1)
             ->where('p.status_moderasi', 'approved')
             ->first();
@@ -136,7 +136,7 @@ class ProductController extends Controller
 
         // 2. Ambil Galeri Gambar
         $gallery_images = DB::table('tb_gambar_barang')
-            ->where('barang_id', $id)
+            ->where('barang_id', $product->id)
             ->orderByDesc('is_utama')
             ->orderBy('id')
             ->pluck('nama_file')
@@ -153,7 +153,7 @@ class ProductController extends Controller
         // 3. Ambil Produk Terkait dari Toko yang Sama
         $related_products = DB::table('tb_barang')
             ->where('toko_id', $product->toko_id)
-            ->where('id', '!=', $id)
+            ->where('id', '!=', $product->id)
             ->where('is_active', 1)
             ->limit(5)
             ->get();
@@ -161,7 +161,7 @@ class ProductController extends Controller
         // 4. Ambil Ulasan Produk
         $reviews = DB::table('tb_review_produk as r')
             ->join('tb_user as u', 'r.user_id', '=', 'u.id')
-            ->where('r.barang_id', $id)
+            ->where('r.barang_id', $product->id)
             ->select('r.*', 'u.nama AS username')
             ->orderByDesc('r.created_at')
             ->get();

@@ -238,18 +238,23 @@
 
                 <div class="space-y-3">
                     {{-- Form Approve --}}
-                    <form action="{{ route('admin.products.process', $produk->id) }}" method="POST" class="m-0">
+                    <form id="form-approve" action="{{ route('admin.products.process', $produk->id) }}" method="POST" class="m-0">
                         @csrf
                         <input type="hidden" name="action" value="approve">
-                        <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-black rounded-xl shadow-md shadow-emerald-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all outline-none" onclick="return confirm('Apakah Anda yakin ingin menyetujui produk ini tayang?')">
+                        <button type="button" onclick="confirmApprove()" class="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-black rounded-xl shadow-md shadow-emerald-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all outline-none">
                             <i class="mdi mdi-check-decagram text-lg"></i> SETUJUI MATERIAL
                         </button>
                     </form>
 
-                    {{-- Tombol Trigger Modal Reject --}}
-                    <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-white dark:bg-slate-800 border-2 border-rose-100 dark:border-rose-500/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-black rounded-xl transition-all outline-none" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                        <i class="mdi mdi-close-octagon-outline text-lg"></i> TOLAK PENGAJUAN
-                    </button>
+                    {{-- Form Reject (Hidden input for SweetAlert) --}}
+                    <form id="form-reject" action="{{ route('admin.products.process', $produk->id) }}" method="POST" class="m-0">
+                        @csrf
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="alasan_penolakan" id="reject-alasan">
+                        <button type="button" onclick="confirmReject()" class="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-white dark:bg-slate-800 border-2 border-rose-100 dark:border-rose-500/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-black rounded-xl transition-all outline-none">
+                            <i class="mdi mdi-close-octagon-outline text-lg"></i> TOLAK PENGAJUAN
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -268,35 +273,84 @@
     </div>
 </div>
 
-{{-- ============================================================================== --}}
-{{-- MODAL REJECT (MENDUKUNG DARK MODE BOOTSTRAP)                                   --}}
-{{-- ============================================================================== --}}
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-[2rem] overflow-hidden border-0 shadow-2xl">
-            <form action="{{ route('admin.products.process', $produk->id) }}" method="POST" class="m-0">
-                @csrf
-                <input type="hidden" name="action" value="reject">
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+    /* Styling khusus agar SweetAlert menyatu dengan Tailwind Dark Mode */
+    .dark .swal2-popup { background-color: #0f172a; border: 1px solid #1e293b; color: #f8fafc; }
+    .dark .swal2-title, .dark .swal2-html-container { color: #f8fafc; }
+    .dark .swal2-textarea { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
+    .dark .swal2-textarea:focus { border-color: #f43f5e; box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2); }
+</style>
+@endpush
 
-                <div class="modal-header border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
-                    <h5 class="text-base font-black text-slate-800 dark:text-white m-0 flex items-center gap-2">
-                        <i class="mdi mdi-shield-alert text-rose-500 text-xl"></i> Kenapa Material Ditolak?
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const swalBg = isDarkMode ? '#0f172a' : '#ffffff';
+    const swalColor = isDarkMode ? '#f8fafc' : '#1e293b';
 
-                <div class="modal-body p-6 bg-slate-50/50 dark:bg-slate-900">
-                    <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4">Berikan alasan yang jelas agar penjual dapat memperbaiki kesalahan pada produk mereka.</p>
-                    <textarea name="alasan_penolakan" class="form-control w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all resize-none shadow-inner dark:shadow-none" rows="4" required placeholder="Contoh: Foto produk sangat buram, atau nama barang mengandung kata tidak pantas..."></textarea>
-                </div>
+    function confirmApprove() {
+        Swal.fire({
+            title: 'Setujui Material?',
+            text: "Material ini akan langsung tampil di katalog dan bisa dibeli oleh customer.",
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '<i class="mdi mdi-check-decagram mr-1"></i> Ya, Setujui',
+            cancelButtonText: 'Batal',
+            background: swalBg,
+            color: swalColor,
+            customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl font-bold shadow-lg shadow-emerald-500/30',
+                cancelButton: 'rounded-xl font-bold'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('form-approve').submit();
+            }
+        });
+    }
 
-                <div class="modal-footer border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex justify-end gap-3">
-                    <button type="button" class="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors outline-none" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-xl font-black text-sm text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 transition-all outline-none">Kirim Penolakan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+    function confirmReject() {
+        Swal.fire({
+            title: 'Tolak Material Ini?',
+            text: "Berikan alasan yang jelas agar penjual dapat memperbaiki kesalahannya.",
+            icon: 'warning',
+            input: 'textarea',
+            inputPlaceholder: 'Contoh: Foto produk sangat buram, mengandung kata terlarang...',
+            inputAttributes: {
+                'aria-label': 'Alasan penolakan'
+            },
+            showCancelButton: true,
+            confirmButtonColor: '#f43f5e',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '<i class="mdi mdi-send mr-1"></i> Kirim Penolakan',
+            cancelButtonText: 'Batal',
+            background: swalBg,
+            color: swalColor,
+            customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl font-bold shadow-lg shadow-rose-500/30',
+                cancelButton: 'rounded-xl font-bold',
+                input: 'rounded-xl border-slate-200 text-sm font-bold text-slate-800'
+            },
+            inputValidator: (value) => {
+                if (!value || value.trim().length < 10) {
+                    return 'Alasan penolakan wajib diisi (minimal 10 karakter)!';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('reject-alasan').value = result.value;
+                document.getElementById('form-reject').submit();
+            }
+        });
+    }
+</script>
+@endpush
 
 @endsection

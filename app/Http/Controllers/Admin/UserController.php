@@ -216,53 +216,70 @@ class UserController extends Controller
     {
         $request->validate([
             'status' => 'required|in:disetujui,ditolak',
-            'catatan_admin' => 'required|string'
+            'catatan_admin' => 'required|string|max:1000'
         ]);
 
-        $appeal = \Illuminate\Support\Facades\DB::table('tb_banding_akun')->where('id', $id)->first();
-        if (!$appeal) return back()->with('error', 'Data banding tidak ditemukan.');
+        try {
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $id) {
+                $appeal = \Illuminate\Support\Facades\DB::table('tb_banding_akun')->where('id', $id)->first();
+                
+                if (!$appeal) {
+                    return back()->with('error', 'Kesalahan: Data banding tidak ditemukan di sistem.');
+                }
 
-        $user = User::findOrFail($appeal->user_id);
+                $user = User::find($appeal->user_id);
+                if (!$user) {
+                    return back()->with('error', 'Kesalahan: Data pengguna terkait tidak ditemukan. Akun mungkin telah dihapus.');
+                }
 
-        if ($request->status === 'disetujui') {
-            $user->is_banned = 0;
-            $user->ban_type = 'none';
-            $user->ban_reason = null;
-            $user->banned_until = null;
-            $user->save();
+                if ($request->status === 'disetujui') {
+                    // Pulihkan Akun
+                    $user->is_banned = false;
+                    $user->ban_type = 'none';
+                    $user->ban_reason = null;
+                    $user->banned_until = null;
+                    $user->save();
 
-            if ($user->level === 'seller') {
-                \Illuminate\Support\Facades\DB::table('tb_toko')
-                    ->where('user_id', $user->id)
-                    ->update(['status' => 'active']);
-            }
+                    // Jika Seller, aktifkan kembali tokonya
+                    if ($user->level === 'seller') {
+                        \Illuminate\Support\Facades\DB::table('tb_toko')
+                            ->where('user_id', $user->id)
+                            ->update(['status' => 'active']);
+                    }
 
-            $user->notify(new \App\Notifications\UserStatusNotification([
-                'title'   => 'Banding Akun Disetujui',
-                'message' => "Selamat! Permohonan banding Anda disetujui. " . $request->catatan_admin,
-                'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
-                'icon'    => 'mdi-check-decagram',
-                'color'   => 'emerald'
-            ]));
-        } else {
-            $user->notify(new \App\Notifications\UserStatusNotification([
-                'title'   => 'Banding Akun Ditolak',
-                'message' => "Mohon maaf, permohonan banding Anda ditolak. " . $request->catatan_admin,
-                'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
-                'icon'    => 'mdi-alert-circle',
-                'color'   => 'red'
-            ]));
+                    $user->notify(new \App\Notifications\UserStatusNotification([
+                        'title'   => 'Banding Akun Disetujui',
+                        'message' => "Selamat! Permohonan banding Anda disetujui. " . $request->catatan_admin,
+                        'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
+                        'icon'    => 'mdi-check-decagram',
+                        'color'   => 'emerald'
+                    ]));
+                } else {
+                    // Jika Ditolak, tetap banned tapi kirim notifikasi
+                    $user->notify(new \App\Notifications\UserStatusNotification([
+                        'title'   => 'Banding Akun Ditolak',
+                        'message' => "Mohon maaf, permohonan banding Anda ditolak. " . $request->catatan_admin,
+                        'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
+                        'icon'    => 'mdi-alert-circle',
+                        'color'   => 'red'
+                    ]));
+                }
+
+                // Update Status Banding
+                \Illuminate\Support\Facades\DB::table('tb_banding_akun')
+                    ->where('id', $id)
+                    ->update([
+                        'status' => $request->status,
+                        'catatan_admin' => $request->catatan_admin,
+                        'updated_at' => now()
+                    ]);
+
+                return back()->with('success', "Keputusan berhasil disimpan! Permohonan banding untuk {$user->nama} telah " . strtoupper($request->status) . ".");
+            });
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Gagal proses banding: " . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan sistem saat memproses banding. Silakan coba lagi.');
         }
-
-        \Illuminate\Support\Facades\DB::table('tb_banding_akun')
-            ->where('id', $id)
-            ->update([
-                'status' => $request->status,
-                'catatan_admin' => $request->catatan_admin,
-                'updated_at' => now()
-            ]);
-
-        return back()->with('success', 'Keputusan banding berhasil diproses.');
     }
 
     // 5. EXPORT DATA KE CSV

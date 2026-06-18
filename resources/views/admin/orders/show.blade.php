@@ -130,6 +130,19 @@
     {{-- Status Badge Kanan Atas --}}
     <div class="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-3 rounded-2xl shadow-sm transition-colors duration-300">
         <div class="flex flex-col text-right">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Metode Transaksi</span>
+            @if(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE' || str_starts_with($order->kode_invoice, 'POS-'))
+                <span class="text-sm font-black text-amber-500 dark:text-amber-400 flex items-center justify-end gap-1.5">
+                    <i class="mdi mdi-cash-register"></i> POINT OF SALE
+                </span>
+            @else
+                <span class="text-sm font-black text-blue-600 dark:text-blue-400 flex items-center justify-end gap-1.5">
+                    <i class="mdi mdi-web"></i> ONLINE WEB
+                </span>
+            @endif
+        </div>
+        <div class="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+        <div class="flex flex-col text-right">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Status Pembayaran</span>
             @if($order->status_pembayaran == 'paid' || $order->status_pembayaran == 'dp_paid')
                 <span class="text-sm font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-1.5">
@@ -262,17 +275,32 @@
                 <div class="p-6">
                     <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Metode & Kurir</span>
                     <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-500 flex items-center justify-center text-xl">
-                            <i class="mdi mdi-package-variant"></i>
-                        </div>
-                        <div>
-                            <div class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">{{ $order->kurir_terpilih ?? 'Belum Ditentukan' }}</div>
-                            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ $order->tipe_pengambilan == 'ambil_di_toko' ? 'Ambil di Toko' : 'Dikirim ke Alamat' }}</div>
-                        </div>
+                        @if(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE' || str_starts_with($order->kode_invoice, 'POS-'))
+                            <div class="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-amber-500 flex items-center justify-center text-xl">
+                                <i class="mdi mdi-cash-register"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">Point of Sale (OFFLINE)</div>
+                                <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">{{ $order->metode_pengiriman == 'AMBIL_DI_TOKO' ? 'Ambil di Toko / Langsung' : 'Dikirim' }}</div>
+                            </div>
+                        @else
+                            <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-500 flex items-center justify-center text-xl">
+                                <i class="mdi mdi-package-variant"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wide">{{ $order->kurir_terpilih ?? 'Belum Ditentukan' }}</div>
+                                <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ $order->tipe_pengambilan == 'ambil_di_toko' ? 'Ambil di Toko' : 'Dikirim ke Alamat' }}</div>
+                            </div>
+                        @endif
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700">
-                        <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor Resi Pintu</span>
-                        <div class="text-sm font-black text-blue-600 dark:text-blue-400 font-mono tracking-wider">{{ $order->resi_pengiriman ?? 'BELUM TERBIT' }}</div>
+                        @if(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE' || str_starts_with($order->kode_invoice, 'POS-'))
+                            <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Informasi Kasir</span>
+                            <div class="text-sm font-black text-amber-600 dark:text-amber-400 font-mono tracking-wider">{{ $order->catatan_global ?? 'Transaksi POS' }}</div>
+                        @else
+                            <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor Resi Pintu</span>
+                            <div class="text-sm font-black text-blue-600 dark:text-blue-400 font-mono tracking-wider">{{ $order->resi_pengiriman ?? 'BELUM TERBIT' }}</div>
+                        @endif
                     </div>
                 </div>
 
@@ -346,19 +374,46 @@
                 <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
 
                 <div class="flex flex-col gap-1 mb-4 border-b border-white/20 dark:border-blue-500/30 pb-4">
-                    <span class="text-[10px] font-black text-blue-100 dark:text-blue-300 uppercase tracking-widest">Total Invoice</span>
-                    <span class="text-2xl font-black text-white font-mono tracking-tight">Rp {{ number_format($order->subtotal + $order->biaya_pengiriman_item, 0, ',', '.') }}</span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-blue-100 dark:text-blue-300 uppercase tracking-widest">Total Nilai Pesanan</span>
+                        @if($order->tipe_pembayaran == 'DP')
+                            <span class="px-2 py-0.5 bg-amber-500 text-white text-[9px] font-black uppercase rounded shadow-sm">B2B DP SYSTEM</span>
+                        @endif
+                    </div>
+                    <span class="text-2xl font-black text-white font-mono tracking-tight">Rp {{ number_format($order->subtotal + $order->biaya_pengiriman_item + ($order->customer_service_fee ?? 0) + ($order->customer_handling_fee ?? 0), 0, ',', '.') }}</span>
                 </div>
 
                 @if($order->tipe_pembayaran == 'DP')
+                    <div class="space-y-3">
+                        <div class="p-3 bg-white/10 dark:bg-emerald-500/10 border border-white/20 dark:border-emerald-500/20 rounded-xl">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] font-black text-blue-100 dark:text-emerald-400 uppercase tracking-widest">
+                                    @if($order->status_pembayaran == 'dp_paid' || $order->status_pembayaran == 'paid')
+                                        <i class="mdi mdi-check-circle mr-1"></i> DP Telah Dibayar
+                                    @else
+                                        <i class="mdi mdi-clock-outline mr-1"></i> Tagihan DP (Web)
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="text-xl font-black text-white dark:text-emerald-400 font-mono">
+                                Rp {{ number_format($order->jumlah_dp, 0, ',', '.') }}
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-[10px] font-black text-blue-100 dark:text-rose-300 uppercase tracking-widest">Sisa Pelunasan (Cash/COD)</span>
+                            <span class="font-black text-white dark:text-rose-400 font-mono text-sm">Rp {{ number_format($order->sisa_tagihan, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                @elseif(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE' || str_starts_with($order->kode_invoice, 'POS-'))
                     <div class="space-y-2">
                         <div class="flex justify-between items-center text-xs">
-                            <span class="font-bold text-emerald-200 dark:text-emerald-400"><i class="mdi mdi-check-circle mr-1"></i> Dibayar (DP)</span>
-                            <span class="font-black text-white dark:text-emerald-400 font-mono">Rp {{ number_format($order->jumlah_dp, 0, ',', '.') }}</span>
+                            <span class="font-bold text-blue-100 dark:text-blue-300">Dibayar Tunai:</span>
+                            <span class="font-black text-white font-mono">Rp {{ number_format($order->bayar ?? 0, 0, ',', '.') }}</span>
                         </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="font-bold text-rose-200 dark:text-rose-400"><i class="mdi mdi-clock-outline mr-1"></i> Sisa (CASH/COD)</span>
-                            <span class="font-black text-white dark:text-rose-400 font-mono">Rp {{ number_format($order->sisa_tagihan, 0, ',', '.') }}</span>
+                        <div class="flex justify-between items-center text-xs pt-2 border-t border-white/20">
+                            <span class="font-bold text-blue-100 dark:text-blue-300">Kembalian:</span>
+                            <span class="font-black text-white font-mono">Rp {{ number_format($order->kembali ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 @else

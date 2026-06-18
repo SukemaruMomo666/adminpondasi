@@ -4,24 +4,26 @@
 
 @push('styles')
 <style>
-    .table-row-premium {
-        transition: all 0.2s ease-in-out;
+    /* Radio Button Custom Styling */
+    .decision-card input:checked + .card-content {
+        transform: scale(1.05);
     }
-    .table-row-premium:hover {
-        @apply bg-slate-50 dark:!bg-slate-800/80;
+    
+    /* We use standard CSS for states that are hard to do with classes only when combined with Peer/Has */
+    .decision-card-active-disetujui {
+        border-color: #10b981 !important;
+        background-color: #ecfdf5 !important;
+    }
+    .dark .decision-card-active-disetujui {
+        background-color: rgba(6, 78, 59, 0.4) !important;
     }
 
-    .decision-card {
-        @apply relative flex flex-col items-center justify-center p-3 bg-white dark:!bg-slate-800 border-2 border-slate-200 dark:!border-slate-600 rounded-xl cursor-pointer transition-all duration-200 overflow-hidden;
+    .decision-card-active-ditolak {
+        border-color: #ef4444 !important;
+        background-color: #fef2f2 !important;
     }
-    .decision-card input:checked + .card-content {
-        @apply transform scale-105;
-    }
-    .decision-card:has(input[value="disetujui"]:checked) { 
-        @apply border-emerald-500 bg-emerald-50 dark:!bg-emerald-900/40; 
-    }
-    .decision-card:has(input[value="ditolak"]:checked) { 
-        @apply border-rose-500 bg-rose-50 dark:!bg-rose-900/40; 
+    .dark .decision-card-active-ditolak {
+        background-color: rgba(153, 27, 27, 0.4) !important;
     }
 </style>
 @endpush
@@ -64,7 +66,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:!divide-slate-700">
                     @forelse($appeals as $appeal)
-                    <tr class="table-row-premium">
+                    <tr class="hover:bg-slate-50 dark:hover:!bg-slate-800/80 transition-all duration-200">
                         <td class="px-5 py-4 align-middle">
                             <div class="flex flex-col gap-1">
                                 <span class="font-bold text-slate-900 dark:!text-white text-sm">{{ $appeal->nama }}</span>
@@ -137,7 +139,7 @@
     </div>
 </div>
 
-{{-- MODAL (DIPERKECIL) --}}
+{{-- MODAL --}}
 <div id="modalReview" class="fixed inset-0 z-[2000] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen p-2 sm:p-4 text-center">
         <div class="fixed inset-0 transition-opacity bg-slate-900/50 dark:!bg-black/80 backdrop-blur-sm" aria-hidden="true" onclick="closeModal()"></div>
@@ -178,17 +180,17 @@
                     <div>
                         <label class="text-[10px] font-bold text-slate-700 dark:!text-slate-300 mb-2 block text-center uppercase tracking-wide">Tentukan Keputusan</label>
                         <div class="flex gap-3 justify-center">
-                            <label class="decision-card w-28">
+                            <label class="decision-card group relative flex flex-col items-center justify-center p-3 bg-white dark:!bg-slate-800 border-2 border-slate-200 dark:!border-slate-600 rounded-xl cursor-pointer transition-all duration-200 overflow-hidden w-28 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 dark:has-[:checked]:!bg-emerald-900/40">
                                 <input type="radio" name="status" value="disetujui" class="absolute opacity-0 z-10 cursor-pointer w-full h-full" required>
-                                <div class="card-content flex flex-col items-center gap-1.5">
+                                <div class="card-content flex flex-col items-center gap-1.5 transition-transform duration-200 group-has-[:checked]:scale-105">
                                     <i class="mdi mdi-check-circle text-2xl text-emerald-500 dark:!text-emerald-400"></i>
                                     <span class="text-[11px] font-black text-slate-900 dark:!text-white">Terima</span>
                                 </div>
                             </label>
                             
-                            <label class="decision-card w-28">
+                            <label class="decision-card group relative flex flex-col items-center justify-center p-3 bg-white dark:!bg-slate-800 border-2 border-slate-200 dark:!border-slate-600 rounded-xl cursor-pointer transition-all duration-200 overflow-hidden w-28 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 dark:has-[:checked]:!bg-rose-900/40">
                                 <input type="radio" name="status" value="ditolak" class="absolute opacity-0 z-10 cursor-pointer w-full h-full" required>
-                                <div class="card-content flex flex-col items-center gap-1.5">
+                                <div class="card-content flex flex-col items-center gap-1.5 transition-transform duration-200 group-has-[:checked]:scale-105">
                                     <i class="mdi mdi-close-circle text-2xl text-rose-500 dark:!text-rose-400"></i>
                                     <span class="text-[11px] font-black text-slate-900 dark:!text-white">Tolak</span>
                                 </div>
@@ -214,13 +216,17 @@
 
 <script>
     function openReviewModal(appeal) {
-        document.getElementById('viewReason').innerText = appeal.alasan_banding;
-        document.getElementById('modalId').innerText = '#' + appeal.id.toString().padStart(4, '0');
-        document.getElementById('modalName').innerText = appeal.nama;
-        document.getElementById('modalEmail').innerText = appeal.email;
-        document.getElementById('modalAvatar').innerText = appeal.nama.charAt(0).toUpperCase();
+        // Reset form to clear previous selections/text
+        const form = document.getElementById('formProcessAppeal');
+        form.reset();
+
+        document.getElementById('viewReason').innerText = appeal.alasan_banding || '-';
+        document.getElementById('modalId').innerText = '#' + (appeal.id ? appeal.id.toString().padStart(4, '0') : '0000');
+        document.getElementById('modalName').innerText = appeal.nama || 'Pengguna';
+        document.getElementById('modalEmail').innerText = appeal.email || '-';
+        document.getElementById('modalAvatar').innerText = (appeal.nama || '?').charAt(0).toUpperCase();
         
-        document.getElementById('formProcessAppeal').action = "{{ url('portal-rahasia-pks/users/appeals') }}/" + appeal.id + "/process";
+        form.action = "{{ url('portal-rahasia-pks/users/appeals') }}/" + appeal.id + "/process";
         
         const modal = document.getElementById('modalReview');
         modal.classList.remove('hidden');

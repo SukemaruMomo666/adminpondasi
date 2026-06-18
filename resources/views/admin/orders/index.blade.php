@@ -149,26 +149,47 @@
     {{-- Filter & Search Header --}}
     <div class="p-5 border-b border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 transition-colors duration-300">
 
-        {{-- Tabs Filter --}}
-        <div class="flex p-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 w-full xl:w-auto overflow-x-auto filter-wrapper">
-            @php
-                $tabs = [
-                    'semua' => 'Semua', 'pending' => 'Belum Bayar',
-                    'diproses' => 'Diproses', 'dikirim' => 'Dikirim',
-                    'selesai' => 'Selesai', 'komplain' => 'Komplain'
-                ];
-            @endphp
-            @foreach($tabs as $val => $label)
-                <a href="{{ route('admin.orders.index', ['status' => $val, 'search' => $search]) }}"
-                   class="px-4 py-2 text-xs font-black capitalize rounded-lg transition-all text-decoration-none outline-none whitespace-nowrap {{ $status == $val ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm border border-slate-200 dark:border-slate-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200' }}">
-                    {{ $label }}
-                </a>
-            @endforeach
+        <div class="flex flex-col gap-3 w-full xl:w-auto">
+            {{-- Tabs Source Filter (Online/POS) --}}
+            <div class="flex p-1 bg-blue-50/50 dark:bg-blue-500/5 rounded-xl border border-blue-100 dark:border-blue-500/20 w-fit overflow-x-auto filter-wrapper">
+                @php
+                    $sources = [
+                        'semua' => 'Global Monitor',
+                        'online' => 'Online Only',
+                        'offline' => 'POS / Offline'
+                    ];
+                @endphp
+                @foreach($sources as $val => $label)
+                    <a href="{{ route('admin.orders.index', ['sumber' => $val, 'status' => $status, 'search' => $search]) }}"
+                       class="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-decoration-none outline-none whitespace-nowrap {{ $sumber == $val ? 'bg-blue-600 text-white shadow-md' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/10' }}">
+                        <i class="mdi {{ $val == 'semua' ? 'mdi-earth' : ($val == 'online' ? 'mdi-web' : 'mdi-cash-register') }} mr-1.5"></i>
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+
+            {{-- Tabs Status Filter --}}
+            <div class="flex p-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50 w-full xl:w-auto overflow-x-auto filter-wrapper">
+                @php
+                    $tabs = [
+                        'semua' => 'Semua Status', 'pending' => 'Belum Bayar',
+                        'diproses' => 'Diproses', 'dikirim' => 'Dikirim',
+                        'selesai' => 'Selesai', 'komplain' => 'Komplain'
+                    ];
+                @endphp
+                @foreach($tabs as $val => $label)
+                    <a href="{{ route('admin.orders.index', ['status' => $val, 'sumber' => $sumber, 'search' => $search]) }}"
+                       class="px-4 py-2 text-xs font-black capitalize rounded-lg transition-all text-decoration-none outline-none whitespace-nowrap {{ $status == $val ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm border border-slate-200 dark:border-slate-600' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200' }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
         </div>
 
         {{-- Search Input --}}
         <form action="{{ route('admin.orders.index') }}" method="GET" class="relative w-full xl:w-80">
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="sumber" value="{{ $sumber }}">
             <i class="mdi mdi-magnify absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-lg"></i>
             <input type="text" name="search" value="{{ $search }}"
                    class="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-inner dark:shadow-none"
@@ -194,9 +215,20 @@
 
                     {{-- Kolom 1: Detail & Invoice --}}
                     <td class="px-6 py-5 align-top">
-                        <a href="{{ route('admin.orders.show', $order->id) }}" class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 rounded-lg text-xs font-black font-mono hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-decoration-none shadow-sm dark:shadow-none mb-3">
-                            <i class="mdi mdi-receipt-text-outline text-base"></i> {{ $order->kode_invoice }}
-                        </a>
+                        <div class="flex items-center gap-2 mb-3">
+                            <a href="{{ route('admin.orders.show', $order->id) }}" class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 rounded-lg text-xs font-black font-mono hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-decoration-none shadow-sm dark:shadow-none">
+                                <i class="mdi mdi-receipt-text-outline text-base"></i> {{ $order->kode_invoice }}
+                            </a>
+                            @if(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE' || str_starts_with($order->kode_invoice, 'POS-'))
+                                <span class="px-2 py-1 bg-amber-500 text-white text-[9px] font-black uppercase rounded shadow-sm" title="Point of Sale / Offline Transaction">
+                                    <i class="mdi mdi-cash-register mr-0.5"></i> POS
+                                </span>
+                            @else
+                                <span class="px-2 py-1 bg-blue-500 text-white text-[9px] font-black uppercase rounded shadow-sm" title="Online Transaction">
+                                    <i class="mdi mdi-web mr-0.5"></i> ONLINE
+                                </span>
+                            @endif
+                        </div>
 
                         <div class="mb-2">
                             @php
@@ -244,8 +276,14 @@
                                     <i class="mdi mdi-star-circle text-sm"></i> Transaksi B2B (DP)
                                 </strong>
                                 <div class="flex justify-between items-center mb-1.5 text-xs">
-                                    <span class="font-bold text-slate-500 dark:text-slate-400">Dibayar (Web):</span>
-                                    <span class="font-black text-emerald-600 dark:text-emerald-400">Rp {{ number_format($order->jumlah_dp ?? 0, 0, ',', '.') }}</span>
+                                    <span class="font-bold text-slate-500 dark:text-slate-400">
+                                        @if($order->status_pembayaran == 'dp_paid' || $order->status_pembayaran == 'paid')
+                                            DP Lunas (Web):
+                                        @else
+                                            Tagihan DP:
+                                        @endif
+                                    </span>
+                                    <span class="font-black {{ $order->status_pembayaran == 'pending' ? 'text-amber-600' : 'text-emerald-600' }} dark:text-emerald-400">Rp {{ number_format($order->jumlah_dp ?? 0, 0, ',', '.') }}</span>
                                 </div>
                                 <div class="flex justify-between items-center pt-1.5 border-t border-amber-200 dark:border-amber-500/20 text-xs">
                                     <span class="font-bold text-slate-500 dark:text-slate-400">Tagihan Cash:</span>
@@ -270,12 +308,21 @@
                     {{-- Kolom 4: Logistik --}}
                     <td class="px-6 py-5 align-top">
                         <div class="bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 p-3 rounded-xl w-60">
-                            <strong class="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-                                <i class="mdi mdi-truck-delivery text-slate-400"></i> {{ $order->kurir_pengiriman ?? 'Belum dipilih' }}
-                            </strong>
-                            <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex flex-col gap-1">
-                                <span>Resi: <span class="font-bold text-slate-700 dark:text-slate-300">{{ $order->nomor_resi ?? 'Belum ada resi' }}</span></span>
-                            </div>
+                            @if(($order->sumber_transaksi ?? 'ONLINE') == 'OFFLINE')
+                                <strong class="block text-xs font-black text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                                    <i class="mdi mdi-shopping text-amber-500"></i> Transaksi Langsung (POS)
+                                </strong>
+                                <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                    Metode: {{ str_replace('_', ' ', $order->metode_pengiriman ?? 'Ambil di Tempat') }}
+                                </div>
+                            @else
+                                <strong class="block text-xs font-black text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                                    <i class="mdi mdi-truck-delivery text-slate-400"></i> {{ $order->kurir_pengiriman ?? ($order->metode_pengiriman ? str_replace('_', ' ', $order->metode_pengiriman) : 'Belum dipilih') }}
+                                </strong>
+                                <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+                                    <span>Resi: <span class="font-bold text-slate-700 dark:text-slate-300">{{ $order->nomor_resi ?? 'Belum ada resi' }}</span></span>
+                                </div>
+                            @endif
                         </div>
                         @if($order->kurir_pengiriman == 'Armada Toko')
                             <div class="mt-2 inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 text-white dark:bg-slate-700 dark:text-slate-200 rounded text-[9px] font-black tracking-widest uppercase">

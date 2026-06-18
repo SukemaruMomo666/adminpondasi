@@ -41,7 +41,7 @@ use App\Http\Controllers\Admin\LogisticSettingController as AdminLogisticSetting
 
 // 1. LANDING PAGE & FRONTEND DETAIL
 Route::get('/', [LandingController::class, 'index'])->name('home');
-Route::get('/produk/{id}', [FrontProductController::class, 'detail'])->name('produk.detail');
+Route::get('/produk/{slug}', [FrontProductController::class, 'detail'])->name('produk.detail');
 
 // 2. CUSTOMER JOURNEY (GROUPED)
 Route::controller(PageController::class)->group(function () {
@@ -89,6 +89,8 @@ Route::controller(PageController::class)->group(function () {
     
     Route::post('/profil-saya/update', 'updateProfil')->name('profil.update');
     Route::get('/profil-saya/ganti-password', 'gantiPassword')->name('profil.password');
+    Route::post('/profil-saya/ganti-password/send-otp', 'sendOtpPassword')->name('profil.password.send_otp');
+    Route::post('/profil-saya/ganti-password/verify-otp', 'verifyOtpPassword')->name('profil.password.verify_otp');
     Route::post('/profil-saya/ganti-password', 'updatePassword')->name('profil.password.update');
 
     // =========================================================================
@@ -101,6 +103,7 @@ Route::controller(PageController::class)->group(function () {
     Route::post('/pesanan/batalkan', 'batalkanPesanan')->name('pesanan.batalkan');
     Route::post('/pesanan/terima', 'terimaPesanan')->name('pesanan.terima');
     Route::post('/pesanan/komplain', 'ajukanPengembalian')->name('pesanan.komplain');
+    Route::post('/pesanan/review', 'submitReview')->name('pesanan.review');
 
     // Sinyal Realtime Midtrans (Auto-Update Status)
     Route::post('/payment/update-status', 'updatePaymentStatus')->name('payment.update_status');
@@ -144,6 +147,7 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::get('/', [SellerController::class, 'pesanan'])->name('index');
         Route::post('/update-status', [SellerController::class, 'updateOrderStatus'])->name('updateStatus');
         Route::post('/mass-update', [SellerController::class, 'massUpdateOrderStatus'])->name('massUpdate');
+        Route::post('/pelunasan-dp', [SellerController::class, 'pelunasanDp'])->name('pelunasan_dp');
         Route::get('/return', [SellerController::class, 'pengembalian'])->name('return');
         Route::post('/return/process', [SellerController::class, 'processPengembalian'])->name('return.process');
         Route::get('/{invoice}/detail', [SellerController::class, 'detailPesanan'])->name('show');
@@ -208,6 +212,9 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
         Route::get('/profile', [ShopController::class, 'profile'])->name('profile');
         Route::put('/profile/update', [ShopController::class, 'updateProfile'])->name('profile.update');
 
+        Route::get('/tier', [ShopController::class, 'tier'])->name('tier');
+        Route::post('/tier/apply', [ShopController::class, 'applyTierUpgrade'])->name('tier.apply');
+
         Route::get('/decoration', [ShopController::class, 'decoration'])->name('decoration');
         Route::get('/decoration/editor', [ShopController::class, 'editor'])->name('decoration.editor');
         Route::get('/decoration/editor-desktop', [ShopController::class, 'editorDesktop'])->name('decoration.editor.desktop');
@@ -260,6 +267,8 @@ Route::prefix('portal-rahasia-pks')->name('admin.')->middleware(['admin'])->grou
         Route::post('/users/{id}/toggle-ban', [AdminUserController::class, 'toggleBan'])->name('users.toggleBan');
 
         Route::get('/stores', [AdminStoreController::class, 'index'])->name('stores.index');
+        Route::get('/stores/tier-applications', [AdminStoreController::class, 'tierApplications'])->name('stores.tierApplications');
+        Route::post('/stores/tier-applications/{id}/process', [AdminStoreController::class, 'processTierApplication'])->name('stores.processTierApplication');
         Route::post('/stores/{id}/verify', [AdminStoreController::class, 'verify'])->name('stores.verify');
         Route::post('/stores/{id}/tier', [AdminStoreController::class, 'updateTier'])->name('stores.updateTier');
 

@@ -243,9 +243,9 @@
                                 </span>
                             </label>
                             <label class="flex items-center gap-3 cursor-pointer group">
-                                <input type="checkbox" name="tier_toko[]" value="pro_merchant" class="custom-checkbox" {{ in_array('pro_merchant', request('tier_toko', [])) ? 'checked' : '' }} onchange="showApplyButton()">
+                                <input type="checkbox" name="tier_toko[]" value="power_merchant" class="custom-checkbox" {{ in_array('power_merchant', request('tier_toko', [])) ? 'checked' : '' }} onchange="showApplyButton()">
                                 <span class="text-sm font-semibold text-zinc-600 group-hover:text-zinc-900 select-none flex items-center gap-2">
-                                    <i class="fas fa-check-circle text-emerald-500 w-4"></i> Pro Merchant
+                                    <i class="fas fa-check-circle text-emerald-500 w-4"></i> Power Merchant
                                 </span>
                             </label>
                         </div>
@@ -377,7 +377,7 @@
                             $cityName = 'Lokasi Terverifikasi';
                         }
                     @endphp
-                    <a href="{{ route('produk.detail', $b->id) }}" class="bg-white rounded-[1.5rem] shadow-sm hover:shadow-hover transition-all duration-300 overflow-hidden flex flex-col group border border-zinc-100 hover:border-blue-200 hover:-translate-y-1 relative">
+                    <a href="{{ route('produk.detail', $b->slug) }}" class="bg-white rounded-[1.5rem] shadow-sm hover:shadow-hover transition-all duration-300 overflow-hidden flex flex-col group border border-zinc-100 hover:border-blue-200 hover:-translate-y-1 relative">
 
                         {{-- Gambar (Rasio 1:1) --}}
                         <div class="w-full pt-[100%] relative bg-zinc-50 border-b border-zinc-50 overflow-hidden">

@@ -161,7 +161,43 @@
                 @if($transaksi->metode_pembayaran)
                 <div class="mt-4 pt-4 border-t border-gray-100">
                     <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Metode Pembayaran</p>
-                    <p class="font-semibold text-gray-800 text-sm"><i class="fas fa-wallet text-gray-400 mr-1.5"></i> {{ $transaksi->metode_pembayaran }}</p>
+                    <p class="font-semibold text-gray-800 text-sm mb-2"><i class="fas fa-wallet text-gray-400 mr-1.5"></i> {{ $transaksi->metode_pembayaran }}</p>
+
+                    @if($transaksi->tipe_pembayaran == 'DP')
+                        <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-orange-700"><i class="fas fa-handshake mr-1"></i> Sistem B2B Uang Muka (DP)</span>
+                                @if($transaksi->sisa_tagihan > 0)
+                                    <span class="px-2 py-0.5 bg-orange-200 text-orange-800 text-[10px] font-black uppercase rounded">Belum Lunas</span>
+                                @else
+                                    <span class="px-2 py-0.5 bg-emerald-200 text-emerald-800 text-[10px] font-black uppercase rounded"><i class="fas fa-check"></i> Lunas</span>
+                                @endif
+                            </div>
+                            <div class="flex justify-between items-center text-sm mb-1">
+                                <span class="text-gray-600">Nominal DP Dibayar</span>
+                                <span class="font-bold text-emerald-600">Rp {{ number_format($transaksi->jumlah_dp, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm mb-3 border-b border-orange-200 pb-2">
+                                <span class="text-gray-600 font-bold">Sisa Pelunasan (Tunai)</span>
+                                <span class="font-black text-rose-600">Rp {{ number_format($transaksi->sisa_tagihan, 0, ',', '.') }}</span>
+                            </div>
+                            
+                            @if($transaksi->sisa_tagihan > 0)
+                                <form action="{{ route('seller.orders.pelunasan_dp') }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="transaksi_id" value="{{ $transaksi->id }}">
+                                    <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-lg text-sm transition-colors" onclick="return confirm('Apakah Anda yakin pembeli sudah membayar lunas uang sisa tagihan secara tunai/offline?')">
+                                        <i class="fas fa-check-double mr-1"></i> Konfirmasi Pelunasan & Selesai
+                                    </button>
+                                </form>
+                                <p class="text-[10px] text-gray-500 mt-2 leading-tight text-center">Sistem akan mencatat User ID kasir dan Timestamp untuk audit pelunasan.</p>
+                            @else
+                                <div class="text-xs text-emerald-600 font-medium text-center">
+                                    <i class="fas fa-info-circle"></i> Pelunasan telah diselesaikan.
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
                 @endif
             </div>

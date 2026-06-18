@@ -241,17 +241,40 @@
             </div>
 
             <div class="payment-area">
+                <div class="payment-method-area" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button class="btn-method active" data-method="Tunai Kasir" onclick="setPaymentMethod('Tunai Kasir')">Tunai / QRIS</button>
+                    @if(isset($dpSettings) && $dpSettings['enable_dp_system'] == '1')
+                    <button class="btn-method dp-btn" data-method="DP B2B" onclick="setPaymentMethod('DP B2B')" style="background: var(--pos-card); color: var(--pos-warning); border-color: var(--pos-warning);">
+                        <i class="fas fa-handshake"></i> Sistem DP
+                    </button>
+                    @endif
+                </div>
+
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <span class="total-label">Tunai Pembeli</span>
+                    <span class="total-label" id="label-amount-paid">Tunai Pembeli</span>
                     <span id="change-due" class="font-digital" style="font-size: 14px; font-weight: 800; color: var(--pos-text-muted);">Kembali: Rp 0</span>
                 </div>
                 <input type="number" id="amount-paid" class="input-cash font-digital" placeholder="0">
-                
-                <div class="cash-shortcuts">
+
+                <div class="cash-shortcuts" id="cash-shortcuts-area">
                     <button class="btn-cash" data-amount="exact">PAS</button>
                     <button class="btn-cash" data-amount="50000">50K</button>
                     <button class="btn-cash" data-amount="100000">100K</button>
                 </div>
+
+                <div id="dp-info-area" style="display: none; padding: 10px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); margin-bottom: 10px;">
+                    <div style="font-size: 11px; font-weight: bold; color: var(--pos-warning); margin-bottom: 5px;">
+                        <i class="fas fa-info-circle"></i> B2B Uang Muka (DP)
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: white;">
+                        <span>Min. Belanja:</span> <span class="font-digital">Rp {{ number_format(isset($dpSettings) ? $dpSettings['min_nominal_dp'] : 10000000, 0, ',', '.') }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: white; margin-top: 2px;">
+                        <span>Min. Bayar DP:</span> <span class="font-digital">{{ isset($dpSettings) ? $dpSettings['dp_percent'] : 50 }}%</span>
+                    </div>
+                </div>
+
+                <input type="hidden" id="selected-payment-method" value="Tunai Kasir">
 
                 <input type="hidden" id="pos-user-id" value="{{ auth()->id() }}">
                 <input type="hidden" id="kasir-name" value="{{ auth()->user()->nama ?? auth()->user()->username }}">
@@ -439,14 +462,70 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    let dpMinTotal = {{ isset($dpSettings) ? $dpSettings['min_nominal_dp'] : 10000000 }};
+    let dpPercent = {{ isset($dpSettings) ? $dpSettings['dp_percent'] : 50 }};
+
+    window.setPaymentMethod = function(method) {
+        document.getElementById('selected-payment-method').value = method;
+        document.querySelectorAll('.btn-method').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-method') === method) {
+                btn.style.background = method === 'DP B2B' ? 'var(--pos-warning)' : 'var(--pos-primary)';
+                btn.style.color = 'white';
+            } else {
+                btn.style.background = 'var(--pos-card)';
+                btn.style.color = btn.classList.contains('dp-btn') ? 'var(--pos-warning)' : 'white';
+            }
+        });
+
+        const labelAmount = document.getElementById('label-amount-paid');
+        const shortcuts = document.getElementById('cash-shortcuts-area');
+        const dpInfo = document.getElementById('dp-info-area');
+        
+        if (method === 'DP B2B') {
+            labelAmount.innerText = 'Nominal DP Diterima';
+            labelAmount.style.color = 'var(--pos-warning)';
+            shortcuts.style.display = 'none';
+            dpInfo.style.display = 'block';
+            document.getElementById('process-payment-btn').innerHTML = '<i class="fas fa-handshake"></i> Konfirmasi DP (F9)';
+        } else {
+            labelAmount.innerText = 'Tunai Pembeli';
+            labelAmount.style.color = 'var(--pos-text-muted)';
+            shortcuts.style.display = 'flex';
+            dpInfo.style.display = 'none';
+            document.getElementById('process-payment-btn').innerHTML = '<i class="fas fa-bolt"></i> Bayar & Cetak (F9)';
+        }
+        calculateChange();
+    };
+
     function calculateChange() {
         let paid = parseInt(amountInput.value) || 0;
+        let method = document.getElementById('selected-payment-method').value;
         let change = paid - currentTotal;
+        
         if(currentTotal === 0) {
-            changeDisplay.innerText = "Kembali: Rp 0";
+            changeDisplay.innerText = method === 'DP B2B' ? "Sisa Tagihan: Rp 0" : "Kembali: Rp 0";
             changeDisplay.style.color = 'var(--pos-text-muted)';
             return;
         }
+
+        if (method === 'DP B2B') {
+            let sisa = currentTotal - paid;
+            let minDp = currentTotal * (dpPercent / 100);
+            
+            if (paid < minDp) {
+                changeDisplay.innerText = "Kurang dari Min DP ("+dpPercent+"%)";
+                changeDisplay.style.color = 'var(--pos-danger)';
+            } else if (paid > currentTotal) {
+                changeDisplay.innerText = "DP Lebihi Total!";
+                changeDisplay.style.color = 'var(--pos-danger)';
+            } else {
+                changeDisplay.innerText = "Sisa Tagihan: Rp " + formatRp(sisa);
+                changeDisplay.style.color = 'var(--pos-warning)';
+            }
+            return;
+        }
+
         if(change < 0) {
             changeDisplay.innerText = "Uang Kurang!";
             changeDisplay.style.color = 'var(--pos-danger)';
@@ -458,10 +537,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('process-payment-btn').addEventListener('click', function() {
         let paid = parseInt(amountInput.value) || 0;
-        if(paid < currentTotal) { 
-            Swal.fire({icon: 'error', title: 'Ups!', text: 'Uang tunai kurang.'}); 
-            return; 
+        let method = document.getElementById('selected-payment-method').value;
+        
+        if (method === 'DP B2B') {
+            if (currentTotal < dpMinTotal) {
+                Swal.fire({icon: 'error', title: 'Belum Memenuhi Syarat', text: 'Total belanja harus minimal Rp ' + formatRp(dpMinTotal) + ' untuk menggunakan fitur DP B2B.'}); 
+                return;
+            }
+            let minDp = currentTotal * (dpPercent / 100);
+            if (paid < minDp) {
+                Swal.fire({icon: 'error', title: 'DP Kurang', text: 'Minimal DP adalah ' + dpPercent + '% dari total belanja (Rp ' + formatRp(minDp) + ').'}); 
+                return;
+            }
+            if (paid > currentTotal) {
+                Swal.fire({icon: 'error', title: 'DP Tidak Valid', text: 'Jumlah DP tidak boleh melebihi total belanja.'}); 
+                return;
+            }
+        } else {
+            if(paid < currentTotal) { 
+                Swal.fire({icon: 'error', title: 'Ups!', text: 'Uang tunai kurang.'}); 
+                return; 
+            }
         }
+        
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
         this.disabled = true;
         fetch("{{ route('seller.pos.api.checkout') }}", {
@@ -470,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({
                 user_id: document.getElementById('pos-user-id').value,
                 kasir_name: document.getElementById('kasir-name').value || 'Kasir',
-                payment_method: 'Tunai Kasir',
+                payment_method: method,
                 amount_paid: paid,
                 total: currentTotal,
                 cart: cart
@@ -479,9 +577,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') {
+                let htmlContent = method === 'DP B2B' 
+                    ? `<div style="color: #f59e0b; font-weight: 700; margin-bottom: 10px;">Sisa Tagihan (Belum Lunas):</div><div style="font-size: 32px; font-weight: 900; color: #f59e0b; font-family: 'JetBrains Mono';">Rp ${formatRp(currentTotal - paid)}</div>`
+                    : `<div style="color: #94a3b8; font-weight: 700; margin-bottom: 10px;">Kembalian:</div><div style="font-size: 32px; font-weight: 900; color: #3b82f6; font-family: 'JetBrains Mono';">Rp ${formatRp(paid - currentTotal)}</div>`;
+                
                 Swal.fire({
-                    title: 'TRANSAKSI BERHASIL',
-                    html: `<div style="color: #94a3b8; font-weight: 700; margin-bottom: 10px;">Kembalian:</div><div style="font-size: 32px; font-weight: 900; color: #3b82f6; font-family: 'JetBrains Mono';">Rp ${formatRp(paid - currentTotal)}</div>`,
+                    title: method === 'DP B2B' ? 'DP BERHASIL DICATAT' : 'TRANSAKSI BERHASIL',
+                    html: htmlContent,
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: '<i class="fas fa-print"></i> Cetak Struk',

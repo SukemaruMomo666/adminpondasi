@@ -142,7 +142,7 @@ class LandingController extends Controller
                 ->join('tb_barang as b', 'fsp.barang_id', '=', 'b.id')
                 ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
                 ->select(
-                    'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
+                    'b.id', 'b.nama_barang', 'b.slug', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon',
                     // FIX: Mengambil kolom kota secara langsung
                     'fsp.harga_flash_sale', 'fsp.stok_flash_sale', 't.kota as kota_toko'
                 )
@@ -164,7 +164,7 @@ class LandingController extends Controller
         $localDiscounts = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
-                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon', 'b.diskon_berakhir',
+                'b.id', 'b.nama_barang', 'b.slug', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon', 'b.diskon_berakhir',
                 // FIX: Mengambil kolom kota secara langsung
                 DB::raw('NULL as harga_flash_sale'), DB::raw('100 as stok_flash_sale'), 't.kota as kota_toko'
             )
@@ -522,7 +522,7 @@ class LandingController extends Controller
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
-                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon', 'b.diskon_mulai', 'b.diskon_berakhir',
+                'b.id', 'b.nama_barang', 'b.slug', 'b.harga', 'b.gambar_utama', 'b.tipe_diskon', 'b.nilai_diskon', 'b.diskon_mulai', 'b.diskon_berakhir',
                 // FIX: Mengambil kolom kota secara langsung
                 't.nama_toko', 't.slug as slug_toko', 't.kota as kota_toko'
             )

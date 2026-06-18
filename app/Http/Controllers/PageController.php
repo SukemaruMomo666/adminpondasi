@@ -49,7 +49,7 @@ class PageController extends Controller
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
             ->select(
-                'b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
+                'b.id', 'b.nama_barang', 'b.slug', 'b.harga', 'b.gambar_utama', 'b.satuan_unit',
                 't.nama_toko', 't.slug as toko_slug', 't.tier_toko', 't.kota as nama_kota'
             )
             ->where('b.is_active', 1)
@@ -154,7 +154,7 @@ class PageController extends Controller
 
         $query = DB::table('tb_barang as b')
             ->join('tb_toko as t', 'b.toko_id', '=', 't.id')
-            ->select('b.id', 'b.nama_barang', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 't.kota as kota_toko')
+            ->select('b.id', 'b.nama_barang', 'b.slug', 'b.harga', 'b.gambar_utama', 't.nama_toko', 't.slug as slug_toko', 't.tier_toko', 't.kota as kota_toko')
             ->where('b.is_active', 1)
             ->where('b.status_moderasi', 'approved')
             ->where('t.status', 'active');
@@ -590,7 +590,19 @@ class PageController extends Controller
             return redirect()->route('keranjang.index')->with('error', 'Data produk tidak valid atau keranjang kosong.');
         }
 
-        return view('pages.checkout', compact('userEmail', 'alamatUser', 'addressData', 'isAlamatIncomplete', 'itemsPerToko', 'itemArray', 'totalProduk', 'isDirectPurchase', 'request'));
+        // Ambil Pengaturan DP B2B
+        $settingsData = DB::table('tb_pengaturan')->whereIn('setting_nama', ['enable_dp_system', 'min_nominal_dp', 'dp_percent', 'dp_expired_minutes'])->get();
+        $dpSettings = [
+            'enable_dp_system' => 0,
+            'min_nominal_dp' => 10000000,
+            'dp_percent' => 50,
+            'dp_expired_minutes' => 1440
+        ];
+        foreach ($settingsData as $row) {
+            $dpSettings[$row->setting_nama] = $row->setting_nilai;
+        }
+
+        return view('pages.checkout', compact('userEmail', 'alamatUser', 'addressData', 'isAlamatIncomplete', 'itemsPerToko', 'itemArray', 'totalProduk', 'isDirectPurchase', 'request', 'dpSettings'));
     }
 
     // =================================================================
@@ -727,6 +739,33 @@ class PageController extends Controller
 
             $grandTotalReal = $totalProdukReal - $totalDiskonReal + $biayaPengirimanReal;
 
+            // AMBIL SETTING DP UNTUK VALIDASI JIKA BUYER MEMILIH DP
+            $tipePembayaranReq = $request->input('tipe_pembayaran', 'LUNAS');
+            $tipePembayaranFinal = 'LUNAS';
+            $jumlahDp = 0;
+            $sisaTagihan = 0;
+            $dpExpiredAt = null;
+            $midtransGrossAmount = $grandTotalReal;
+            
+            if ($tipePembayaranReq === 'DP') {
+                $dpSettingsData = DB::table('tb_pengaturan')->whereIn('setting_nama', ['enable_dp_system', 'min_nominal_dp', 'dp_percent', 'dp_expired_minutes'])->get()->pluck('setting_nilai', 'setting_nama');
+                
+                if (($dpSettingsData['enable_dp_system'] ?? 0) == 1 && $totalProdukReal >= ($dpSettingsData['min_nominal_dp'] ?? 10000000)) {
+                    $tipePembayaranFinal = 'DP';
+                    $dpPercent = $dpSettingsData['dp_percent'] ?? 50;
+                    
+                    // Hitung nominal DP dari Grand Total (Bukan hanya total produk)
+                    $jumlahDp = round($grandTotalReal * ($dpPercent / 100));
+                    $sisaTagihan = $grandTotalReal - $jumlahDp;
+                    
+                    $expiredMinutes = (int) ($dpSettingsData['dp_expired_minutes'] ?? 1440);
+                    $dpExpiredAt = now()->addMinutes($expiredMinutes);
+                    
+                    $midtransGrossAmount = $jumlahDp; // Midtrans hanya charge DP
+                    $rincianKurir[] = 'STATUS: MENUNGGU DP B2B';
+                }
+            }
+
             // 4. INSERT GLOBAL TRANSAKSI
             $transaksiId = DB::table('tb_transaksi')->insertGetId([
                 'kode_invoice'              => $orderId, 
@@ -735,7 +774,10 @@ class PageController extends Controller
                 'total_harga_produk'        => $totalProdukReal, 
                 'total_diskon'              => $totalDiskonReal, 
                 'total_final'               => $grandTotalReal,
-                'tipe_pembayaran'           => 'LUNAS', 
+                'tipe_pembayaran'           => $tipePembayaranFinal, 
+                'jumlah_dp'                 => $jumlahDp,
+                'sisa_tagihan'              => $sisaTagihan,
+                'dp_expired_at'             => $dpExpiredAt,
                 'status_pembayaran'         => 'pending', 
                 'status_pesanan_global'     => 'menunggu_pembayaran',
                 
@@ -772,7 +814,7 @@ class PageController extends Controller
             \Midtrans\Config::$is3ds = true;
 
             $snapToken = \Midtrans\Snap::getSnapToken([
-                'transaction_details' => ['order_id' => $orderId, 'gross_amount' => (int) $grandTotalReal],
+                'transaction_details' => ['order_id' => $orderId, 'gross_amount' => (int) $midtransGrossAmount],
                 'customer_details' => [
                     'first_name' => $request->input('shipping_nama_penerima') ?? $user->nama,
                     'email'      => $user->email,
@@ -1085,7 +1127,13 @@ class PageController extends Controller
         // Urutkan dari yang terbaru (Desc) untuk UI Timeline
         $trackingLogs = array_reverse($trackingLogs);
 
-        return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs'));
+        // FITUR BARU: Cek barang mana yang sudah diulas
+        $reviewed_items = DB::table('tb_review_produk')
+            ->where('user_id', Auth::id())
+            ->pluck('detail_transaksi_id')
+            ->toArray();
+
+        return view('pages.pesanan_lacak', compact('order', 'items', 'clientKey', 'trackingLogs', 'reviewed_items'));
     }
 
     // =================================================================
@@ -1180,12 +1228,60 @@ class PageController extends Controller
 
     public function gantiPassword() { return view('pages.ganti_password'); }
 
+    public function sendOtpPassword(Request $request)
+    {
+        $user = Auth::user();
+        $otp = rand(100000, 999999);
+        
+        session(['password_change_otp' => $otp, 'password_change_otp_time' => now()]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\OtpSecurityMail($otp, $user->nama));
+            return response()->json(['success' => true, 'message' => 'OTP telah dikirim ke email Anda (' . $user->email . ')']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal mengirim email. Silakan coba lagi nanti.'], 500);
+        }
+    }
+
+    public function verifyOtpPassword(Request $request)
+    {
+        $request->validate(['otp' => 'required|numeric']);
+        
+        $sessionOtp = session('password_change_otp');
+        $sessionTime = session('password_change_otp_time');
+
+        if (!$sessionOtp || !$sessionTime) {
+            return response()->json(['success' => false, 'message' => 'Sesi OTP tidak ditemukan. Silakan kirim ulang OTP.']);
+        }
+
+        if (now()->diffInMinutes($sessionTime) > 5) {
+            session()->forget(['password_change_otp', 'password_change_otp_time']);
+            return response()->json(['success' => false, 'message' => 'OTP telah kedaluwarsa. Silakan kirim ulang OTP.']);
+        }
+
+        if ($request->otp != $sessionOtp) {
+            return response()->json(['success' => false, 'message' => 'Kode OTP salah. Periksa kembali email Anda.']);
+        }
+
+        session(['password_change_otp_verified' => true]);
+        return response()->json(['success' => true, 'message' => 'OTP berhasil diverifikasi!']);
+    }
+
     public function updatePassword(Request $request)
     {
-        $request->validate(['password_lama' => 'required', 'password_baru' => 'required|min:8|confirmed']);
-        if (!Hash::check($request->password_lama, Auth::user()->password)) { return back()->with('error', 'Password lama salah!'); }
+        if (!session('password_change_otp_verified')) {
+            return back()->with('error', 'Akses ditolak: Anda harus memverifikasi OTP terlebih dahulu.');
+        }
+
+        $request->validate([
+            'password_baru' => 'required|min:8|confirmed'
+        ]);
+
         DB::table('tb_user')->where('id', Auth::id())->update(['password' => Hash::make($request->password_baru), 'updated_at' => now()]);
-        return back()->with('success', 'Password berhasil diperbarui!');
+        
+        session()->forget(['password_change_otp', 'password_change_otp_time', 'password_change_otp_verified']);
+
+        return back()->with('success', 'Password berhasil diperbarui dengan aman!');
     }
 
     public function searchBiteshipAPI(Request $request)
@@ -1319,6 +1415,120 @@ class PageController extends Controller
             DB::rollBack();
             return back()->with('error', 'Gagal mengajukan komplain.');
         }
+    }
+
+    /**
+     * FITUR DEWA: Submit Review Pelanggan (Perfect Flow)
+     */
+    public function submitReview(Request $request)
+    {
+        $request->validate([
+            'detail_id' => 'required|integer',
+            'rating' => 'required|integer|min:1|max:5',
+            'ulasan' => 'required|string|max:1000',
+            'foto' => 'nullable|image|max:2048',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $item = DB::table('tb_detail_transaksi')->where('id', $request->detail_id)->first();
+            if (!$item) return back()->with('error', 'Item tidak ditemukan.');
+
+            $order = DB::table('tb_transaksi')->where('id', $item->transaksi_id)->where('user_id', Auth::id())->first();
+            if (!$order || $order->status_pesanan_global !== 'selesai') {
+                return back()->with('error', 'Anda hanya bisa memberikan ulasan untuk pesanan yang sudah selesai.');
+            }
+
+            // Batas waktu 14 hari
+            $diff = now()->diffInDays(\Carbon\Carbon::parse($order->updated_at));
+            if ($diff > 14) {
+                return back()->with('error', 'Maaf, batas waktu pemberian ulasan (14 hari) telah habis.');
+            }
+
+            // Cek apakah sudah diulas?
+            $exists = DB::table('tb_review_produk')->where('detail_transaksi_id', $item->id)->exists();
+            if ($exists) return back()->with('error', 'Anda sudah memberikan ulasan untuk item ini.');
+
+            // Auto-Moderasi (Filter Kata Kasar & Link)
+            $badWords = ['anjing', 'babi', 'bangsat', 'kontol', 'memek', 'ngentot', 'http', 'www', '.com', '.id', '.net'];
+            $isHidden = false;
+            foreach ($badWords as $word) {
+                if (stripos(strtolower($request->ulasan), $word) !== false) {
+                    $isHidden = true;
+                    break;
+                }
+            }
+
+            // Upload Foto
+            $fotoName = null;
+            if ($request->hasFile('foto')) {
+                $fotoName = time() . '_rev_' . Auth::id() . '.' . $request->file('foto')->extension();
+                $request->file('foto')->move(public_path('assets/uploads/reviews'), $fotoName);
+            }
+
+            // Simpan Review
+            $isRewarded = false;
+            if ($fotoName) {
+                // Berikan Reward Poin (50 Poin)
+                DB::table('tb_user')->where('id', Auth::id())->increment('poin', 50);
+                $isRewarded = true;
+            }
+
+            DB::table('tb_review_produk')->insert([
+                'detail_transaksi_id' => $item->id,
+                'barang_id' => $item->barang_id,
+                'user_id' => Auth::id(),
+                'rating' => $request->rating,
+                'ulasan' => $request->ulasan,
+                'gambar_ulasan' => $fotoName,
+                'is_hidden' => $isHidden,
+                'is_rewarded' => $isRewarded,
+                'created_at' => now()
+            ]);
+
+            // Hitung Ulang Rating Produk & Toko
+            $this->recalculateRating($item->barang_id, $item->toko_id);
+
+            DB::commit();
+
+            $msg = 'Ulasan berhasil disimpan!';
+            if ($isRewarded) $msg .= ' Selamat! Anda mendapatkan 50 Poin karena menyertakan foto.';
+            if ($isHidden) $msg .= ' (Ulasan Anda sedang ditinjau karena mengandung kata sensitif)';
+
+            return back()->with('success', $msg);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal mengirim ulasan: ' . $e->getMessage());
+        }
+    }
+
+    private function recalculateRating($barang_id, $toko_id)
+    {
+        // 1. Update Produk
+        $statsBarang = DB::table('tb_review_produk')
+            ->where('barang_id', $barang_id)
+            ->where('is_hidden', 0)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(id) as total_rev')
+            ->first();
+
+        DB::table('tb_barang')->where('id', $barang_id)->update([
+            'rating_rata' => $statsBarang->avg_rating ?? 0,
+            'jumlah_ulasan' => $statsBarang->total_rev ?? 0
+        ]);
+
+        // 2. Update Toko
+        $statsToko = DB::table('tb_review_produk as rp')
+            ->join('tb_barang as b', 'rp.barang_id', '=', 'b.id')
+            ->where('b.toko_id', $toko_id)
+            ->where('rp.is_hidden', 0)
+            ->selectRaw('AVG(rp.rating) as avg_rating, COUNT(rp.id) as total_rev')
+            ->first();
+
+        DB::table('tb_toko')->where('id', $toko_id)->update([
+            'rating_toko' => $statsToko->avg_rating ?? 0,
+            'jumlah_ulasan_toko' => $statsToko->total_rev ?? 0
+        ]);
     }
     // API: Toggle Follow / Unfollow Toko
     public function toggleFollow(Request $request)

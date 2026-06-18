@@ -370,13 +370,13 @@
                             <div class="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
                                 @foreach($renderProducts as $prod)
                                     @php
-                                        $pId = is_object($prod) ? $prod->id : ($prod->id ?? '#');
+                                        $pSlug = is_object($prod) ? $prod->slug : ($prod->slug ?? '#');
                                         $pName = is_object($prod) && isset($prod->nama_barang) ? $prod->nama_barang : ($prod->name ?? 'Produk');
                                         $pPrice = is_object($prod) && isset($prod->harga) ? 'Rp'.number_format($prod->harga,0,',','.') : ($prod->price ?? '0');
                                         $pImg = (is_object($prod) && !empty($prod->gambar_utama)) ? asset('assets/uploads/products/'.$prod->gambar_utama) : 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400';
                                     @endphp
 
-                                    <a href="{{ route('produk.detail', $pId) }}" class="snap-start min-w-[150px] w-[150px] flex-shrink-0 bg-white rounded-xl shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col group border border-gray-100 hover:border-toko-500">
+                                    <a href="{{ route('produk.detail', $pSlug) }}" class="snap-start min-w-[150px] w-[150px] flex-shrink-0 bg-white rounded-xl shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col group border border-gray-100 hover:border-toko-500">
                                         <div class="w-full pt-[100%] relative bg-gray-100 overflow-hidden">
                                             <img src="{{ $pImg }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
                                         </div>
@@ -456,7 +456,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                         @foreach($products as $p)
                             @php $img = !empty($p->gambar_utama) ? 'assets/uploads/products/'.$p->gambar_utama : 'assets/uploads/products/default.jpg'; @endphp
-                            <a href="{{ route('produk.detail', $p->id) }}" class="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden flex flex-col group border border-transparent hover:border-toko-500 relative hover:-translate-y-1">
+                            <a href="{{ route('produk.detail', $p->slug) }}" class="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden flex flex-col group border border-transparent hover:border-toko-500 relative hover:-translate-y-1">
                                 <div class="w-full pt-[100%] relative bg-white border-b border-gray-100 overflow-hidden">
                                     <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400'" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
                                 </div>

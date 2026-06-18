@@ -195,9 +195,31 @@
                                 <h3 class="text-base font-black text-zinc-900 truncate mb-1 group-hover:text-blue-600 transition-colors">{{ $item->nama_barang_saat_transaksi }}</h3>
                                 <p class="text-xs font-bold text-zinc-400 uppercase tracking-widest">Harga Satuan: Rp{{ number_format($item->harga_saat_transaksi, 0, ',', '.') }}</p>
                             </div>
-                            <div class="text-right hidden sm:block">
-                                <span class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Subtotal</span>
-                                <span class="text-lg font-black text-zinc-950 tracking-tighter leading-none">Rp{{ number_format($item->subtotal, 0, ',', '.') }}</span>
+                            <div class="text-right flex flex-col items-end gap-2">
+                                <div class="hidden sm:block">
+                                    <span class="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Subtotal</span>
+                                    <span class="text-lg font-black text-zinc-950 tracking-tighter leading-none">Rp{{ number_format($item->subtotal, 0, ',', '.') }}</span>
+                                </div>
+
+                                {{-- FITUR DEWA: Tombol Ulasan --}}
+                                @if($order->status_pesanan_global == 'selesai')
+                                    @php
+                                        $diffDays = now()->diffInDays(\Carbon\Carbon::parse($order->updated_at));
+                                        $isReviewed = in_array($item->id, $reviewed_items ?? []);
+                                    @endphp
+
+                                    @if($isReviewed)
+                                        <span class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-xl border border-emerald-100">
+                                            <i class="fas fa-check-circle mr-1"></i> Sudah Diulas
+                                        </span>
+                                    @elseif($diffDays <= 14)
+                                        <button type="button" onclick="openReviewModal({{ $item->id }}, '{{ addslashes($item->nama_barang_saat_transaksi) }}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95">
+                                            <i class="fas fa-star mr-1"></i> Tulis Ulasan
+                                        </button>
+                                    @else
+                                        <span class="text-[9px] font-bold text-zinc-300 uppercase italic">Waktu Ulasan Habis</span>
+                                    @endif
+                                @endif
                             </div>
                         </div>
                         @endforeach
@@ -270,11 +292,38 @@
                                 <span class="text-zinc-500 font-medium tracking-wide">Biaya Logistik</span>
                                 <span class="font-black text-zinc-300 tracking-tight text-right">Rp{{ number_format($order->biaya_pengiriman, 0, ',', '.') }}</span>
                             </div>
-                            <div class="pt-6 border-t border-white/10 mt-6">
-                                <div class="flex justify-between items-end">
-                                    <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Grand Total</span>
-                                    <span class="text-3xl font-black text-white tracking-tighter leading-none">Rp{{ number_format($order->total_final, 0, ',', '.') }}</span>
-                                </div>
+                            <div class="pt-6 border-t border-white/10 mt-6 space-y-4">
+                                @if($order->tipe_pembayaran == 'DP')
+                                    {{-- Khusus Sistem DP B2B --}}
+                                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
+                                        <div class="flex justify-between items-center text-xs mb-3">
+                                            <span class="font-black text-amber-500 uppercase tracking-widest"><i class="fas fa-handshake mr-1.5"></i> Sistem B2B DP ({{ round(($order->jumlah_dp / $order->total_final) * 100) }}%)</span>
+                                            <span class="px-2 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded uppercase">Aktif</span>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between items-center text-sm">
+                                                <span class="text-zinc-400 font-medium text-xs uppercase tracking-wide">Uang Muka (DP)</span>
+                                                <span class="font-black text-white tracking-tight">Rp{{ number_format($order->jumlah_dp, 0, ',', '.') }}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-sm pt-2 border-t border-white/5">
+                                                <span class="text-zinc-400 font-medium text-xs uppercase tracking-wide">Sisa Pelunasan</span>
+                                                <span class="font-black text-rose-500 tracking-tight">Rp{{ number_format($order->sisa_tagihan, 0, ',', '.') }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 text-[10px] text-zinc-500 font-bold leading-tight italic">
+                                            * Sisa pelunasan dilakukan secara tunai/transfer langsung ke Penjual saat barang diterima.
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between items-end bg-blue-600/10 border border-blue-600/20 p-4 rounded-2xl">
+                                        <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Total DP Ditagihkan</span>
+                                        <span class="text-3xl font-black text-white tracking-tighter leading-none">Rp{{ number_format($order->jumlah_dp, 0, ',', '.') }}</span>
+                                    </div>
+                                @else
+                                    <div class="flex justify-between items-end">
+                                        <span class="text-xs font-black uppercase text-blue-500 tracking-widest mb-1">Grand Total</span>
+                                        <span class="text-3xl font-black text-white tracking-tighter leading-none">Rp{{ number_format($order->total_final, 0, ',', '.') }}</span>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -520,6 +569,91 @@
                     }
                 });
             };
+        }
+
+    {{-- FITUR DEWA: MODAL ULASAN PRODUK --}}
+    <div id="modalReview" class="fixed inset-0 z-[100] hidden overflow-y-auto">
+        <div class="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm transition-opacity" onclick="closeReviewModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-lg transform overflow-hidden rounded-[3rem] bg-white p-8 lg:p-12 shadow-2xl transition-all">
+                
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-xl font-black text-zinc-900">Beri Penilaian</h3>
+                        <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1" id="review_item_name"></p>
+                    </div>
+                    <button type="button" onclick="closeReviewModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-red-500 hover:text-white transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form action="{{ route('pesanan.review') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+                    @csrf
+                    <input type="hidden" name="detail_id" id="review_detail_id">
+                    
+                    {{-- Star Rating --}}
+                    <div class="text-center">
+                        <p class="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bagaimana Kualitas Material?</p>
+                        <div class="flex justify-center gap-3" id="star-rating">
+                            @for($i=1; $i<=5; $i++)
+                                <button type="button" onclick="setRating({{ $i }})" class="star-btn text-4xl text-zinc-200 hover:text-yellow-400 transition-all transform hover:scale-110" data-val="{{ $i }}">
+                                    <i class="fas fa-star"></i>
+                                </button>
+                            @endfor
+                        </div>
+                        <input type="hidden" name="rating" id="input_rating" required>
+                    </div>
+
+                    {{-- Text Review --}}
+                    <div>
+                        <label class="block text-xs font-black text-zinc-500 uppercase tracking-wider mb-3">Tulis Ulasan Anda</label>
+                        <textarea name="ulasan" rows="4" class="w-full bg-zinc-50 border border-zinc-200 rounded-[2rem] p-5 text-sm font-semibold outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 transition-all" placeholder="Ceritakan pengalaman Anda menggunakan material ini..." required></textarea>
+                    </div>
+
+                    {{-- Upload Media --}}
+                    <div class="p-6 bg-blue-50/50 border border-dashed border-blue-200 rounded-[2rem]">
+                        <label class="block text-xs font-black text-blue-600 uppercase tracking-wider mb-3 flex items-center justify-between">
+                            <span>Lampirkan Foto Produk</span>
+                            <span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full">+50 Poin</span>
+                        </label>
+                        <input type="file" name="foto" accept="image/*" class="w-full text-xs font-bold text-zinc-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-all cursor-pointer">
+                        <p class="mt-3 text-[10px] font-medium text-blue-600/60 leading-relaxed italic">Ulasan dengan foto membantu Juragan lain dan memberikan Anda poin belanja tambahan!</p>
+                    </div>
+
+                    <button type="submit" class="w-full py-5 bg-zinc-950 hover:bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-[2rem] shadow-xl transition-all active:scale-95">
+                        Kirim Penilaian Resmi
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openReviewModal(detailId, itemName) {
+            document.getElementById('review_detail_id').value = detailId;
+            document.getElementById('review_item_name').innerText = itemName;
+            document.getElementById('modalReview').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeReviewModal() {
+            document.getElementById('modalReview').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function setRating(val) {
+            document.getElementById('input_rating').value = val;
+            const stars = document.querySelectorAll('.star-btn');
+            stars.forEach((s, idx) => {
+                if (idx < val) {
+                    s.classList.remove('text-zinc-200');
+                    s.classList.add('text-yellow-400');
+                } else {
+                    s.classList.remove('text-yellow-400');
+                    s.classList.add('text-zinc-200');
+                }
+            });
         }
 
         // Logika Batalkan Pesanan

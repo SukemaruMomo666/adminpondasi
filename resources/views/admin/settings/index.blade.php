@@ -483,14 +483,14 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label class="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">Minimal Belanja (Opsi DP Muncul)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-r-0 text-slate-500">Rp</span>
                                 <input type="number" name="min_nominal_dp" value="{{ $settings['min_nominal_dp'] ?? '10000000' }}" class="form-control-input form-control-custom bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white shadow-inner dark:shadow-none">
                             </div>
-                            <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1">Minimal total harga keranjang agar opsi cicilan awal muncul di Checkout.</p>
+                            <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1">Minimal total belanja.</p>
                         </div>
                         <div>
                             <label class="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">Persentase Wajib DP</label>
@@ -498,7 +498,15 @@
                                 <input type="number" name="dp_percent" value="{{ $settings['dp_percent'] ?? '50' }}" max="99" class="form-control-input form-control-custom bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white shadow-inner dark:shadow-none text-center text-lg">
                                 <span class="input-group-text bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-0 text-slate-500">%</span>
                             </div>
-                            <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1 text-center">Persentase dari total belanja yang wajib dibayar.</p>
+                            <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1 text-center">Persentase dari total belanja.</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">Batas Waktu Pembayaran</label>
+                            <div class="input-group">
+                                <input type="number" name="dp_expired_minutes" value="{{ $settings['dp_expired_minutes'] ?? '1440' }}" class="form-control-input form-control-custom bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white shadow-inner dark:shadow-none text-center text-lg">
+                                <span class="input-group-text bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-0 text-slate-500">Menit</span>
+                            </div>
+                            <p class="text-[10px] font-bold text-slate-400 mt-2 mb-0 ml-1 text-center">Contoh: 1440 = 24 Jam.</p>
                         </div>
                     </div>
                 </div>

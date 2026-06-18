@@ -82,9 +82,11 @@
             <span class="text-blue-600 dark:text-blue-400">Kelola Toko & Kasta (Tier)</span>
         </div>
     </div>
-    <div class="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 px-4 py-2.5 rounded-xl flex items-center gap-3 transition-colors duration-300">
-        <i class="mdi mdi-information-outline text-blue-500 text-xl"></i>
-        <span class="text-xs font-bold text-blue-700 dark:text-blue-400">Kelola kasta (tier) vendor untuk membedakan distributor resmi dan toko reguler.</span>
+    <div class="flex items-center gap-3">
+        <a href="{{ route('admin.stores.tierApplications') }}" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-md text-decoration-none">
+            <i class="mdi mdi-rocket-launch text-xl"></i>
+            <span class="text-xs font-black uppercase">Pengajuan Naik Level</span>
+        </a>
     </div>
 </div>
 

@@ -276,6 +276,45 @@ class SellerController extends Controller
         return redirect()->back()->with('success', count($request->detail_ids) . ' Pesanan berhasil diproses ke pengiriman!');
     }
 
+    public function pelunasanDp(Request $request)
+    {
+        $request->validate([
+            'transaksi_id' => 'required|integer'
+        ]);
+
+        $userId = Auth::id();
+        $toko = DB::table('tb_toko')->where('user_id', $userId)->first();
+
+        if (!$toko) {
+            return redirect()->back()->with('error', 'Toko tidak valid.');
+        }
+
+        $transaksi = DB::table('tb_transaksi')->where('id', $request->transaksi_id)->first();
+        if (!$transaksi || $transaksi->tipe_pembayaran !== 'DP') {
+            return redirect()->back()->with('error', 'Transaksi tidak valid untuk pelunasan DP.');
+        }
+
+        // Keamanan Sistem: Audit Trail Pencatatan Pelunasan DP
+        DB::table('tb_transaksi')->where('id', $transaksi->id)->update([
+            'sisa_tagihan' => 0,
+            'bayar' => $transaksi->total_final, // Bayar full
+            'status_pembayaran' => 'paid',
+            'status_pesanan_global' => 'selesai',
+            'completed_by' => $userId, // Timestamp ID kasir
+            'completed_at' => now(), // Waktu persis diklik
+            'updated_at' => now(),
+            'catatan' => $transaksi->catatan . ' [LUNAS OFFLINE via Kasir ID: ' . $userId . ' pada ' . now() . ']'
+        ]);
+
+        // Update semua detail transaksi milik toko ini menjadi selesai
+        DB::table('tb_detail_transaksi')
+            ->where('transaksi_id', $transaksi->id)
+            ->where('toko_id', $toko->id)
+            ->update(['status_pesanan_item' => 'selesai']);
+
+        return redirect()->back()->with('success', 'Pelunasan berhasil dicatat. Transaksi telah selesai secara sistem.');
+    }
+
     // =========================================================================
     // 3. HALAMAN PENGEMBALIAN PESANAN (RETURN/REFUND)
     // =========================================================================
@@ -946,7 +985,20 @@ class SellerController extends Controller
     // =========================================================================
     public function pos()
     {
-        return view('seller.pos');
+        $settingsData = DB::table('tb_pengaturan')->get();
+        $settings = [];
+        foreach ($settingsData as $row) {
+            $settings[$row->setting_nama] = $row->setting_nilai;
+        }
+        
+        $dpSettings = [
+            'enable_dp_system' => $settings['enable_dp_system'] ?? 0,
+            'min_nominal_dp' => $settings['min_nominal_dp'] ?? 10000000,
+            'dp_percent' => $settings['dp_percent'] ?? 50,
+            'dp_expired_minutes' => $settings['dp_expired_minutes'] ?? 1440
+        ];
+
+        return view('seller.pos', compact('dpSettings'));
     }
 
     public function getPosCategories()
@@ -995,6 +1047,28 @@ class SellerController extends Controller
 
             $invoice = 'POS-' . strtoupper(substr($toko->nama_toko, 0, 3)) . '-' . date('ymdHis');
             
+            $isDp = $request->payment_method === 'DP B2B';
+            $dpExpiredAt = null;
+            $statusPembayaran = 'paid';
+            $statusGlobal = 'selesai';
+            $statusItem = 'sampai_tujuan';
+            $jumlahDp = 0;
+            $sisaTagihan = 0;
+            
+            if ($isDp) {
+                // Ambil setting timer
+                $settingsData = DB::table('tb_pengaturan')->where('setting_nama', 'dp_expired_minutes')->first();
+                $expiredMinutes = (int) ($settingsData ? $settingsData->setting_nilai : 1440);
+                
+                $dpExpiredAt = now()->addMinutes($expiredMinutes);
+                $statusPembayaran = 'pending';
+                $statusGlobal = 'diproses'; // Status global DP B2B (stok di hold)
+                $statusItem = 'diproses';
+                
+                $jumlahDp = $request->amount_paid;
+                $sisaTagihan = $request->total - $request->amount_paid;
+            }
+            
             $transaksiId = DB::table('tb_transaksi')->insertGetId([
                 'kode_invoice'          => $invoice,
                 'sumber_transaksi'      => 'OFFLINE',
@@ -1002,12 +1076,16 @@ class SellerController extends Controller
                 'total_harga_produk'    => $request->total,
                 'total_final'           => $request->total,
                 'bayar'                 => $request->amount_paid,
-                'kembali'               => $request->amount_paid - $request->total,
+                'kembali'               => $isDp ? 0 : ($request->amount_paid - $request->total),
+                'tipe_pembayaran'       => $isDp ? 'DP' : 'LUNAS',
+                'jumlah_dp'             => $jumlahDp,
+                'sisa_tagihan'          => $sisaTagihan,
+                'dp_expired_at'         => $dpExpiredAt,
                 'metode_pembayaran'     => $request->payment_method,
-                'status_pembayaran'     => 'paid',
-                'status_pesanan_global' => 'selesai',
+                'status_pembayaran'     => $statusPembayaran,
+                'status_pesanan_global' => $statusGlobal,
                 'tanggal_transaksi'     => now(),
-                'catatan'               => 'Pembelian POS (' . $toko->nama_toko . ') | Dilayani Kasir: ' . $request->kasir_name
+                'catatan'               => 'Pembelian POS (' . $toko->nama_toko . ') | Dilayani Kasir: ' . $request->kasir_name . ($isDp ? ' | STATUS: MENUNGGU DP' : '')
             ]);
 
             foreach ($request->cart as $item) {
@@ -1020,9 +1098,10 @@ class SellerController extends Controller
                     'jumlah'                     => $item['qty'],
                     'subtotal'                   => $item['harga'] * $item['qty'],
                     'metode_pengiriman'          => 'AMBIL_DI_TOKO',
-                    'status_pesanan_item'        => 'sampai_tujuan',
+                    'status_pesanan_item'        => $statusItem,
                 ]);
 
+                // Stok selalu dipotong saat order POS dibuat (Hold Stok untuk DP, Permanen untuk Lunas)
                 DB::table('tb_barang')->where('id', $item['id'])->decrement('stok', $item['qty']);
                 
                 DB::table('tb_stok_histori')->insert([
@@ -1082,16 +1161,20 @@ class SellerController extends Controller
             return redirect()->route('seller.dashboard')->with('error', 'Data toko tidak ditemukan.');
         }
 
-        $summary = DB::table('tb_toko_review')
-            ->where('toko_id', $toko->id)
-            ->selectRaw('AVG(rating) as avg_rating, COUNT(id) as total_reviews')
+        $summary = DB::table('tb_review_produk as r')
+            ->join('tb_barang as b', 'r.barang_id', '=', 'b.id')
+            ->where('b.toko_id', $toko->id)
+            ->where('r.is_hidden', 0)
+            ->selectRaw('AVG(r.rating) as avg_rating, COUNT(r.id) as total_reviews')
             ->first();
 
-        $ratingCountsRaw = DB::table('tb_toko_review')
-            ->where('toko_id', $toko->id)
-            ->select('rating', DB::raw('count(*) as total'))
-            ->groupBy('rating')
-            ->pluck('total', 'rating')->toArray();
+        $ratingCountsRaw = DB::table('tb_review_produk as r')
+            ->join('tb_barang as b', 'r.barang_id', '=', 'b.id')
+            ->where('b.toko_id', $toko->id)
+            ->where('r.is_hidden', 0)
+            ->select('r.rating', DB::raw('count(r.id) as total'))
+            ->groupBy('r.rating')
+            ->pluck('total', 'r.rating')->toArray();
 
         $ratingCounts = [
             5 => $ratingCountsRaw[5] ?? 0,
@@ -1110,33 +1193,21 @@ class SellerController extends Controller
 
         $starFilter = $request->query('star', 'all');
 
-        $query = DB::table('tb_toko_review as r')
+        $query = DB::table('tb_review_produk as r')
             ->join('tb_user as u', 'r.user_id', '=', 'u.id')
-            ->leftJoin('tb_detail_transaksi as dt', function($join) {
-                $join->on('r.transaksi_id', '=', 'dt.transaksi_id')
-                     ->on('r.toko_id', '=', 'dt.toko_id');
-            })
-            ->leftJoin('tb_barang as b', 'dt.barang_id', '=', 'b.id')
-            ->where('r.toko_id', $toko->id)
+            ->join('tb_barang as b', 'r.barang_id', '=', 'b.id')
+            ->where('b.toko_id', $toko->id)
+            ->where('r.is_hidden', 0)
             ->select(
                 'r.id', 
                 'r.rating', 
                 'r.ulasan', 
-                'r.balasan_penjual', 
+                'r.gambar_ulasan',
+                'r.balasan_seller as balasan_penjual', 
                 'r.created_at',
                 'u.nama as nama_user',
                 'b.nama_barang',        
                 'b.gambar_utama as gambar_barang'
-            )
-            ->groupBy(
-                'r.id', 
-                'r.rating', 
-                'r.ulasan', 
-                'r.balasan_penjual', 
-                'r.created_at', 
-                'u.nama', 
-                'b.nama_barang', 
-                'b.gambar_utama'
             )
             ->orderBy('r.created_at', 'desc');
 
@@ -1158,12 +1229,26 @@ class SellerController extends Controller
 
         $toko = DB::table('tb_toko')->where('user_id', Auth::id())->first();
 
-        DB::table('tb_toko_review')
+        // Validasi kepemilikan ulasan
+        $review = DB::table('tb_review_produk as r')
+            ->join('tb_barang as b', 'r.barang_id', '=', 'b.id')
+            ->where('r.id', $request->review_id)
+            ->where('b.toko_id', $toko->id)
+            ->first();
+
+        if (!$review) {
+            return redirect()->back()->with('error', 'Ulasan tidak ditemukan atau tidak memiliki akses.');
+        }
+
+        if ($review->balasan_seller) {
+            return redirect()->back()->with('error', 'Anda sudah membalas ulasan ini (Maksimal 1 kali).');
+        }
+
+        DB::table('tb_review_produk')
             ->where('id', $request->review_id)
-            ->where('toko_id', $toko->id)
             ->update([
-                'balasan_penjual' => $request->balasan,
-                'updated_at' => now()
+                'balasan_seller' => $request->balasan,
+                'waktu_balasan' => now(),
             ]);
 
         return redirect()->back()->with('success', 'Balasan ulasan berhasil dipublikasikan!');

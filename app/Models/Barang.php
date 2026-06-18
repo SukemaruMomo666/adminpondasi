@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Support\Str;
+
 class Barang extends Model
 {
     use HasFactory;
@@ -14,6 +16,47 @@ class Barang extends Model
 
     // 2. Lindungi ID, sisanya boleh diisi massal
     protected $guarded = ['id'];
+
+    /**
+     * Get the route key for the model.
+     *
+     * @return string
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($barang) {
+            if (empty($barang->slug)) {
+                $barang->slug = static::generateUniqueSlug($barang->nama_barang);
+            }
+        });
+
+        static::updating(function ($barang) {
+            if ($barang->isDirty('nama_barang') && empty($barang->slug)) {
+                $barang->slug = static::generateUniqueSlug($barang->nama_barang);
+            }
+        });
+    }
+
+    private static function generateUniqueSlug($nama)
+    {
+        $slug = Str::slug($nama);
+        $originalSlug = $slug;
+        $count = 1;
+
+        while (static::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+
+        return $slug;
+    }
 
     // ================= RELASI =================
 

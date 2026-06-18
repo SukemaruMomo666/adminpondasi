@@ -50,8 +50,8 @@ class ChatAiController extends Controller
         $query = DB::table('tb_barang')
             ->join('tb_toko', 'tb_barang.toko_id', '=', 'tb_toko.id')
             ->where('tb_barang.is_active', 1)
-            // KITA TAMBAHKAN tb_barang.id UNTUK MEMBUAT URL
-            ->select('tb_barang.id', 'tb_barang.nama_barang', 'tb_barang.harga', 'tb_barang.stok', 'tb_toko.nama_toko');
+            // KITA TAMBAHKAN tb_barang.slug UNTUK MEMBUAT URL
+            ->select('tb_barang.id', 'tb_barang.nama_barang', 'tb_barang.slug', 'tb_barang.harga', 'tb_barang.stok', 'tb_toko.nama_toko');
 
         // Jika ada kata kunci spesifik
         if (count($cleanWords) > 0) {
@@ -80,7 +80,7 @@ class ChatAiController extends Controller
             foreach($hasilCari as $item) {
                 $hargaRupiah = number_format($item->harga, 0, ',', '.');
                 // KITA BUAT URL ASLI MENUJU PRODUK
-                $urlProduk = route('produk.detail', $item->id); 
+                $urlProduk = route('produk.detail', $item->slug); 
                 
                 // Masukkan URL ke dalam bisikan untuk POTA
                 $infoPencarian .= "- Nama: {$item->nama_barang} | Harga: Rp{$hargaRupiah} | Stok: {$item->stok} | Penjual: {$item->nama_toko} | LinkAsli: {$urlProduk}\n";
@@ -100,7 +100,8 @@ ATURAN SANGAT PENTING:
 2. JIKA kamu merekomendasikan produk dari data tersebut, KAMU WAJIB mengubah nama produknya menjadi link HTML yang bisa diklik dengan format warna biru.
 Gunakan format HTML ini: <a href=\"[LinkAsli]\" class=\"text-blue-600 font-black hover:underline\" target=\"_blank\">[Nama Barang]</a>
 
-Contoh gaya bicaramu: 'Dari data yang POTA punya, produk paling mahal saat ini adalah <a href=\"http://localhost:8000/produk/1\" class=\"text-blue-600 font-black hover:underline\" target=\"_blank\">Sapu Mahal</a> harganya Rp120.000 dijual oleh Toko Ucok.'
+Contoh gaya bicaramu: 'Dari data yang POTA punya, produk paling mahal saat ini adalah <a href="http://localhost:8000/produk/sapu-mahal" class="text-blue-600 font-black hover:underline" target="_blank">Sapu Mahal</a> harganya Rp120.000 dijual oleh Toko Ucok.'
+
 
 CONTEKAN DATA:
 " . $infoToko . $infoPencarian;

@@ -466,7 +466,7 @@
                         $total_stok = $fs->stok_flash_sale ?? 100;
                         $persen_terjual = min(100, round(($terjual / $total_stok) * 100));
                     @endphp
-                    <a href="{{ route('produk.detail', $fs->id) }}" class="snap-start shrink-0 w-[140px] sm:w-44 md:w-56 bg-white rounded-2xl p-2.5 md:p-3 shadow-lg hover:-translate-y-1 md:hover:-translate-y-2 transition-transform duration-300 group">
+                    <a href="{{ route('produk.detail', $fs->slug) }}" class="snap-start shrink-0 w-[140px] sm:w-44 md:w-56 bg-white rounded-2xl p-2.5 md:p-3 shadow-lg hover:-translate-y-1 md:hover:-translate-y-2 transition-transform duration-300 group">
                         <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-100 mb-2 md:mb-3">
                             <img src="{{ asset('assets/uploads/products/'.($fs->gambar_utama ?? 'default.jpg')) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="{{ $fs->nama_barang }}">
                             <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 bg-red-500 text-white text-[9px] md:text-[10px] font-black px-1.5 md:px-2 py-0.5 md:py-1 rounded-md">-{{ $persen }}%</div>
@@ -722,7 +722,7 @@
                         $jumlah_ulasan = $statUlasan->total ?? 0;
                         $terjual = $p->stok_terjual ?? rand(5, 100);
                     @endphp
-                    <a href="{{ route('produk.detail', $p->id) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 hover:-translate-y-1 hover:shadow-xl flex flex-col overflow-hidden w-full transition-all">
+                    <a href="{{ route('produk.detail', $p->slug) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-zinc-100 hover:-translate-y-1 hover:shadow-xl flex flex-col overflow-hidden w-full transition-all">
                         <div class="aspect-square bg-zinc-50 overflow-hidden relative">
                             <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
                             @if($ada_diskon) <div class="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">{{ $badge_diskon }}</div> @endif
@@ -792,7 +792,7 @@
                         $jumlah_ulasan = $statUlasan->total ?? 0;
                         $terjual = $p->stok_terjual ?? rand(5, 100);
                     @endphp
-                    <a href="{{ route('produk.detail', $p->id) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-blue-100 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 flex flex-col overflow-hidden w-full transition-all">
+                    <a href="{{ route('produk.detail', $p->slug) }}" class="group relative bg-white rounded-2xl md:rounded-[2.5rem] border border-blue-100 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 flex flex-col overflow-hidden w-full transition-all">
                         <div class="aspect-square bg-zinc-50 overflow-hidden relative">
                             <img src="{{ asset($img) }}" onerror="this.src='https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600'" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
                             <div class="absolute bottom-2 right-2 bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow"><i class="fas fa-map-marker-alt"></i> Lokal</div>

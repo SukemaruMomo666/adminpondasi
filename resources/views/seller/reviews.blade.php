@@ -141,6 +141,13 @@
                                 <div class="text-sm font-medium text-slate-400 italic mb-4">Pembeli tidak meninggalkan ulasan tertulis.</div>
                             @endif
 
+                            {{-- Gambar Ulasan --}}
+                            @if(!empty($review->gambar_ulasan))
+                                <div class="mb-4">
+                                    <img src="{{ asset('assets/uploads/reviews/' . $review->gambar_ulasan) }}" alt="Foto Ulasan" class="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-sm cursor-zoom-in" onclick="window.open(this.src, '_blank')">
+                                </div>
+                            @endif
+
                             {{-- Produk yang Dibeli --}}
                             @if(!empty($review->nama_barang))
                                 <div class="inline-flex items-center gap-3 bg-slate-50 border border-slate-200 p-2 pr-4 rounded-xl mb-4">

@@ -373,6 +373,44 @@
 
                         <div class="p-6 sm:p-8">
                             <h3 class="text-lg font-black text-black mb-6">Ringkasan Pembayaran</h3>
+
+                            {{-- Pilihan Tipe Pembayaran (LUNAS / DP) --}}
+                            @if(isset($dpSettings) && $dpSettings['enable_dp_system'] == '1')
+                                <div id="dp-payment-section" class="mb-6 hidden">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <h4 class="text-sm font-bold text-zinc-800 m-0">Pilih Metode Pembayaran</h4>
+                                        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black uppercase rounded-full">Partai Besar</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="tipe_pembayaran" value="LUNAS" class="peer hidden" checked onchange="calculateTotal()">
+                                            <div class="px-4 py-3 border-2 border-zinc-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center">
+                                                <i class="fas fa-check-circle text-blue-500 mb-1 hidden peer-checked:inline-block"></i>
+                                                <div class="text-xs font-black text-zinc-800 uppercase">Bayar Lunas</div>
+                                            </div>
+                                        </label>
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="tipe_pembayaran" value="DP" class="peer hidden" onchange="calculateTotal()">
+                                            <div class="px-4 py-3 border-2 border-zinc-200 rounded-xl peer-checked:border-amber-500 peer-checked:bg-amber-50 transition-all text-center">
+                                                <i class="fas fa-handshake text-amber-500 mb-1 hidden peer-checked:inline-block"></i>
+                                                <div class="text-xs font-black text-zinc-800 uppercase">Sistem B2B (DP)</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div id="dp-info-box" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <div class="flex justify-between items-center text-xs mb-1">
+                                            <span class="text-amber-800 font-medium">Nominal Wajib DP ({{ $dpSettings['dp_percent'] }}%)</span>
+                                            <span id="dp-amount-display" class="font-bold text-amber-600">Rp0</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-amber-800 font-medium">Sisa Pelunasan Nanti</span>
+                                            <span id="sisa-tagihan-display" class="font-bold text-rose-600">Rp0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <input type="hidden" name="tipe_pembayaran" value="LUNAS">
+                            @endif
                             
                             {{-- Rincian Tagihan --}}
                             <div class="space-y-4 text-sm border-b border-dashed border-zinc-200 pb-6 mb-6">
@@ -886,10 +924,10 @@
             let totalShipping = 0;
             let totalDiscount = 0;
             const tipe = tipePengambilan.value;
-            
+
             document.querySelectorAll('.store-container').forEach(store => {
                 const id = store.dataset.tokoId;
-                
+
                 // Tambah Ongkir Toko
                 if (tipe !== 'ambil_di_toko') {
                     const shipVal = document.getElementById(`shipping-input-${id}`).value;
@@ -898,7 +936,7 @@
                         if (valParts.length > 1) totalShipping += parseInt(valParts[valParts.length - 1]);
                     }
                 }
-                
+
                 // Tambah Diskon Toko
                 const discVal = document.getElementById(`discount-toko-${id}`).value;
                 if(discVal) totalDiscount += parseFloat(discVal);
@@ -910,12 +948,53 @@
 
             document.getElementById('shipping-total-display').innerText = formatRp(totalShipping);
             document.getElementById('discount-total-display').innerText = '- ' + formatRp(totalDiscount);
-            
+
             const rowDiscount = document.getElementById('discount-row');
             if(totalDiscount > 0) {
                 rowDiscount.classList.remove('hidden'); rowDiscount.classList.add('flex');
             } else {
                 rowDiscount.classList.add('hidden'); rowDiscount.classList.remove('flex');
+            }
+
+            // Logic DP Cerdas
+            const dpSection = document.getElementById('dp-payment-section');
+            if (dpSection) {
+                const minDP = parseInt("{{ $dpSettings['min_nominal_dp'] ?? 10000000 }}");
+                const isDPEnabled = "{{ $dpSettings['enable_dp_system'] ?? 0 }}" === "1";
+                const isCorrectShipping = (tipe === 'armada' || tipe === 'ambil_di_toko');
+
+                if (isDPEnabled && totalProdukAsli >= minDP && isCorrectShipping) {
+                    dpSection.classList.remove('hidden');
+                    dpSection.style.display = 'block';
+
+                    const isDpSelected = document.querySelector('input[name="tipe_pembayaran"]:checked').value === 'DP';
+                    const infoBox = document.getElementById('dp-info-box');
+
+                    if (isDpSelected) {
+                        if(infoBox) infoBox.classList.remove('hidden');
+                        const dpPct = parseInt("{{ $dpSettings['dp_percent'] ?? 50 }}");
+                        const dpAmt = grandTotal * (dpPct / 100);
+                        const sisa = grandTotal - dpAmt;
+
+                        if(document.getElementById('dp-amount-display')) document.getElementById('dp-amount-display').innerText = formatRp(dpAmt);
+                        if(document.getElementById('sisa-tagihan-display')) document.getElementById('sisa-tagihan-display').innerText = formatRp(sisa);
+
+                        grandTotal = dpAmt; // Tampilkan nominal DP saja
+
+                        if(document.querySelector('#grand-total-display')) document.querySelector('#grand-total-display').parentElement.querySelector('span:first-child').innerText = 'DIBAYAR SEKARANG (DP)';
+                        if(document.querySelector('#mobile-grand-total')) document.querySelector('#mobile-grand-total').parentElement.querySelector('span:first-child').innerText = 'TOTAL DP B2B';
+                    } else {
+                        if(infoBox) infoBox.classList.add('hidden');
+                        if(document.querySelector('#grand-total-display')) document.querySelector('#grand-total-display').parentElement.querySelector('span:first-child').innerText = 'Total Tagihan';
+                        if(document.querySelector('#mobile-grand-total')) document.querySelector('#mobile-grand-total').parentElement.querySelector('span:first-child').innerText = 'Total Pembayaran';
+                    }
+                } else {
+                    dpSection.classList.add('hidden');
+                    dpSection.style.display = 'none';
+                    document.querySelector('input[name="tipe_pembayaran"][value="LUNAS"]').checked = true;
+                    if(document.querySelector('#grand-total-display')) document.querySelector('#grand-total-display').parentElement.querySelector('span:first-child').innerText = 'Total Tagihan';
+                    if(document.querySelector('#mobile-grand-total')) document.querySelector('#mobile-grand-total').parentElement.querySelector('span:first-child').innerText = 'Total Pembayaran';
+                }
             }
 
             const totalDisplays = [document.getElementById('grand-total-display'), document.getElementById('mobile-grand-total')];
@@ -929,7 +1008,8 @@
                 }
             });
 
-            document.getElementById('input_grand_total').value = grandTotal;
+            // Input value tetap pure calculation sebelum dipotong DP (karena di controller total produk dihitung asli)
+            document.getElementById('input_grand_total').value = totalProdukAsli - totalDiscount + totalShipping;
             document.getElementById('input_total_diskon').value = totalDiscount;
         }
 
@@ -954,8 +1034,12 @@
         // Event Listeners Init
         radioAddress.forEach(radio => radio.addEventListener('change', updateAddressUI));
         document.querySelectorAll('.manual-input').forEach(input => input.addEventListener('input', syncManualToHidden));
-        tipePengambilan.addEventListener('change', triggerShippingFetch); 
+        tipePengambilan.addEventListener('change', () => {
+            triggerShippingFetch();
+            calculateTotal(); // Trigger re-evaluation of DP visibility when shipping method changes
+        });
         updateAddressUI();
+        calculateTotal(); // Force initial evaluation of DP visibility logic
 
         // ==========================================
         // SUBMIT CHECKOUT FORM (FINAL)

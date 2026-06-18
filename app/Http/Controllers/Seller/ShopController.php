@@ -36,126 +36,226 @@ class ShopController extends Controller
     }
 
 public function updateProfile(Request $request)
-    {
-        $toko = $this->getToko();
+{
+    $toko = $this->getToko();
 
-        // 1. Validasi Komprehensif (DIPERBAIKI KHUSUS UNTUK BUG WINDOWS/LARAGON)
-        $request->validate([
-            'nama_toko'      => 'required|string|max:50',
-            'slogan'         => 'nullable|string|max:100',
-            'deskripsi_toko' => 'nullable|string|max:1000',
-            'no_telepon'     => 'required|string|max:20',
-            'alamat_toko'    => 'required|string|max:500', 
-            'area_id'        => 'required|string|max:255', 
-            'kota'           => 'nullable|string|max:100',
-            'kode_pos'       => 'required|numeric|digits_between:5,6',
-            'latitude'       => 'required|numeric',
-            'longitude'      => 'required|numeric',
-            'catatan_toko'   => 'nullable|string',
-            'kebijakan_retur'=> 'nullable|string',
-            
-            // 🔥 SOLUSI SAKTI: Ganti 'image|mimes' jadi 'extensions' agar tidak di-block oleh Windows
-            'logo_toko'      => 'nullable|file|extensions:jpeg,png,jpg,webp|max:5120',
-            'banner_toko'    => 'nullable|file|extensions:jpeg,png,jpg,webp|max:5120',
-            'dokumen_nib'    => 'nullable|file|extensions:pdf,jpg,jpeg,png|max:5120',
-            'dokumen_npwp'   => 'nullable|file|extensions:pdf,jpg,jpeg,png|max:5120',
-        ], [
-            'area_id.required' => 'Kecamatan Biteship wajib dicari dan diklik dari pilihan dropdown.'
-        ]);
+    // 1. Validasi Komprehensif (DIPERBAIKI KHUSUS UNTUK BUG WINDOWS/LARAGON)
+    $request->validate([
+        'nama_toko'      => 'required|string|max:50',
+        'slogan'         => 'nullable|string|max:100',
+        'deskripsi_toko' => 'nullable|string|max:1000',
+        'no_telepon'     => 'required|string|max:20',
+        'alamat_toko'    => 'required|string|max:500', 
+        'area_id'        => 'required|string|max:255', 
+        'kota'           => 'nullable|string|max:100',
+        'kode_pos'       => 'required|numeric|digits_between:5,6',
+        'latitude'       => 'required|numeric',
+        'longitude'      => 'required|numeric',
+        'catatan_toko'   => 'nullable|string',
+        'kebijakan_retur'=> 'nullable|string',
 
-        // 2. Persiapan Data Teks & Koordinat
-        $dataUpdate = [
-            'nama_toko'      => $request->nama_toko,
-            'slogan'         => $request->slogan,
-            'deskripsi_toko' => $request->deskripsi_toko,
-            'telepon_toko'   => $request->no_telepon,
-            'alamat_toko'    => $request->alamat_toko,     
-            'area_id'        => $request->area_id,         
-            'kota'           => $request->kota,            
-            'kode_pos'       => $request->kode_pos,
-            'latitude'       => $request->latitude,
-            'longitude'      => $request->longitude,
-            'catatan_toko'   => $request->catatan_toko,
-            'kebijakan_retur'=> $request->kebijakan_retur,
-            'updated_at'     => now()
+        // 🔥 SOLUSI SAKTI: Ganti 'image|mimes' jadi 'extensions' agar tidak di-block oleh Windows
+        'logo_toko'      => 'nullable|file|extensions:jpeg,png,jpg,webp|max:5120',
+        'banner_toko'    => 'nullable|file|extensions:jpeg,png,jpg,webp|max:5120',
+        'dokumen_nib'    => 'nullable|file|extensions:pdf,jpg,jpeg,png|max:5120',
+        'dokumen_npwp'   => 'nullable|file|extensions:pdf,jpg,jpeg,png|max:5120',
+    ], [
+        'area_id.required' => 'Kecamatan Biteship wajib dicari dan diklik dari pilihan dropdown.'
+    ]);
+
+    // 2. Persiapan Data Teks & Koordinat
+    $dataUpdate = [
+        'nama_toko'      => $request->nama_toko,
+        'slogan'         => $request->slogan,
+        'deskripsi_toko' => $request->deskripsi_toko,
+        'telepon_toko'   => $request->no_telepon,
+        'alamat_toko'    => $request->alamat_toko,     
+        'area_id'        => $request->area_id,         
+        'kota'           => $request->kota,            
+        'kode_pos'       => $request->kode_pos,
+        'latitude'       => $request->latitude,
+        'longitude'      => $request->longitude,
+        'catatan_toko'   => $request->catatan_toko,
+        'kebijakan_retur'=> $request->kebijakan_retur,
+        'updated_at'     => now()
+    ];
+
+    // 3. Kosongkan ID wilayah lama agar tidak bentrok
+    if (\Illuminate\Support\Facades\Schema::hasColumn('tb_toko', 'province_id')) {
+        $dataUpdate['province_id'] = null;
+        $dataUpdate['city_id'] = null;
+        $dataUpdate['district_id'] = null;
+    }
+
+    // 4. Handle Logo Baru
+    if ($request->hasFile('logo_toko')) {
+        $logo = $request->file('logo_toko');
+        $logoName = 'logo_' . \Illuminate\Support\Str::random(10) . '.' . $logo->getClientOriginalExtension();
+
+        if (!empty($toko->logo_toko)) {
+            $oldPath = public_path('assets/uploads/logos/' . $toko->logo_toko);
+            if (\Illuminate\Support\Facades\File::exists($oldPath)) { 
+                \Illuminate\Support\Facades\File::delete($oldPath); 
+            }
+        }
+
+        if(!\Illuminate\Support\Facades\File::exists(public_path('assets/uploads/logos'))) { 
+            \Illuminate\Support\Facades\File::makeDirectory(public_path('assets/uploads/logos'), 0777, true); 
+        }
+        $logo->move(public_path('assets/uploads/logos'), $logoName);
+        $dataUpdate['logo_toko'] = $logoName;
+    }
+
+    // 5. Handle Banner Baru
+    if ($request->hasFile('banner_toko')) {
+        $banner = $request->file('banner_toko');
+        $bannerName = 'banner_' . \Illuminate\Support\Str::random(10) . '.' . $banner->getClientOriginalExtension();
+
+        if (!empty($toko->banner_toko)) {
+            $oldBannerPath = public_path('assets/uploads/banners/' . $toko->banner_toko);
+            if (\Illuminate\Support\Facades\File::exists($oldBannerPath)) { 
+                \Illuminate\Support\Facades\File::delete($oldBannerPath); 
+            }
+        }
+
+        if(!\Illuminate\Support\Facades\File::exists(public_path('assets/uploads/banners'))) { 
+            \Illuminate\Support\Facades\File::makeDirectory(public_path('assets/uploads/banners'), 0777, true); 
+        }
+        $banner->move(public_path('assets/uploads/banners'), $bannerName);
+        $dataUpdate['banner_toko'] = $bannerName;
+    }
+
+    // 6. Handle Dokumen Legalitas
+    $legalPath = public_path('assets/uploads/legalitas');
+    if(!\Illuminate\Support\Facades\File::exists($legalPath)) { 
+        \Illuminate\Support\Facades\File::makeDirectory($legalPath, 0777, true); 
+    }
+
+    if ($request->hasFile('dokumen_nib')) {
+        $nib = $request->file('dokumen_nib');
+        $nibName = 'NIB_' . $toko->id . '_' . \Illuminate\Support\Str::random(5) . '.' . $nib->getClientOriginalExtension();
+        if (!empty($toko->dokumen_nib) && \Illuminate\Support\Facades\File::exists($legalPath . '/' . $toko->dokumen_nib)) { 
+            \Illuminate\Support\Facades\File::delete($legalPath . '/' . $toko->dokumen_nib); 
+        }
+        $nib->move($legalPath, $nibName);
+        $dataUpdate['dokumen_nib'] = $nibName;
+    }
+
+    if ($request->hasFile('dokumen_npwp')) {
+        $npwp = $request->file('dokumen_npwp');
+        $npwpName = 'NPWP_' . $toko->id . '_' . \Illuminate\Support\Str::random(5) . '.' . $npwp->getClientOriginalExtension();
+        if (!empty($toko->dokumen_npwp) && \Illuminate\Support\Facades\File::exists($legalPath . '/' . $toko->dokumen_npwp)) { 
+            \Illuminate\Support\Facades\File::delete($legalPath . '/' . $toko->dokumen_npwp); 
+        }
+        $npwp->move($legalPath, $npwpName);
+        $dataUpdate['dokumen_npwp'] = $npwpName;
+    }
+
+    // 7. Eksekusi Update ke Database
+    \Illuminate\Support\Facades\DB::table('tb_toko')->where('id', $toko->id)->update($dataUpdate);
+
+    return redirect()->back()->with('success', 'Profil & Legalitas Toko berhasil diperbarui!');
+}
+
+/**
+ * ==========================================
+ * 1.5 KENAIKAN TIER (UPGRADE LEVEL)
+ * ==========================================
+ */
+public function tier()
+{
+    $toko = $this->getToko();
+
+    // 1. Ambil Statistik Rating
+    $rating = DB::table('tb_toko_review')
+        ->where('toko_id', $toko->id)
+        ->avg('rating') ?: 0;
+
+    // 2. Ambil Total Pesanan Selesai
+    $totalPesanan = DB::table('tb_detail_transaksi')
+        ->where('toko_id', $toko->id)
+        ->whereIn('status_pesanan_item', ['sampai_tujuan', 'selesai'])
+        ->distinct('transaksi_id')
+        ->count('transaksi_id');
+
+    // 3. Ambil Pengajuan Aktif (jika ada)
+    $pengajuan = DB::table('tb_pengajuan_tier')
+        ->where('toko_id', $toko->id)
+        ->orderByDesc('created_at')
+        ->first();
+
+    // 4. Tentukan Eligibility (Syarat)
+    $nextTier = null;
+    $syarat = [];
+
+    if ($toko->tier_toko == 'regular') {
+        $nextTier = 'power_merchant';
+        $syarat = [
+            'rating' => ['min' => 4.0, 'current' => round($rating, 1)],
+            'pesanan' => ['min' => 5, 'current' => $totalPesanan]
         ];
+    } elseif ($toko->tier_toko == 'power_merchant') {
+        $nextTier = 'official_store';
+        $syarat = [
+            'rating' => ['min' => 4.7, 'current' => round($rating, 1)],
+            'pesanan' => ['min' => 50, 'current' => $totalPesanan],
+            'legalitas' => ['required' => true, 'nib' => !empty($toko->dokumen_nib), 'npwp' => !empty($toko->dokumen_npwp)]
+        ];
+    }
 
-        // 3. Kosongkan ID wilayah lama agar tidak bentrok
-        if (\Illuminate\Support\Facades\Schema::hasColumn('tb_toko', 'province_id')) {
-            $dataUpdate['province_id'] = null;
-            $dataUpdate['city_id'] = null;
-            $dataUpdate['district_id'] = null;
-        }
+    $isEligible = true;
+    foreach ($syarat as $key => $val) {
+        if ($key == 'rating' && $val['current'] < $val['min']) $isEligible = false;
+        if ($key == 'pesanan' && $val['current'] < $val['min']) $isEligible = false;
+        if ($key == 'legalitas' && (!$val['nib'] || !$val['npwp'])) $isEligible = false;
+    }
 
-        // 4. Handle Logo Baru
-        if ($request->hasFile('logo_toko')) {
-            $logo = $request->file('logo_toko');
-            $logoName = 'logo_' . \Illuminate\Support\Str::random(10) . '.' . $logo->getClientOriginalExtension();
+    return view('seller.shop.tier', compact('toko', 'rating', 'totalPesanan', 'pengajuan', 'nextTier', 'syarat', 'isEligible'));
+}
 
-            if (!empty($toko->logo_toko)) {
-                $oldPath = public_path('assets/uploads/logos/' . $toko->logo_toko);
-                if (\Illuminate\Support\Facades\File::exists($oldPath)) { 
-                    \Illuminate\Support\Facades\File::delete($oldPath); 
-                }
-            }
+public function applyTierUpgrade(Request $request)
+{
+    $toko = $this->getToko();
 
-            if(!\Illuminate\Support\Facades\File::exists(public_path('assets/uploads/logos'))) { 
-                \Illuminate\Support\Facades\File::makeDirectory(public_path('assets/uploads/logos'), 0777, true); 
-            }
-            $logo->move(public_path('assets/uploads/logos'), $logoName);
-            $dataUpdate['logo_toko'] = $logoName;
-        }
+    // Cek apakah sudah ada pengajuan pending
+    $existing = DB::table('tb_pengajuan_tier')
+        ->where('toko_id', $toko->id)
+        ->whereIn('status', ['pending', 'revision'])
+        ->exists();
 
-        // 5. Handle Banner Baru
-        if ($request->hasFile('banner_toko')) {
-            $banner = $request->file('banner_toko');
-            $bannerName = 'banner_' . \Illuminate\Support\Str::random(10) . '.' . $banner->getClientOriginalExtension();
+    if ($existing) {
+        return back()->with('error', 'Anda masih memiliki pengajuan yang sedang diproses.');
+    }
 
-            if (!empty($toko->banner_toko)) {
-                $oldBannerPath = public_path('assets/uploads/banners/' . $toko->banner_toko);
-                if (\Illuminate\Support\Facades\File::exists($oldBannerPath)) { 
-                    \Illuminate\Support\Facades\File::delete($oldBannerPath); 
-                }
-            }
+    // Tentukan tier tujuan
+    $tierTujuan = ($toko->tier_toko == 'regular') ? 'power_merchant' : 'official_store';
 
-            if(!\Illuminate\Support\Facades\File::exists(public_path('assets/uploads/banners'))) { 
-                \Illuminate\Support\Facades\File::makeDirectory(public_path('assets/uploads/banners'), 0777, true); 
-            }
-            $banner->move(public_path('assets/uploads/banners'), $bannerName);
-            $dataUpdate['banner_toko'] = $bannerName;
-        }
+    // Simpan snapshot metadata saat pengajuan
+    $rating = DB::table('tb_toko_review')->where('toko_id', $toko->id)->avg('rating') ?: 0;
+    $totalPesanan = DB::table('tb_detail_transaksi')
+        ->where('toko_id', $toko->id)
+        ->whereIn('status_pesanan_item', ['sampai_tujuan', 'selesai'])
+        ->distinct('transaksi_id')
+        ->count('transaksi_id');
 
-        // 6. Handle Dokumen Legalitas
-        $legalPath = public_path('assets/uploads/legalitas');
-        if(!\Illuminate\Support\Facades\File::exists($legalPath)) { 
-            \Illuminate\Support\Facades\File::makeDirectory($legalPath, 0777, true); 
-        }
+    DB::table('tb_pengajuan_tier')->insert([
+        'toko_id' => $toko->id,
+        'tier_saat_ini' => $toko->tier_toko,
+        'tier_tujuan' => $tierTujuan,
+        'status' => 'pending',
+        'catatan_penjual' => $request->catatan,
+        'metadata_syarat' => json_encode([
+            'rating_snapshot' => round($rating, 2),
+            'pesanan_snapshot' => $totalPesanan,
+            'nib_snapshot' => !empty($toko->dokumen_nib),
+            'npwp_snapshot' => !empty($toko->dokumen_npwp)
+        ]),
+        'created_at' => now(),
+        'updated_at' => now()
+    ]);
 
-        if ($request->hasFile('dokumen_nib')) {
-            $nib = $request->file('dokumen_nib');
-            $nibName = 'NIB_' . $toko->id . '_' . \Illuminate\Support\Str::random(5) . '.' . $nib->getClientOriginalExtension();
-            if (!empty($toko->dokumen_nib) && \Illuminate\Support\Facades\File::exists($legalPath . '/' . $toko->dokumen_nib)) { 
-                \Illuminate\Support\Facades\File::delete($legalPath . '/' . $toko->dokumen_nib); 
-            }
-            $nib->move($legalPath, $nibName);
-            $dataUpdate['dokumen_nib'] = $nibName;
-        }
-
-        if ($request->hasFile('dokumen_npwp')) {
-            $npwp = $request->file('dokumen_npwp');
-            $npwpName = 'NPWP_' . $toko->id . '_' . \Illuminate\Support\Str::random(5) . '.' . $npwp->getClientOriginalExtension();
-            if (!empty($toko->dokumen_npwp) && \Illuminate\Support\Facades\File::exists($legalPath . '/' . $toko->dokumen_npwp)) { 
-                \Illuminate\Support\Facades\File::delete($legalPath . '/' . $toko->dokumen_npwp); 
-            }
-            $npwp->move($legalPath, $npwpName);
-            $dataUpdate['dokumen_npwp'] = $npwpName;
-        }
-
-        // 7. Eksekusi Update ke Database
-        \Illuminate\Support\Facades\DB::table('tb_toko')->where('id', $toko->id)->update($dataUpdate);
-
-        return redirect()->back()->with('success', 'Profil & Legalitas Toko berhasil diperbarui!');
-    }   
+    return redirect()->route('seller.shop.tier')->with('success', 'Pengajuan naik level berhasil dikirim! Silakan tunggu tinjauan admin.');
+}
 
     /**
      * ==========================================

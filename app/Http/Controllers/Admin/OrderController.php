@@ -14,6 +14,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status', 'semua');
+        $sumber = $request->get('sumber', 'semua');
         $search = $request->get('search');
 
         // 1. Statistik Live berdasarkan detail transaksi
@@ -35,11 +36,13 @@ class OrderController extends Controller
                 'trx.kode_invoice',
                 'trx.tanggal_transaksi',
                 'trx.status_pembayaran',
+                'trx.sumber_transaksi',
                 'dt.status_pesanan_item as status_pesanan',
                 't.nama_toko',
                 'u.nama as nama_pembeli',
                 'u.email as email_pembeli',
                 'dt.kurir_terpilih as kurir_pengiriman',
+                'dt.metode_pengiriman',
                 'dt.resi_pengiriman as nomor_resi',
 
                 // Mendukung Sistem DP B2B
@@ -66,6 +69,20 @@ class OrderController extends Controller
             }
         }
 
+        // Filter Sumber Transaksi (ONLINE / OFFLINE)
+        if ($sumber !== 'semua') {
+            if ($sumber === 'offline') {
+                $query->where(function($q) {
+                    $q->where('trx.sumber_transaksi', 'OFFLINE')
+                      ->orWhere('trx.kode_invoice', 'LIKE', 'POS-%');
+                });
+            } else {
+                // Online
+                $query->where('trx.sumber_transaksi', 'ONLINE')
+                      ->where('trx.kode_invoice', 'NOT LIKE', 'POS-%');
+            }
+        }
+
         // Pencarian dinamis
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -77,7 +94,7 @@ class OrderController extends Controller
 
         $orders = $query->latest('trx.tanggal_transaksi')->paginate(15)->withQueryString();
 
-        return view('admin.orders.index', compact('orders', 'status', 'search', 'stats'));
+        return view('admin.orders.index', compact('orders', 'status', 'sumber', 'search', 'stats'));
     }
 
     /**
@@ -98,6 +115,7 @@ class OrderController extends Controller
                 'trx.shipping_nama_penerima', 'trx.shipping_label_alamat', 'trx.shipping_telepon_penerima',
                 'trx.shipping_alamat_lengkap', 'trx.shipping_kecamatan', 'trx.shipping_kota_kabupaten',
                 'trx.shipping_provinsi', 'trx.shipping_kode_pos', 'trx.tipe_pengambilan', 'trx.sumber_transaksi',
+                'trx.catatan as catatan_global', 'trx.bayar', 'trx.kembali',
                 't.nama_toko', 't.telepon_toko as telp_toko', // <-- Bug "no_telepon" diperbaiki
                 'u.nama as nama_pembeli', 'u.email as email_pembeli'
             )

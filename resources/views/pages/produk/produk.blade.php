@@ -226,7 +226,7 @@
             {{-- Grid Produk --}}
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-10">
                 @forelse($products as $b)
-                    <a href="{{ url('pages/detail_produk?id=' . $b->id . '&toko_slug=' . ($b->toko_slug ?? '#')) }}" class="group bg-white rounded-[1.5rem] border border-zinc-100 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                    <a href="{{ route('produk.detail', $b->slug) }}" class="group bg-white rounded-[1.5rem] border border-zinc-100 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-100 hover:-translate-y-1 transition-all duration-300 flex flex-col">
                         
                         {{-- Image --}}
                         <div class="w-full aspect-square bg-zinc-50 overflow-hidden relative p-4">
