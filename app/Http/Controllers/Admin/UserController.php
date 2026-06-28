@@ -150,7 +150,7 @@ class UserController extends Controller
             $user->notify(new \App\Notifications\UserStatusNotification([
                 'title'   => "Akun Anda DIAKTIFKAN KEMBALI",
                 'message' => "Selamat! Akun Anda telah diaktifkan kembali. Anda dapat melanjutkan aktivitas Anda di Pondasikita.",
-                'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
+                'url'     => $user->level === 'seller' ? 'https://seller.pondasikita.com/seller/dashboard' : 'https://www.pondasikita.com/profil',
                 'icon'    => 'mdi-account-check',
                 'color'   => 'emerald'
             ]));
@@ -190,7 +190,7 @@ class UserController extends Controller
         $user->notify(new \App\Notifications\UserStatusNotification([
             'title'   => "Akun Anda DIBLOKIR ({$banTypeText})",
             'message' => $statusMessage,
-            'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
+            'url'     => $user->level === 'seller' ? 'https://seller.pondasikita.com/seller/data/health' : 'https://www.pondasikita.com/profil',
             'icon'    => 'mdi-account-off',
             'color'   => 'red'
         ]));
@@ -250,7 +250,7 @@ class UserController extends Controller
                     $user->notify(new \App\Notifications\UserStatusNotification([
                         'title'   => 'Banding Akun Disetujui',
                         'message' => "Selamat! Permohonan banding Anda disetujui. " . $request->catatan_admin,
-                        'url'     => $user->level === 'seller' ? route('seller.dashboard') : route('profil.index'),
+                        'url'     => $user->level === 'seller' ? 'https://seller.pondasikita.com/seller/dashboard' : 'https://www.pondasikita.com/profil',
                         'icon'    => 'mdi-check-decagram',
                         'color'   => 'emerald'
                     ]));
@@ -259,7 +259,7 @@ class UserController extends Controller
                     $user->notify(new \App\Notifications\UserStatusNotification([
                         'title'   => 'Banding Akun Ditolak',
                         'message' => "Mohon maaf, permohonan banding Anda ditolak. " . $request->catatan_admin,
-                        'url'     => $user->level === 'seller' ? route('seller.data.health') : route('profil.index'),
+                        'url'     => $user->level === 'seller' ? 'https://seller.pondasikita.com/seller/data/health' : 'https://www.pondasikita.com/profil',
                         'icon'    => 'mdi-alert-circle',
                         'color'   => 'red'
                     ]));
