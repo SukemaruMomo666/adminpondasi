@@ -73,7 +73,7 @@
         .custom-dropdown-container button:focus { outline: none; }
     </style>
 </head>
-<body class="text-zinc-800 antialiased pt-[80px] pb-32 lg:pb-12">
+<body class="text-zinc-800 antialiased pt-[80px]">
 
     @include('partials.navbar')
 

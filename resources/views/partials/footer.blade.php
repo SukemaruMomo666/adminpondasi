@@ -1,7 +1,7 @@
 {{-- ========================================================
      PREMIUM B&W FOOTER (TAILWIND CSS) - APP EDITION
      ======================================================== --}}
-<footer class="bg-[#050505] text-zinc-400 pt-20 pb-10 border-t-2 border-zinc-800 relative overflow-hidden font-sans">
+<footer class="bg-[#050505] text-zinc-400 pt-20 pb-28 md:pb-10 border-t-2 border-zinc-800 relative overflow-hidden font-sans">
 
     {{-- Subtle Blue Glow Background (Opsional, agar tidak terlalu gelap) --}}
     <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full filter blur-[100px] pointer-events-none"></div>

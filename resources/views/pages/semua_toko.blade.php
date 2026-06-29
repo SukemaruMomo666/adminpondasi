@@ -78,7 +78,7 @@
         .pin-bounce:hover { transform: scale(1.15) translateY(-5px); z-index: 1000 !important; }
     </style>
 </head>
-<body class="text-zinc-800 antialiased pt-[80px] pb-24 lg:pb-0">
+<body class="text-zinc-800 antialiased pt-[80px]">
 
     @include('partials.navbar')
 

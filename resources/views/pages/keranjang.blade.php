@@ -49,7 +49,7 @@
         .price-transition { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="flex flex-col min-h-screen text-zinc-900 antialiased pt-[80px] pb-24 lg:pb-12">
+<body class="flex flex-col min-h-screen text-zinc-900 antialiased pt-[80px]">
 
     @include('partials.navbar')
 
