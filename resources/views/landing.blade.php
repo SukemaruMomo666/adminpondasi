@@ -123,10 +123,8 @@
         <div class="container mx-auto px-4 relative z-10 grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
 
             {{-- TEXT AREA --}}
-            <div class="lg:col-span-5 space-y-6 md:space-y-8 text-center lg:text-left pt-4 lg:pt-0">
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-blue-400 text-[9px] md:text-[10px] font-black tracking-widest uppercase">
-                    <span class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-pulse"></span> Sistem V2.0 Aktif
-                </div>
+            <div class="lg:col-span-5 space-y-6 md:space-y-8 text-center lg:text-left pt-4 lg:pt-0 order-2 lg:order-1">
+                <!-- Removed Sistem V2 badge -->
 
                 <div class="space-y-1 md:space-y-2">
                     <h1 class="text-3xl sm:text-4xl lg:text-6xl font-black text-white leading-tight tracking-tight">
@@ -155,7 +153,7 @@
             </div>
 
             {{-- DYNAMIC BANNER --}}
-            <div class="lg:col-span-7 relative w-full px-2 sm:px-0">
+            <div class="lg:col-span-7 relative w-full px-2 sm:px-0 order-1 lg:order-2 mb-8 lg:mb-0">
                 <div class="absolute top-4 left-6 md:top-8 md:left-12 flex gap-2 z-40" id="slider-dots"></div>
                 <div class="relative w-full aspect-[4/3] sm:aspect-video lg:aspect-[16/10] rounded-3xl md:rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] md:shadow-[0_30px_70px_rgba(0,0,0,0.7)] border border-white/10 group bg-zinc-900 cursor-pointer">
 
