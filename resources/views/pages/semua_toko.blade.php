@@ -192,7 +192,7 @@
         </div>
 
         {{-- DAFTAR TOKO GRID --}}
-        <div id="store-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+        <div id="store-grid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-8">
 
             @forelse($stores as $toko)
                 @php
@@ -239,52 +239,52 @@
                 @endphp
 
                 <a href="{{ route('toko.detail', ['slug' => $toko->slug]) }}"
-                   class="group relative bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-500 hover:-translate-y-2 border border-zinc-100/50 flex flex-col w-full {{ $cardBorder }}">
+                   class="group relative bg-white rounded-2xl sm:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-500 hover:-translate-y-2 border border-zinc-100/50 flex flex-col w-full {{ $cardBorder }}">
 
                     {{-- 1. Banner Area --}}
-                    <div class="h-32 sm:h-36 bg-cover bg-center relative transition-transform duration-700 group-hover:scale-105" style="{{ $bannerStyle }}">
+                    <div class="h-20 sm:h-36 bg-cover bg-center relative transition-transform duration-700 group-hover:scale-105" style="{{ $bannerStyle }}">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                         {{-- Badge Tier Kanan Atas --}}
-                        <div class="absolute top-4 right-4 {{ $badgeBg }} text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">
+                        <div class="absolute top-2 right-2 sm:top-4 sm:right-4 {{ $badgeBg }} text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-widest shadow-md">
                             {{ $badgeText }}
                         </div>
 
                         {{-- Jika GPS Aktif, tampilkan badge jarak kiri atas --}}
                         @if(isset($toko->jarak_km))
-                            <div class="absolute top-4 left-4 bg-blue-600/90 backdrop-blur text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5 border border-blue-400">
+                            <div class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-blue-600/90 backdrop-blur text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-widest shadow-md flex items-center gap-1 sm:gap-1.5 border border-blue-400">
                                 <i class="fas fa-location-arrow animate-pulse text-blue-200"></i> {{ number_format($toko->jarak_km, 1) }} KM
                             </div>
                         @endif
                     </div>
 
                     {{-- 2. Body Area --}}
-                    <div class="px-6 pb-6 flex-1 flex flex-col relative bg-white">
+                    <div class="px-3 pb-3 sm:px-6 sm:pb-6 flex-1 flex flex-col relative bg-white">
                         
                         {{-- Avatar Overlapping Banner --}}
-                        <div class="absolute -top-10 left-6">
+                        <div class="absolute -top-8 sm:-top-10 left-3 sm:left-6">
                             <div class="relative inline-block">
                                 @if($hasLogo)
-                                    <img src="{{ asset($logoPath) }}" alt="{{ $toko->nama_toko }}" class="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-md bg-white transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-3">
+                                    <img src="{{ asset($logoPath) }}" alt="{{ $toko->nama_toko }}" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl object-cover border-[3px] sm:border-4 border-white shadow-md bg-white transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-3">
                                 @else
-                                    <div class="w-20 h-20 rounded-2xl border-4 border-white shadow-md flex items-center justify-center font-black text-2xl text-white transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-3" style="background-color: {{ $storeColor }};">
+                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl border-[3px] sm:border-4 border-white shadow-md flex items-center justify-center font-black text-xl sm:text-2xl text-white transition-transform duration-500 group-hover:scale-105 group-hover:-rotate-3" style="background-color: {{ $storeColor }};">
                                         {{ $storeInitials }}
                                     </div>
                                 @endif
 
                                 {{-- Ikon Toko Mungil di sudut Kanan Bawah Avatar --}}
-                                <div class="absolute -bottom-2 -right-2 w-7 h-7 rounded-lg border-[3px] border-white flex items-center justify-center text-[10px] shadow-sm {{ $miniIconBg }} {{ $miniIconColor }}">
+                                <div class="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-5 h-5 sm:w-7 sm:h-7 rounded sm:rounded-lg border-2 sm:border-[3px] border-white flex items-center justify-center text-[8px] sm:text-[10px] shadow-sm {{ $miniIconBg }} {{ $miniIconColor }}">
                                     <i class="fas fa-store"></i>
                                 </div>
                             </div>
                         </div>
 
                         {{-- Judul dan Lokasi --}}
-                        <div class="mt-14 space-y-1.5">
-                            <h4 class="font-black text-xl text-zinc-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-tight">
+                        <div class="mt-10 sm:mt-14 space-y-1 sm:space-y-1.5">
+                            <h4 class="font-black text-[13px] sm:text-xl text-zinc-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-tight">
                                 {{ $toko->nama_toko }}
                             </h4>
-                            <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <p class="text-zinc-500 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 sm:gap-1.5">
                                 <i class="fas fa-map-marker-alt {{ $tier == 'official_store' ? 'text-purple-500' : 'text-blue-500' }}"></i>
                                 <span class="truncate">{{ $cityName }}</span>
                             </p>
@@ -293,13 +293,13 @@
                         <div class="flex-1"></div>
 
                         {{-- 3. Footer Area --}}
-                        <div class="mt-6 pt-5 border-t border-zinc-100 flex items-end justify-between">
+                        <div class="mt-3 sm:mt-6 pt-2.5 sm:pt-5 border-t border-zinc-100 flex items-end justify-between">
                             <div class="flex flex-col">
-                                <span class="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Koleksi</span>
-                                <span class="text-sm font-black text-zinc-800">{{ number_format($toko->jumlah_produk) }} Produk</span>
+                                <span class="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-0.5 sm:mb-1">Koleksi</span>
+                                <span class="text-[11px] sm:text-sm font-black text-zinc-800">{{ number_format($toko->jumlah_produk) }} Produk</span>
                             </div>
-                            <div class="w-10 h-10 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-[0_4px_15px_rgba(37,99,235,0.4)]">
-                                <i class="fas fa-arrow-right -rotate-45 group-hover:rotate-0 transition-transform"></i>
+                            <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-[0_4px_15px_rgba(37,99,235,0.4)]">
+                                <i class="fas fa-arrow-right text-[10px] sm:text-base -rotate-45 group-hover:rotate-0 transition-transform"></i>
                             </div>
                         </div>
 
