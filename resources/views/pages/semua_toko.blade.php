@@ -94,10 +94,10 @@
         <div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_30px_rgba(0,0,0,0.05)] z-[20]"></div>
 
         {{-- FLOATING WIDGET PANEL (Pojok Kiri Atas - Ramping & Tidak Menghalangi Peta) --}}
-        <div class="absolute top-4 left-4 right-4 md:top-6 md:left-6 md:right-auto md:w-[360px] z-[400] flex flex-col gap-3 pointer-events-none">
+        <div class="absolute top-4 left-4 right-4 md:top-6 md:left-6 md:right-auto md:w-[360px] z-[400] flex flex-col gap-2 md:gap-3 pointer-events-none">
             
-            {{-- Bagian Atas: Info Hitam & Biru --}}
-            <div class="pointer-events-auto bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-[1.5rem] p-5 sm:p-6 shadow-2xl transition-transform hover:-translate-y-1 duration-300">
+            {{-- Bagian Atas: Info Hitam & Biru (Sembunyikan di Mobile agar Peta Luas) --}}
+            <div class="hidden md:block pointer-events-auto bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 rounded-[1.5rem] p-5 sm:p-6 shadow-2xl transition-transform hover:-translate-y-1 duration-300">
                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[9px] font-black tracking-widest uppercase mb-3 shadow-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> 
                     @if($lat ?? false) Satelit Terkunci @else Radar Geospasial @endif
@@ -110,20 +110,15 @@
                 </p>
             </div>
 
-            {{-- Bagian Bawah: Form Putih --}}
-            <div class="pointer-events-auto bg-white/95 backdrop-blur-xl border border-white rounded-[1.5rem] p-4 sm:p-5 shadow-2xl flex flex-col gap-3 transition-transform hover:-translate-y-1 duration-300">
+            {{-- Bagian Bawah: Form Putih (Dibuat Kompak di Mobile) --}}
+            <div class="pointer-events-auto bg-white/95 backdrop-blur-xl border border-white rounded-[1.25rem] md:rounded-[1.5rem] p-3 md:p-5 shadow-2xl flex flex-col gap-2 md:gap-3 transition-transform hover:-translate-y-1 duration-300">
                 
-                {{-- Tombol GPS Aktif/Nonaktif --}}
-                <button onclick="requestGPS()" type="button" class="w-full h-12 rounded-[1rem] flex items-center justify-center gap-2 text-sm font-bold transition-all duration-300 relative {{ $lat ?? false ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-500' : 'bg-zinc-50 hover:bg-blue-50 text-blue-600 border border-zinc-200 hover:border-blue-200' }}">
-                    @if($lat ?? false) <span class="absolute inset-0 rounded-[1rem] border border-blue-400 animate-ping opacity-50"></span> @endif
-                    <i class="fas fa-crosshairs {{ $lat ?? false ? 'animate-spin-slow text-blue-200' : '' }}"></i>
-                    {{ $lat ?? false ? 'GPS Sedang Aktif' : 'Gunakan Lokasi Saya' }}
-                </button>
-
-                <form action="{{ route('toko.index') }}" method="GET" id="filterForm" class="flex flex-col gap-3">
+                <form action="{{ route('toko.index') }}" method="GET" id="filterForm" class="flex flex-col gap-2 md:gap-3">
+                    
+                    {{-- Dropdown Lokasi (Row 1) --}}
                     @if(!($lat ?? false))
                     <div class="relative w-full">
-                        <select name="lokasi" id="lokasi-select" class="custom-select w-full bg-white border border-zinc-200 hover:border-blue-300 text-zinc-800 text-xs font-bold rounded-[1rem] focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 block pl-4 pr-10 h-12 transition-all outline-none cursor-pointer shadow-sm">
+                        <select name="lokasi" id="lokasi-select" class="custom-select w-full bg-white border border-zinc-200 hover:border-blue-300 text-zinc-800 text-xs font-bold rounded-[1rem] focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 block pl-4 pr-10 h-11 md:h-12 transition-all outline-none cursor-pointer shadow-sm">
                             <option value="semua">Nasional (Semua Area)</option>
                             @foreach($locations as $lokasi)
                                 <option value="{{ $lokasi->city_id }}" {{ ($filter_lokasi ?? '') == $lokasi->city_id ? 'selected' : '' }}>
@@ -135,14 +130,31 @@
                             <div class="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center"><i class="fas fa-chevron-down text-zinc-500 text-[10px]"></i></div>
                         </div>
                     </div>
-                    <button type="submit" class="w-full bg-zinc-950 hover:bg-blue-600 text-white h-12 rounded-[1rem] font-black transition-colors shadow-lg text-xs uppercase tracking-wider">
-                        Cari Toko
-                    </button>
-                    @else
-                    <a href="{{ route('toko.index') }}" class="w-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white h-12 rounded-[1rem] font-black transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-sm">
-                        <i class="fas fa-times"></i> Matikan GPS
-                    </a>
                     @endif
+
+                    {{-- Tombol GPS & Cari (Row 2 - Bersebelahan di Mobile) --}}
+                    <div class="flex gap-2">
+                        @if(!($lat ?? false))
+                            <button onclick="requestGPS()" type="button" class="w-12 h-11 md:w-full md:h-12 shrink-0 rounded-[1rem] flex items-center justify-center gap-2 text-sm font-bold transition-all duration-300 relative bg-zinc-50 hover:bg-blue-50 text-blue-600 border border-zinc-200 hover:border-blue-200" title="Gunakan Lokasi Saya">
+                                <i class="fas fa-crosshairs"></i>
+                                <span class="hidden md:inline">Gunakan Lokasi Saya</span>
+                            </button>
+
+                            <button type="submit" class="flex-1 bg-zinc-950 hover:bg-blue-600 text-white h-11 md:h-12 rounded-[1rem] font-black transition-colors shadow-lg text-xs uppercase tracking-wider">
+                                Cari Toko
+                            </button>
+                        @else
+                            <button onclick="requestGPS()" type="button" class="w-12 h-11 md:w-full md:h-12 shrink-0 rounded-[1rem] flex items-center justify-center gap-2 text-sm font-bold transition-all duration-300 relative bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-500" title="GPS Sedang Aktif">
+                                <span class="absolute inset-0 rounded-[1rem] border border-blue-400 animate-ping opacity-50"></span>
+                                <i class="fas fa-crosshairs animate-spin-slow text-blue-200"></i>
+                                <span class="hidden md:inline">GPS Sedang Aktif</span>
+                            </button>
+
+                            <a href="{{ route('toko.index') }}" class="flex-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white h-11 md:h-12 rounded-[1rem] font-black transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-sm">
+                                <i class="fas fa-times"></i> <span class="hidden md:inline">Matikan GPS</span><span class="md:hidden">Reset</span>
+                            </a>
+                        @endif
+                    </div>
                 </form>
 
             </div>
