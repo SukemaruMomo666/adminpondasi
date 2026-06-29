@@ -1,6 +1,6 @@
 {{-- ===================== CHAT HUB PREMIUM (POTA AI & SELLER) ===================== --}}
 {{-- Tombol Toggle Floating --}}
-<button id="live-chat-toggle" class="fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-zinc-950 text-white p-1.5 pr-5 md:pr-6 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] hover:shadow-[0_15px_50px_rgba(37,99,235,0.4)] transition-all duration-300 z-[9998] flex items-center gap-2.5 md:gap-3 group outline-none hover:-translate-y-1 border border-zinc-800" onclick="toggleChatWindow()">
+<button id="live-chat-toggle" class="fixed bottom-[84px] right-4 md:bottom-8 md:right-8 bg-zinc-950 text-white p-3 md:p-1.5 md:pr-6 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] hover:shadow-[0_15px_50px_rgba(37,99,235,0.4)] transition-all duration-300 z-[9998] flex items-center gap-2.5 md:gap-3 group outline-none hover:-translate-y-1 border border-zinc-800" onclick="toggleChatWindow()">
     <div class="bg-blue-600 w-11 h-11 md:w-12 md:h-12 rounded-full relative flex items-center justify-center shadow-inner">
         <div class="absolute inset-0 bg-blue-500 animate-pulse opacity-50 rounded-full"></div>
         <i class="fas fa-comments text-lg md:text-xl relative z-10 text-white group-hover:scale-110 transition-transform duration-300"></i>
