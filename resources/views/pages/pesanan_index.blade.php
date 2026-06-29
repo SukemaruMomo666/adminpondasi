@@ -198,23 +198,23 @@
                         {{-- Rangkuman Produk (Biar tau beli apa) --}}
                         @php
                             $firstItem = DB::table('tb_detail_transaksi')
-                                ->join('tb_produk', 'tb_detail_transaksi.produk_id', '=', 'tb_produk.id')
+                                ->join('tb_barang', 'tb_detail_transaksi.barang_id', '=', 'tb_barang.id')
                                 ->where('transaksi_id', $row->id)
-                                ->select('tb_produk.nama_produk', 'tb_produk.foto_produk_1')
+                                ->select('tb_barang.nama_barang', 'tb_barang.gambar_utama')
                                 ->first();
                             $totalItemsCount = DB::table('tb_detail_transaksi')->where('transaksi_id', $row->id)->count();
                         @endphp
                         @if($firstItem)
                         <div class="px-6 sm:px-8 py-4 border-b border-zinc-100 flex items-center gap-4 bg-white hover:bg-zinc-50/50 transition-colors">
                             <div class="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                @if($firstItem->foto_produk_1)
-                                    <img src="{{ asset('assets/uploads/products/' . $firstItem->foto_produk_1) }}" alt="Product Image" class="w-full h-full object-cover">
+                                @if($firstItem->gambar_utama)
+                                    <img src="{{ asset('assets/uploads/products/' . $firstItem->gambar_utama) }}" alt="Product Image" class="w-full h-full object-cover">
                                 @else
                                     <i class="fas fa-box text-zinc-300"></i>
                                 @endif
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h5 class="text-[13px] sm:text-sm font-black text-zinc-800 truncate">{{ $firstItem->nama_produk }}</h5>
+                                <h5 class="text-[13px] sm:text-sm font-black text-zinc-800 truncate">{{ $firstItem->nama_barang }}</h5>
                                 @if($totalItemsCount > 1)
                                     <p class="text-[10px] sm:text-[11px] font-bold text-zinc-500 mt-0.5 uppercase tracking-wider">+ {{ $totalItemsCount - 1 }} material lainnya</p>
                                 @endif
