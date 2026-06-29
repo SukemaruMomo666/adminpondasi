@@ -306,10 +306,21 @@
         {{-- ========================================================= --}}
         <main class="flex-1 w-full min-w-0">
 
-            {{-- HEADER HASIL PENCARIAN (Sorting) --}}
+            {{-- HEADER HASIL PENCARIAN (Sorting & Location) --}}
             <div class="bg-white rounded-[1.5rem] shadow-sm border border-zinc-100 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-                <div class="text-sm font-medium text-zinc-500 px-2">
-                    Menampilkan <span class="font-black text-zinc-900">{{ $products->count() ?? 0 }}</span> produk dari total <span class="font-black text-zinc-900">{{ $products->total() ?? 0 }}</span>
+                <div class="flex flex-col gap-1.5 px-2">
+                    <div class="text-sm font-medium text-zinc-500">
+                        Menampilkan <span class="font-black text-zinc-900">{{ $products->count() ?? 0 }}</span> dari <span class="font-black text-zinc-900">{{ $products->total() ?? 0 }}</span>
+                    </div>
+                    {{-- ESTETIC LOCATION PILL --}}
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 text-blue-600">
+                            <i class="fas fa-map-marker-alt text-[10px]"></i>
+                        </span>
+                        <span class="text-xs font-bold text-zinc-700">
+                            {{ request('lokasi') ?: 'Seluruh Indonesia' }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -347,7 +358,7 @@
             </div>
 
             {{-- GRID PRODUK (1:1 Sempurna) --}}
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 relative z-0 mb-10">
+            <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 relative z-0 mb-10">
                 @forelse($products as $b)
                     @php
                         $img = !empty($b->gambar_utama) ? 'assets/uploads/products/'.$b->gambar_utama : 'assets/uploads/products/default.jpg';
@@ -412,10 +423,16 @@
                 @endforelse
             </div>
 
-            {{-- PAGINASI --}}
-            <div class="pagination-wrap">
+            {{-- LOAD MORE (ESTETIK) --}}
+            <div class="pagination-wrap mt-8 mb-12 text-center w-full flex justify-center">
                 @if(isset($products) && $products->hasPages())
-                    {{ $products->appends(request()->query())->links('pagination::tailwind') }}
+                    @if($products->hasMorePages())
+                        <button id="load-more-btn" data-next-url="{{ $products->nextPageUrl() }}" class="group relative overflow-hidden bg-zinc-950 hover:bg-zinc-900 text-white font-black text-xs sm:text-sm uppercase tracking-widest py-4 px-8 sm:px-10 rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto">
+                            <span class="flex items-center gap-2">
+                                Tampilkan Lebih Banyak <i class="fas fa-chevron-down text-blue-400 group-hover:translate-y-1 transition-transform"></i>
+                            </span>
+                        </button>
+                    @endif
                 @endif
             </div>
 
@@ -550,6 +567,58 @@
                         }
                     })
                     .catch(error => console.log('Sistem gagal melacak lokasi otomatis.', error));
+            }
+
+            // ==========================================
+            // D. LOAD MORE LOGIC (AJAX) - ESTETIK
+            // ==========================================
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            if(loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function() {
+                    const url = this.getAttribute('data-next-url');
+                    if(!url) return;
+
+                    const originalHTML = this.innerHTML;
+                    this.innerHTML = '<span class="flex items-center gap-2"><i class="fas fa-circle-notch fa-spin text-blue-400"></i> Memuat...</span>';
+                    this.disabled = true;
+
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(res => res.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            
+                            // Append products
+                            const newItems = doc.querySelectorAll('#product-grid > a');
+                            const grid = document.getElementById('product-grid');
+                            newItems.forEach(item => {
+                                item.style.opacity = '0';
+                                item.style.transform = 'translateY(10px)';
+                                item.style.transition = 'all 0.5s ease';
+                                grid.appendChild(item);
+                                
+                                setTimeout(() => {
+                                    item.style.opacity = '1';
+                                    item.style.transform = 'translateY(0)';
+                                }, 50);
+                            });
+
+                            // Update button URL or remove it
+                            const newBtn = doc.getElementById('load-more-btn');
+                            if(newBtn) {
+                                this.setAttribute('data-next-url', newBtn.getAttribute('data-next-url'));
+                                this.innerHTML = originalHTML;
+                                this.disabled = false;
+                            } else {
+                                this.remove(); // No more pages
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to load more products:', err);
+                            this.innerHTML = originalHTML;
+                            this.disabled = false;
+                        });
+                });
             }
 
         });
