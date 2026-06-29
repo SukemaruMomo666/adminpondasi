@@ -162,8 +162,4 @@
 
     </div>
 
-    {{-- Floating Back to Top Button (Opsional) --}}
-    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="absolute bottom-8 right-8 w-12 h-12 bg-zinc-800 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg group">
-        <i class="fas fa-chevron-up group-hover:-translate-y-1 transition-transform"></i>
-    </button>
 </footer>
