@@ -314,8 +314,8 @@
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
                     {{-- Button Filter HP --}}
-                    <button id="mobile-filter-btn" class="lg:hidden flex-1 flex items-center justify-center gap-2 bg-zinc-50 border border-zinc-200 text-zinc-800 font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-xl hover:bg-zinc-100 shadow-sm transition-colors">
-                        <i class="fas fa-filter"></i> Filter
+                    <button id="mobile-filter-btn" class="lg:hidden flex-1 flex items-center justify-center gap-2 bg-zinc-900 text-white border border-zinc-800 font-bold text-xs uppercase tracking-widest py-3.5 px-4 rounded-[1.25rem] hover:bg-zinc-800 shadow-lg shadow-zinc-900/20 active:scale-95 transition-all">
+                        <i class="fas fa-filter text-blue-400"></i> Filter
                     </button>
 
                     {{-- Dropdown Sort Standar Ikon --}}
@@ -333,7 +333,7 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-sort-amount-down text-zinc-400"></i>
                             </div>
-                            <select name="sort" onchange="document.getElementById('sort-form').submit()" class="w-full bg-white border border-zinc-200 text-zinc-700 py-3 pl-11 pr-10 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm">
+                            <select name="sort" onchange="document.getElementById('sort-form').submit()" class="w-full bg-white border border-zinc-200 text-zinc-700 py-3.5 pl-11 pr-10 rounded-[1.25rem] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm appearance-none">
                                 <option value="terbaru" {{ request('sort') == 'terbaru' ? 'selected' : '' }}>Paling Baru</option>
                                 <option value="termurah" {{ request('sort') == 'termurah' ? 'selected' : '' }}>Harga Terendah</option>
                                 <option value="termahal" {{ request('sort') == 'termahal' ? 'selected' : '' }}>Harga Tertinggi</option>
@@ -356,11 +356,15 @@
                         $tier = $b->tier_toko ?? 'regular';
                         $locIconColor = $tier == 'official_store' ? 'text-purple-500' : ($tier == 'power_merchant' ? 'text-emerald-500' : 'text-blue-500');
                     @endphp
-                    <a href="{{ route('produk.detail', $b->slug) }}" class="bg-white rounded-[1.5rem] shadow-sm hover:shadow-hover transition-all duration-300 overflow-hidden flex flex-col group border border-zinc-100 hover:border-blue-200 hover:-translate-y-1 relative">
+                    <a href="{{ route('produk.detail', $b->slug) }}" class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(37,99,235,0.1)] transition-all duration-500 overflow-hidden flex flex-col group border border-zinc-100/50 hover:border-blue-200 hover:-translate-y-1 relative">
 
                         {{-- Gambar (Rasio 1:1) --}}
-                        <div class="w-full pt-[100%] relative bg-zinc-50 border-b border-zinc-50 overflow-hidden">
-                            <img src="{{ asset($img) }}" onerror="this.src='{{ asset('assets/uploads/products/default.jpg') }}'" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out mix-blend-multiply p-2" alt="{{ $b->nama_barang }}">
+                        <div class="w-full pt-[100%] relative bg-gradient-to-br from-zinc-50 to-zinc-100/50 border-b border-zinc-50 overflow-hidden">
+                            <div class="absolute inset-0 p-3 sm:p-4">
+                                <div class="w-full h-full bg-white rounded-2xl overflow-hidden shadow-[0_2px_10px_rgb(0,0,0,0.02)] relative flex items-center justify-center group-hover:shadow-[0_8px_20px_rgb(0,0,0,0.06)] transition-all duration-500">
+                                    <img src="{{ asset($img) }}" onerror="this.src='{{ asset('assets/uploads/products/default.jpg') }}'" class="w-[85%] h-[85%] object-contain transform group-hover:scale-110 transition-transform duration-700 ease-out mix-blend-multiply" alt="{{ $b->nama_barang }}">
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Detail Informasi --}}
