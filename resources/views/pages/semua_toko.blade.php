@@ -180,7 +180,7 @@
         </div>
 
         {{-- DAFTAR TOKO GRID --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+        <div id="store-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
 
             @forelse($stores as $toko)
                 @php
@@ -227,7 +227,7 @@
                 @endphp
 
                 <a href="{{ route('toko.detail', ['slug' => $toko->slug]) }}"
-                   class="group relative bg-white rounded-[2rem] shadow-card overflow-hidden transition-all duration-500 hover:-translate-y-2 border border-zinc-200 flex flex-col w-full {{ $cardBorder }}">
+                   class="group relative bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-500 hover:-translate-y-2 border border-zinc-100/50 flex flex-col w-full {{ $cardBorder }}">
 
                     {{-- 1. Banner Area --}}
                     <div class="h-32 sm:h-36 bg-cover bg-center relative transition-transform duration-700 group-hover:scale-105" style="{{ $bannerStyle }}">
@@ -312,9 +312,17 @@
 
         </div>
 
-        {{-- PAGINASI --}}
-        <div class="pagination-wrap">
-            {{ $stores->links('pagination::tailwind') }}
+        {{-- LOAD MORE (ESTETIK) --}}
+        <div class="pagination-wrap mt-8 mb-12 text-center w-full flex justify-center">
+            @if(isset($stores) && $stores->hasPages())
+                @if($stores->hasMorePages())
+                    <button id="load-more-btn" data-next-url="{{ $stores->nextPageUrl() }}" class="group relative overflow-hidden bg-zinc-950 hover:bg-zinc-900 text-white font-black text-xs sm:text-sm uppercase tracking-widest py-4 px-8 sm:px-10 rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto">
+                        <span class="flex items-center gap-2">
+                            Tampilkan Lebih Banyak <i class="fas fa-chevron-down text-blue-400 group-hover:translate-y-1 transition-transform"></i>
+                        </span>
+                    </button>
+                @endif
+            @endif
         </div>
 
     </div>
@@ -454,7 +462,7 @@
             // ==========================================
             // 5. AUTO DETECT LOCATION
             // ==========================================
-            const urlParams = newSearchParams(window.location.search);
+            const urlParams = new URLSearchParams(window.location.search);
             if (!urlParams.has('lokasi') && !urlParams.has('lat') && !sessionStorage.getItem('auto_lokasi_semuatoko_done')) {
                 sessionStorage.setItem('auto_lokasi_semuatoko_done', '1');
                 fetch('https://ipapi.co/json/')
@@ -478,6 +486,55 @@
                         }
                     })
                     .catch(e => console.log('Gagal IP Geolocation'));
+            }
+            // ==========================================
+            // 6. LOAD MORE LOGIC (AJAX) - ESTETIK
+            // ==========================================
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            if(loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function() {
+                    const url = this.getAttribute('data-next-url');
+                    if(!url) return;
+
+                    const originalHTML = this.innerHTML;
+                    this.innerHTML = '<span class="flex items-center gap-2"><i class="fas fa-circle-notch fa-spin text-blue-400"></i> Memuat...</span>';
+                    this.disabled = true;
+
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(res => res.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            
+                            const newItems = doc.querySelectorAll('#store-grid > a');
+                            const grid = document.getElementById('store-grid');
+                            newItems.forEach(item => {
+                                item.style.opacity = '0';
+                                item.style.transform = 'translateY(10px)';
+                                item.style.transition = 'all 0.5s ease';
+                                grid.appendChild(item);
+                                
+                                setTimeout(() => {
+                                    item.style.opacity = '1';
+                                    item.style.transform = 'translateY(0)';
+                                }, 50);
+                            });
+
+                            const newBtn = doc.getElementById('load-more-btn');
+                            if(newBtn) {
+                                this.setAttribute('data-next-url', newBtn.getAttribute('data-next-url'));
+                                this.innerHTML = originalHTML;
+                                this.disabled = false;
+                            } else {
+                                this.remove(); 
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to load more stores:', err);
+                            this.innerHTML = originalHTML;
+                            this.disabled = false;
+                        });
+                });
             }
         });
     </script>
