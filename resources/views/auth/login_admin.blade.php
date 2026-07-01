@@ -12,7 +12,7 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <a href="{{ url('/') }}" class="brand-link">Pondasikita</a>
+                <a href="{{ url('/') }}" class="brand-link"><img src="{{ asset('logopondasikita.png') }}" alt="Pondasikita Logo" class="h-8 w-auto"></a>
                 <h2>Admin Panel Login</h2>
                 <p>Silakan masuk untuk mengelola website.</p>
             </div>

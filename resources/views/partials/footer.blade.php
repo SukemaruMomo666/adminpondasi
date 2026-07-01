@@ -35,7 +35,7 @@
 
                 {{-- App Text & Buttons --}}
                 <div class="flex flex-col justify-center h-full">
-                    <h3 class="text-3xl font-black text-white mb-2 tracking-tight">Pondasikita<span class="text-blue-500">.</span> App</h3>
+                    <img src="{{ asset('logopondasikita.png') }}" alt="Pondasikita Logo" class="h-10 w-auto mb-4">
                     <p class="text-sm leading-relaxed text-zinc-400 mb-8 max-w-sm">
                         Kelola RAB proyek, lacak material *real-time*, dan dapatkan diskon B2B khusus di aplikasi. Unduh gratis sekarang!
                     </p>

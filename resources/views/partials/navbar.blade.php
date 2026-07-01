@@ -13,8 +13,7 @@
 
             {{-- Logo --}}
             <a href="{{ url('/') }}" class="hidden sm:flex items-center gap-2 group">
-                <div class="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-black group-hover:bg-blue-600 transition-colors duration-300 shadow-md">P</div>
-                <h3 class="text-2xl font-black text-black tracking-tight">Pondasikita<span class="text-blue-600 animate-pulse">.</span></h3>
+                <img src="{{ asset('logopondasikita.png') }}" alt="Pondasikita Logo" class="h-8 w-auto">
             </a>
         </div>
 
