@@ -35,6 +35,8 @@ class ApiMonitorController extends Controller
             $maskedKey = substr($key, 0, 10) . '...' . substr($key, -5);
             $startTime = microtime(true);
             
+            $modelsList = [];
+            
             try {
                 // Melakukan ping ringan ke endpoint models (hanya membaca list model, tidak memakai token generation)
                 $response = Http::timeout(5)->get('https://generativelanguage.googleapis.com/v1beta/models', [
@@ -46,6 +48,17 @@ class ApiMonitorController extends Controller
                 if ($response->successful()) {
                     $status = 'active';
                     $message = 'Tersedia';
+                    
+                    // Ambil daftar model Gemini yang didukung oleh API Key ini
+                    $data = $response->json();
+                    if (isset($data['models'])) {
+                        foreach ($data['models'] as $modelData) {
+                            $modelName = str_replace('models/', '', $modelData['name'] ?? '');
+                            if (strpos($modelName, 'gemini') !== false && !in_array($modelName, $modelsList)) {
+                                $modelsList[] = $modelName;
+                            }
+                        }
+                    }
                 } elseif ($response->status() == 429) {
                     $status = 'limit';
                     $message = 'Limit (Kuota Habis)';
@@ -60,13 +73,19 @@ class ApiMonitorController extends Controller
                 $message = 'Timeout / Unreachable';
             }
 
+            // Batasi tampilan model agar tidak terlalu panjang (tampilkan 3 utama)
+            $supportedModels = count($modelsList) > 0 
+                ? implode(', ', array_slice($modelsList, 0, 3)) . (count($modelsList) > 3 ? ' (+' . (count($modelsList) - 3) . ' lainnya)' : '')
+                : 'Menunggu koneksi...';
+
             $results[] = [
                 'name' => 'POTA Engine (Gemini) - ' . ($index + 1),
                 'key' => $maskedKey,
                 'status' => $status,
                 'message' => $message,
                 'latency' => $timeTaken,
-                'type' => 'ai'
+                'type' => 'ai',
+                'models' => $supportedModels
             ];
         }
 

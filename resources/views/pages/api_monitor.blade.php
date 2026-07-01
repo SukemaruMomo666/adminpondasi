@@ -79,6 +79,22 @@
                     @endif
                 </div>
 
+                @if($api['type'] == 'ai' && isset($api['models']))
+                <div class="mb-4">
+                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Model yang Didukung:</div>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach(explode(', ', preg_replace('/\s\(\+[0-9]+\slainnya\)/', '', $api['models'])) as $modelName)
+                            @if($modelName != 'Menunggu koneksi...')
+                                <span class="bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded text-[10px]">{{ $modelName }}</span>
+                            @endif
+                        @endforeach
+                        @if(strpos($api['models'], '(+') !== false)
+                            <span class="bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded text-[10px]">+{{ preg_replace('/[^0-9]/', '', substr($api['models'], strpos($api['models'], '(+'))) }} Lainnya</span>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
                 {{-- Metrics --}}
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800/50">
