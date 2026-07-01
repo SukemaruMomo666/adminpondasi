@@ -176,6 +176,11 @@
                 <i class="mdi mdi-cog-outline text-xl transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('admin.settings.*') ? 'text-white' : '' }}"></i>
                 <span class="text-sm flex-1">Pengaturan Umum</span>
             </a>
+
+            <a href="{{ route('admin.api_monitor') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 outline-none text-decoration-none group relative overflow-hidden {{ request()->routeIs('admin.api_monitor') ? 'bg-indigo-600 dark:bg-indigo-600 text-white font-black shadow-lg shadow-indigo-600/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold' }}">
+                <i class="mdi mdi-access-point-network text-xl transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('admin.api_monitor') ? 'text-white' : '' }}"></i>
+                <span class="text-sm flex-1">Monitor API</span>
+            </a>
         @endif
     </div>
 

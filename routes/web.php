@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\LogisticSettingController as AdminLogisticSettingController;
+use App\Http\Controllers\Admin\ApiMonitorController as AdminApiMonitorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,10 @@ Route::prefix('portal-rahasia-pks')->name('admin.')->middleware(['admin'])->grou
     Route::get('/dashboard/top-stores', [AdminDashboardController::class, 'topStores'])
         ->name('dashboard.top_stores')
         ->middleware('admin.role:super,finance,cs');
+
+    Route::get('/api-monitor', [AdminApiMonitorController::class, 'index'])
+        ->name('api_monitor')
+        ->middleware('admin.role:super,cs');
 
     // Customer Service & Store Management
     Route::middleware(['admin.role:super,cs'])->group(function () {
