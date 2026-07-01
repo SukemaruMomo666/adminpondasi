@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" href="{{ asset('logopondasikita.png') }}" type="image/png">
     <style>
         body { font-family: 'Helvetica', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
         .container { max-w-md; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }

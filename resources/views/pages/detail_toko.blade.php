@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" href="{{ asset('logopondasikita.png') }}" type="image/png">
     <meta charset="UTF-8">
     <title>{{ $toko->nama_toko }} - Official Store | Pondasikita</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

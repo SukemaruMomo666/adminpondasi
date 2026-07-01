@@ -4,6 +4,7 @@
       x-init="$watch('darkMode', val => localStorage.setItem('theme', val ? 'dark' : 'light'))"
       :class="{ 'dark': darkMode }">
 <head>
+    <link rel="icon" href="{{ asset('logopondasikita.png') }}" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -230,3 +231,4 @@
     @stack('scripts')
 </body>
 </html>
+

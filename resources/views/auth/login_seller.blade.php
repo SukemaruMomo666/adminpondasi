@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" href="{{ asset('logopondasikita.png') }}" type="image/png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seller Login - Pondasikita Seller Centre</title>
@@ -241,3 +242,4 @@
     </script>
 </body>
 </html>
+

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" href="{{ asset('logopondasikita.png') }}" type="image/png">
     <meta charset="utf-8">
     <title>Laporan Kesehatan Toko - {{ $toko->nama_toko }}</title>
     <style>
@@ -97,3 +98,4 @@
 
 </body>
 </html>
+
